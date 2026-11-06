@@ -1,0 +1,183 @@
+{
+  "knowledge_id": "consumer-support-v1",
+  "version": "1.0.0",
+  "last_checked": "2026-11-05",
+  "scope": [
+    "refund_not_received",
+    "defective_goods",
+    "non_delivery",
+    "stated_return_or_refund_refused"
+  ],
+  "status": "application_guidance_pending_indian_lawyer_review",
+  "separation_rule": "This file contains shared guidance only. User facts, uploads, extracts and drafts belong in the private case workspace and must never be inserted here.",
+  "intake_playbooks": [
+    {
+      "playbook_id": "consumer-refund-intake-v1",
+      "title": "Refund dispute intake",
+      "applies_to": ["refund_not_received", "stated_return_or_refund_refused"],
+      "questions": [
+        {"field": "purchase_and_purpose", "prompt": "What did you buy, and was it mainly for personal use?", "why": "Tests whether the supported consumer workflow may fit without assuming consumer status.", "required": true},
+        {"field": "parties", "prompt": "Who sold it, and was a marketplace or payment intermediary involved?", "why": "Identifies the possible opposite parties and available records.", "required": true},
+        {"field": "order_date", "prompt": "When did you order and pay?", "why": "Starts the chronology and timing review.", "required": true},
+        {"field": "delivery_or_cancellation", "prompt": "Was it delivered, cancelled, returned, or never delivered? When?", "why": "Separates non-delivery, cancellation, return, defect and refund paths.", "required": true},
+        {"field": "failure", "prompt": "What exactly went wrong?", "why": "Identifies the factual issue without converting it into a legal conclusion.", "required": true},
+        {"field": "promise", "prompt": "What did the seller or platform say about the refund, return, repair or replacement?", "why": "Captures stated commitments and their source.", "required": false},
+        {"field": "completed_actions", "prompt": "What have you already sent or done, and what response did you receive?", "why": "Avoids repeating completed steps and preserves correspondence history.", "required": true},
+        {"field": "remedy", "prompt": "What outcome do you want now: refund, repair, replacement, delivery, or something else?", "why": "Keeps the requested remedy separate from possible legal relief.", "required": true},
+        {"field": "evidence", "prompt": "Which documents, messages, photographs or transaction records do you have?", "why": "Builds an evidence checklist and identifies material gaps.", "required": true}
+      ],
+      "branches": [
+        {"if": "seller_claims_refund_processed", "ask": ["processing_date", "refund_transaction_reference", "payment_channel", "destination_account_or_instrument"], "reason": "Do not assume the seller never initiated a refund; distinguish initiation, routing and receipt."},
+        {"if": "online_marketplace_purchase", "ask": ["marketplace_name", "seller_legal_name", "platform_ticket_number", "displayed_return_policy"], "reason": "Marketplace, seller and platform records may support different facts."},
+        {"if": "defect_claimed", "ask": ["when_defect_first_observed", "how_product_was_used", "photos_or_video", "inspection_or_service_report"], "reason": "A purchase record alone does not establish a defect or its cause."},
+        {"if": "non_delivery_claimed", "ask": ["promised_delivery_date", "tracking_history", "delivery_address", "carrier_or_seller_response"], "reason": "Separates dispatch, attempted delivery, misdelivery and non-dispatch."},
+        {"if": "commercial_or_resale_purpose_possible", "ask": ["business_use", "resale_intent", "self_employment_livelihood_context"], "reason": "Consumer status may require legal assessment and must not be assumed."},
+        {"if": "another_dispute_appears", "ask": ["whether_to_start_separate_case"], "reason": "Keep one case per chat without forcing separation."}
+      ],
+      "source_ids": ["india-code-cpa-2019", "cpa-ecommerce-rules-2020"]
+    },
+    {
+      "playbook_id": "consumer-defect-intake-v1",
+      "title": "Defective goods intake",
+      "applies_to": ["defective_goods"],
+      "questions": [
+        {"field": "product_identity", "prompt": "What is the product, model and serial number if available?", "why": "Connects the complaint to the correct goods and records.", "required": true},
+        {"field": "represented_condition", "prompt": "What condition, feature or quality was advertised or promised?", "why": "Creates a comparison point without assuming a legal breach.", "required": true},
+        {"field": "observed_condition", "prompt": "What did you personally observe, and when?", "why": "Separates observation from inference about cause.", "required": true},
+        {"field": "use_and_handling", "prompt": "How was it used, stored and handled before the problem appeared?", "why": "Identifies possible factual objections and preservation needs.", "required": false},
+        {"field": "inspection", "prompt": "Has the seller, manufacturer or an independent technician inspected it?", "why": "Identifies expert or service evidence and conflicting explanations.", "required": false}
+      ],
+      "branches": [
+        {"if": "seller_alleges_misuse", "ask": ["written_reason", "inspection_report", "warranty_terms", "user_response"], "reason": "Record the objection and evidence instead of treating either account as established."},
+        {"if": "safety_risk", "ask": ["current_location", "injury_or_property_damage", "whether_use_has_stopped"], "reason": "Prioritise safety and professional help where needed."}
+      ],
+      "source_ids": ["india-code-cpa-2019", "cpa-ecommerce-rules-2020"]
+    },
+    {
+      "playbook_id": "consumer-nondelivery-intake-v1",
+      "title": "Non-delivery intake",
+      "applies_to": ["non_delivery"],
+      "questions": [
+        {"field": "promised_delivery", "prompt": "What delivery date or range was promised, and where is it recorded?", "why": "Establishes the represented delivery commitment.", "required": true},
+        {"field": "tracking", "prompt": "What does the complete tracking history show?", "why": "Separates non-dispatch, transit delay, attempted delivery and delivered-status disputes.", "required": true},
+        {"field": "address", "prompt": "Was the delivery address correct in the order confirmation?", "why": "Identifies a common factual dispute.", "required": true},
+        {"field": "delivery_proof", "prompt": "Has the seller or carrier provided delivery proof, a recipient name or location?", "why": "Identifies evidence that may conflict with the user's account.", "required": false}
+      ],
+      "branches": [
+        {"if": "tracking_says_delivered", "ask": ["delivery_proof", "household_or_reception_check", "carrier_case_number", "delivery_photo_or_otp"], "reason": "A delivered scan and actual receipt are distinct facts."}
+      ],
+      "source_ids": ["india-code-cpa-2019", "cpa-ecommerce-rules-2020"]
+    }
+  ],
+  "evidence_playbooks": [
+    {"evidence_type": "invoice_or_order_confirmation", "request": "Complete invoice/order confirmation showing seller, product, amount and date.", "may_support": ["purchase details", "named seller", "amount", "product identity"], "does_not_automatically_prove": ["defect", "non-delivery", "refund entitlement"], "authenticity_checks": ["complete page", "order number", "seller identity", "matching amount"], "common_contradictions": ["invoice seller differs from platform name", "invoice date differs from payment date"], "preservation": "Keep the original file or email and export a copy without editing it."},
+    {"evidence_type": "payment_record", "request": "Payment confirmation or bank/card/UPI entry with sensitive unrelated entries redacted where possible.", "may_support": ["payment amount", "date", "recipient or merchant reference"], "does_not_automatically_prove": ["all contractual conditions were satisfied", "the payment was never reversed elsewhere"], "authenticity_checks": ["transaction reference", "account/instrument", "complete relevant period"], "common_contradictions": ["merchant descriptor differs from seller", "amount differs from invoice"], "preservation": "Preserve the original statement and note any redactions made for sharing."},
+    {"evidence_type": "seller_or_platform_message", "request": "Complete conversation or email thread including sender, date and surrounding messages.", "may_support": ["what was communicated", "a stated promise", "ticket number", "response chronology"], "does_not_automatically_prove": ["the underlying statement is true", "the promise was fulfilled", "the sender had authority"], "authenticity_checks": ["sender identity", "timestamps", "thread completeness", "attachments"], "common_contradictions": ["different refund dates", "promise subject to conditions", "seller and platform give different accounts"], "preservation": "Keep the original message export or email headers; do not rely only on a cropped screenshot."},
+    {"evidence_type": "product_photo_or_video", "request": "Original photographs or video showing the product, serial number, packaging and observed problem.", "may_support": ["visible condition when recorded", "product identity", "packaging condition"], "does_not_automatically_prove": ["when damage occurred", "who caused it", "a hidden technical defect"], "authenticity_checks": ["original metadata if available", "uncropped context", "serial number", "capture date"], "common_contradictions": ["image date after repair attempt", "different serial number"], "preservation": "Keep original files and avoid filters, annotations or recompression of the only copy."},
+    {"evidence_type": "refund_request", "request": "Complete email, ticket or letter requesting the refund, plus any delivery or acknowledgement record.", "may_support": ["that a request was made", "the requested remedy", "date and wording"], "does_not_automatically_prove": ["recipient received it", "recipient accepted it", "refund was legally due"], "authenticity_checks": ["recipient address", "sent timestamp", "delivery status", "attachments"], "common_contradictions": ["request amount differs from invoice", "request sent to wrong entity"], "preservation": "Keep the sent-message original and server acknowledgement where available."},
+    {"evidence_type": "bank_or_wallet_statement", "request": "Statement covering the claimed refund window and relevant account or instrument.", "may_support": ["transactions shown during the supplied period", "absence of an obvious matching credit in that period"], "does_not_automatically_prove": ["absence through every channel", "that a pending or reversed credit never existed"], "authenticity_checks": ["complete period", "correct account", "refund descriptor variants", "pending and reversed transactions"], "common_contradictions": ["refund sent to original card not bank account", "partial credit under a processor name"], "preservation": "Keep the original downloaded statement; redact unrelated transactions only in the sharing copy."},
+    {"evidence_type": "service_or_inspection_report", "request": "Complete report including technician identity, date, tests and conclusion.", "may_support": ["observations and tests recorded", "technical opinion", "inspection chronology"], "does_not_automatically_prove": ["independence", "correct methodology", "legal responsibility"], "authenticity_checks": ["author qualifications", "scope of inspection", "serial number", "method", "complete pages"], "common_contradictions": ["seller report and independent report disagree", "report concerns another unit"], "preservation": "Keep the signed original and any photographs or readings supplied with it."}
+  ],
+  "procedures": [
+    {
+      "route_id": "seller_or_platform_correspondence",
+      "title": "Factual seller or platform request",
+      "when_may_fit": "The person wants to clarify facts, invoke a stated policy or request a remedy before escalation.",
+      "authority": "Seller, service provider, marketplace or grievance officer",
+      "required_inputs": ["correct recipient", "order details", "factual chronology", "requested remedy", "supporting records"],
+      "instructions": ["State facts and sources separately from legal conclusions.", "Attach copies, not the only originals.", "Request acknowledgement and retain the complete sent record."],
+      "what_happens_next": "The recipient may accept, reject, request more information or not respond; record the actual outcome before choosing another step.",
+      "lawyer_review_triggers": ["large or consequential loss", "serious factual dispute", "admission or waiver language", "safety or criminal allegation"],
+      "source_ids": ["cpa-ecommerce-rules-2020"],
+      "limitations": "No universal pre-action notice or response period is asserted. Any period stated in a draft must be labelled as requested unless a cited rule supplies it."
+    },
+    {
+      "route_id": "national_consumer_helpline",
+      "title": "National Consumer Helpline pre-litigation grievance",
+      "when_may_fit": "A consumer wants a government-supported pre-litigation grievance channel and understands that resolution is not guaranteed.",
+      "authority": "National Consumer Helpline, Department of Consumer Affairs",
+      "required_inputs": ["consumer contact details", "seller/company details", "transaction and grievance summary", "supporting documents"],
+      "instructions": ["Use current official NCH channels.", "Keep the docket or grievance number.", "Record company responses and the outcome."],
+      "what_happens_next": "NCH forwards the grievance through its convergence process; an unresolved person may consider the appropriate Consumer Commission or professional advice.",
+      "lawyer_review_triggers": ["possible limitation issue", "high value", "complex party or jurisdiction question", "conflicting official responses"],
+      "source_ids": ["nch-about", "nch-contact"],
+      "limitations": "NCH describes itself as pre-litigation and does not guarantee a remedy. Operational details can change."
+    },
+    {
+      "route_id": "consumer_commission_ejagriti",
+      "title": "Consumer Commission complaint through current official platform",
+      "when_may_fit": "A person is considering adjudication and needs forum, territorial jurisdiction, monetary jurisdiction, limitation, pleadings, evidence, fee and service reviewed.",
+      "authority": "Appropriate District, State or National Consumer Commission",
+      "required_inputs": ["consumer-status facts", "opposite parties", "territorial facts", "consideration paid", "cause-of-action chronology", "requested relief", "evidence index", "timing and delay explanation if relevant"],
+      "routing_rules": [
+        {"rule": "pecuniary_jurisdiction", "inputs": ["consideration_paid"], "source_id": "cpa-jurisdiction-rules-2021", "exceptions": ["other statutory provisions", "later amendments", "valuation dispute"]},
+        {"rule": "territorial_jurisdiction", "inputs": ["consumer_residence_or_work", "opposite_party_locations", "cause_of_action_locations"], "source_id": "india-code-cpa-2019", "exceptions": ["case-specific jurisdiction dispute", "multiple parties"]},
+        {"rule": "limitation", "inputs": ["cause_of_action_dates", "continuing_events", "delay_reason"], "source_id": "india-code-cpa-2019", "exceptions": ["sufficient-cause application", "legal interpretation of accrual"]}
+      ],
+      "instructions": ["Verify current e-Jagriti instructions and accepted formats at filing time.", "Prepare a chronology, party details, relief, evidence index and source-backed legal issues.", "Check current fee, signature, affidavit, service and copy requirements rather than relying on an old tutorial."],
+      "what_happens_next": "The Commission may examine admissibility, issue notice, receive the opposite party's response, consider evidence, refer a suitable dispute to mediation, hear the matter and pass an order; actual stages vary.",
+      "lawyer_review_triggers": ["forum uncertainty", "timing issue", "interim relief", "expert evidence", "substantial amount", "appeal or execution", "complex company structure"],
+      "source_ids": ["india-code-cpa-2019", "cpa-jurisdiction-rules-2021", "cpa-commission-procedure-regulations-2020", "doca-consumer-unit-ejagriti"],
+      "limitations": "This playbook does not select a forum from similarity alone and does not file or serve anything."
+    },
+    {
+      "route_id": "consumer_mediation",
+      "title": "Consumer mediation after Commission consideration",
+      "when_may_fit": "A consumer dispute is pending before a Commission, appears suitable for settlement and is not within a statutory exclusion.",
+      "authority": "Consumer mediation cell attached to the relevant Commission",
+      "required_inputs": ["pending proceeding", "issues capable of settlement", "party positions", "exclusion screening"],
+      "instructions": ["Check Rule 4 exclusions and current Commission procedure.", "Keep hypothetical settlement ranges separate from admissions.", "Have any settlement wording reviewed before acceptance where consequences are material."],
+      "what_happens_next": "Suitability and referral are controlled by the Commission; settlement consequences depend on the governing procedure.",
+      "lawyer_review_triggers": ["fraud or forgery allegation", "public-interest issue", "serious injury", "non-compoundable offence", "unclear settlement effect"],
+      "source_ids": ["cpa-mediation-rules-2020"],
+      "limitations": "Mediation is not automatically available or appropriate and is not a guaranteed settlement."
+    }
+  ],
+  "templates": [
+    {"template_id": "seller-factual-refund-request-v1", "title": "Factual refund request", "sections": ["recipient", "order and payment identifiers", "dated chronology", "observed problem", "seller or platform statements", "requested remedy", "attached evidence list", "requested acknowledgement"], "required_confirmations": ["amount", "dates", "recipient", "requested remedy"], "must_not_invent": ["prior reminders", "admissions", "losses", "threats", "statutory deadlines"]},
+    {"template_id": "nch-grievance-summary-v1", "title": "National Consumer Helpline grievance summary", "sections": ["consumer and company identifiers", "transaction", "issue category", "chronology", "steps already taken", "company response", "requested resolution", "document list"], "required_confirmations": ["company identity", "transaction details", "actual completed actions"], "must_not_invent": ["ticket numbers", "company responses", "delivery status"]},
+    {"template_id": "lawyer-brief-v1", "title": "Qualified-lawyer briefing pack", "sections": ["one-page overview", "chronology linked to evidence", "evidence index", "disputed facts and gaps", "correspondence history", "possible legal issues for review", "urgent matters", "questions for lawyer", "source list", "draft status and case version"], "required_confirmations": ["objective", "parties", "amount", "material dates", "completed actions"], "must_not_invent": ["legal conclusion", "deadline", "lawyer instruction", "eligibility"]}
+  ],
+  "selected_judgments": [
+    {
+      "judgment_id": "sc-experion-sushma-2022",
+      "case_name": "Experion Developers Pvt. Ltd. v. Sushma Ashok Shiroor",
+      "citation": "Civil Appeal Nos. 6044 and 7149 of 2019",
+      "court": "Supreme Court of India",
+      "decision_date": "2022-04-07",
+      "official_url": "https://api.sci.gov.in/supremecourt/2019/26982/26982_2019_2_1501_34781_Judgement_07-Apr-2022.pdf",
+      "material_facts": "Homebuyer refund dispute concerning delayed apartment possession, one-sided agreement terms and overlapping Consumer Protection Act 1986 and RERA remedies.",
+      "issues": ["consumer commission power to direct refund", "one-sided terms", "parallel statutory remedies"],
+      "holding_summary": "On its facts, the Supreme Court upheld the refund direction and explained that the consumer and RERA remedies considered there did not exclude each other.",
+      "supporting_locator": "Paragraphs 15-19, especially paragraph 17",
+      "exact_excerpt": "the Commission has the power and jurisdiction to direct return of money",
+      "important_distinctions": ["homebuyer and immovable-property facts", "Consumer Protection Act 1986", "RERA overlap", "high-value delayed possession rather than retail goods"],
+      "treatment_status": "Supreme Court final judgment; subsequent treatment not independently checked",
+      "last_checked": "2026-11-05",
+      "use_rule": "May identify arguments or distinctions. Must not be presented as promising the same result in a retail refund case."
+    }
+  ],
+  "lawyer_preparation": {
+    "pack_sections": ["one_page_overview", "evidence_linked_chronology", "evidence_index", "disputed_facts_and_gaps", "correspondence_history", "legal_issues_for_review", "urgent_matters", "questions_for_lawyer", "sources", "draft_versions"],
+    "consultation_questions": ["Is this the appropriate forum?", "What facts or documents are still missing?", "Are there timing issues?", "What remedies are realistically available?", "What are the likely costs and stages?", "Is settlement worth exploring?", "What work will the lawyer's fee cover?"],
+    "source_ids": ["nalsa-faq-legal-services"]
+  },
+  "referrals": [
+    {
+      "referral_id": "nalsa-legal-services",
+      "title": "Legal advice, assistance and possible legal aid",
+      "provider": "National and State Legal Services Institutions",
+      "official_url": "https://nalsa.gov.in/faqs/",
+      "services_described": ["legal advice and assistance", "drafting", "preparation of pleadings", "representation for eligible beneficiaries", "specified litigation expenses in appropriate cases"],
+      "do_not_promise": ["eligibility", "lawyer assignment", "availability", "case acceptance", "outcome"],
+      "source_ids": ["nalsa-faq-legal-services"]
+    }
+  ],
+  "storage_map": [
+    {"store": "Chroma vector index", "content": "Approved legal passages, official procedure guidance and selected judgment passages only"},
+    {"store": "Versioned JSON playbooks", "content": "Intake questions, evidence meaning, route gates, escalation and lawyer-preparation guidance"},
+    {"store": "SQLite private case workspace", "content": "User facts, provenance, timeline, evidence links, contradictions, actions, responses and drafts"},
+    {"store": "Private file storage", "content": "Original uploads and corrected extracted text"},
+    {"store": "Evaluation collection", "content": "Synthetic cases and observable run outputs, separate from live legal sources"}
+  ]
+}

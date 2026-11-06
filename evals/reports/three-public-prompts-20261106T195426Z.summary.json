@@ -1,0 +1,298 @@
+{
+  "cases": 3,
+  "statuses": {
+    "amazon-two-fans": "partial",
+    "blinkit-expired-milk": "supported",
+    "employment-unpaid-salary": "supported"
+  },
+  "provider_requests": [
+    {
+      "operation": "generation_search",
+      "case_id": "amazon-two-fans",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 2052,
+        "completion_tokens": 2196,
+        "total_tokens": 4248,
+        "prompt_tokens_details": {
+          "cached_tokens": 1350,
+          "cache_write_tokens": 699,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 901,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 20.269
+    },
+    {
+      "operation": "embedding",
+      "case_id": "amazon-two-fans",
+      "status": "completed",
+      "http_status": 200,
+      "model": "text-embedding-3-small",
+      "token_usage": {
+        "prompt_tokens": 189,
+        "total_tokens": 189
+      },
+      "latency_seconds": 0.869
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "amazon-two-fans",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 8247,
+        "completion_tokens": 3377,
+        "total_tokens": 11624,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 8244,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1352,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 37.847
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "amazon-two-fans",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6.1-sol",
+      "token_usage": {
+        "prompt_tokens": 9620,
+        "completion_tokens": 1134,
+        "total_tokens": 10754,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 9617,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 232,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 20.206
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "blinkit-expired-milk",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 1870,
+        "completion_tokens": 1877,
+        "total_tokens": 3747,
+        "prompt_tokens_details": {
+          "cached_tokens": 1350,
+          "cache_write_tokens": 517,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1071,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 17.231
+    },
+    {
+      "operation": "embedding",
+      "case_id": "blinkit-expired-milk",
+      "status": "completed",
+      "http_status": 200,
+      "model": "text-embedding-3-small",
+      "token_usage": {
+        "prompt_tokens": 100,
+        "total_tokens": 100
+      },
+      "latency_seconds": 0.654
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "blinkit-expired-milk",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-astra",
+      "token_usage": {
+        "input_tokens": 12512,
+        "input_tokens_details": {
+          "cache_write_tokens": 52,
+          "cached_tokens": 4312
+        },
+        "output_tokens": 262,
+        "output_tokens_details": {
+          "reasoning_tokens": 47
+        },
+        "total_tokens": 12774
+      },
+      "latency_seconds": 8.699
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "blinkit-expired-milk",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 10713,
+        "completion_tokens": 1911,
+        "total_tokens": 12624,
+        "prompt_tokens_details": {
+          "cached_tokens": 2048,
+          "cache_write_tokens": 8662,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1024,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 24.405
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "blinkit-expired-milk",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6.1-sol",
+      "token_usage": {
+        "prompt_tokens": 11247,
+        "completion_tokens": 732,
+        "total_tokens": 11979,
+        "prompt_tokens_details": {
+          "cached_tokens": 1625,
+          "cache_write_tokens": 9619,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 81,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 12.664
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "employment-unpaid-salary",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 2076,
+        "completion_tokens": 1637,
+        "total_tokens": 3713,
+        "prompt_tokens_details": {
+          "cached_tokens": 1350,
+          "cache_write_tokens": 723,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 660,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 19.887
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "employment-unpaid-salary",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-astra",
+      "token_usage": {
+        "input_tokens": 12657,
+        "input_tokens_details": {
+          "cache_write_tokens": 50,
+          "cached_tokens": 4312
+        },
+        "output_tokens": 275,
+        "output_tokens_details": {
+          "reasoning_tokens": 38
+        },
+        "total_tokens": 12932
+      },
+      "latency_seconds": 9.008
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "employment-unpaid-salary",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 4581,
+        "completion_tokens": 3242,
+        "total_tokens": 7823,
+        "prompt_tokens_details": {
+          "cached_tokens": 2048,
+          "cache_write_tokens": 2530,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1461,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 34.976
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "employment-unpaid-salary",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6.1-sol",
+      "token_usage": {
+        "prompt_tokens": 5708,
+        "completion_tokens": 924,
+        "total_tokens": 6632,
+        "prompt_tokens_details": {
+          "cached_tokens": 1625,
+          "cache_write_tokens": 4080,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 130,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 13.38
+    }
+  ],
+  "reported_graph_model_calls": 11,
+  "instrumentation_status": "observed",
+  "generation_search_requests": 11,
+  "query_embedding_requests": 2,
+  "generation_search_cap": 12,
+  "query_embedding_cap": 3,
+  "raw_output": "/Users/ashutoshanand/Downloads/Nyay sathi/evals/raw_outputs/live-three-public-prompts-20261106T195426Z.jsonl",
+  "report": "/Users/ashutoshanand/Downloads/Nyay sathi/evals/reports/three-public-prompts-20261106T195426Z.md"
+}

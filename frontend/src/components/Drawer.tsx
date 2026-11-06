@@ -1,0 +1,101 @@
+import { ArrowDown, Database, ExternalLink, GitBranch, ShieldCheck, X } from 'lucide-react'
+import { useState } from 'react'
+import type { AgentWorkflow, Detail, KnowledgeBase, Source } from '../types'
+import { api } from '../api'
+import JourneyPanel from './JourneyPanel'
+import DraftEditor from './DraftEditor'
+
+export function Drawer({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return <div className="panel-backdrop" onMouseDown={e=>{if(e.currentTarget===e.target)onClose()}}><aside className="panel"><header><h2>{title}</h2><button onClick={onClose} aria-label="Close panel"><X/></button></header>{children}</aside></div>}
+export function Sources({sources}:{sources:Source[]}){return <div className="panel-content source-list">{sources.map(s=><section key={s.passage_id}><div className="source-type">{s.source_type==='indian_official'?'Indian official origin · applicability assessed per claim':s.source_type==='foreign_official'?'Foreign official origin · Indian applicability not established':s.origin==='web'?(s.verification_status==='official_origin_pending_answer_review'?'Official origin · applicability needs review':'Public source · authority not verified'):'Saved official source'}</div><h3>{s.title}</h3><b>{s.locator}</b><blockquote>{s.text}</blockquote><p className="limitation">{s.limitations}</p><small>Retrieved {s.retrieved_at}{s.effective_date?` · Effective ${s.effective_date}`:''}{s.origin==='web'&&!s.effective_date?' · Effective date unknown':''}</small><a href={s.canonical_url} target="_blank" rel="noreferrer">Open source page <ExternalLink size={14}/></a></section>)}</div>}
+const readable=(value:unknown)=>typeof value==='string'?value:JSON.stringify(value)
+const humanLabel=(value:string)=>value.replaceAll('_',' ').replace(/^./,v=>v.toUpperCase())
+const factStatus=(status:string)=>({user_allegation:'You said',user_confirmed:'Confirmed',document_statement:'From a document',assistant_inference:'Needs review'}[status]||humanLabel(status))
+function EvidencePreview({attachment,caseId}:{attachment:Detail['attachments'][number];caseId:string}){
+  const [text,setText]=useState(attachment.extracted_text),[status,setStatus]=useState(''),[saving,setSaving]=useState(false)
+  const metadata=JSON.parse(attachment.metadata_json||'{}') as {pages?:{page:number;start:number;end:number}[]}
+  async function save(){setSaving(true);try{await api.correctAttachment(caseId,attachment.id,text);setStatus('Correction saved. Dependent drafts need review.')}catch{setStatus('Could not save. Your changes remain here.')}finally{setSaving(false)}}
+  return <details className="evidence-preview"><summary><span>{attachment.filename}</span><small>{attachment.extraction_status==='complete'?'Ready':humanLabel(attachment.extraction_status)}{metadata.pages?.length?` · ${metadata.pages.length} pages`:''}</small></summary>
+    <p className="muted">Document contents are evidence of what is written, not independent proof of every statement.</p>
+    {metadata.pages?.map(page=><details key={page.page}><summary>Page {page.page}</summary><pre>{attachment.extracted_text.slice(page.start,page.end)||'No readable text on this page.'}</pre></details>)}
+    <label>Review or correct extracted text<textarea aria-label={`Extracted text from ${attachment.filename}`} value={text} onChange={e=>setText(e.target.value)}/></label>
+    {!text&&<p>Text could not be read. You can type the relevant details here or upload a clearer copy.</p>}
+    <button disabled={saving||text===attachment.extracted_text} onClick={save}>{saving?'Saving…':'Save correction'}</button><p role="status">{status}</p>
+  </details>
+}
+export function CasePanel({detail}:{detail:Detail}){const m=detail.case_memory, facts=Object.entries(m.facts);const conflicts=m.contradictions.filter(x=>!(x as {resolved?:boolean}).resolved);const overview=facts.filter(([k])=>!['issue_type','requested_remedy'].includes(k)).slice(0,3).map(([,v])=>v.value).join(' ')||detail.messages.find(message=>message.role==='user'&&message.content.length>20)?.content.slice(0,500)||'Tell me what happened. Your case will take shape as we chat.';return <div className="panel-content case-workspace">
+  <div className="case-version">Private case · version {m.version}</div>
+  <section className="case-overview"><h3>What happened</h3><p>{overview}</p><span className="muted">Based on your account and supplied documents.</span><h3>What you want</h3><p>{m.requested_remedy||'We haven’t discussed your preferred resolution yet.'}</p></section>
+  {m.journey&&(m.journey.events.length>0||m.journey.recommendations.length>0)&&<JourneyPanel journey={m.journey} caseVersion={m.version}/>}
+  {!!(conflicts.length||m.unknowns.length)&&<section><h3>Needs your attention</h3>{conflicts.map((x,i)=><p className="workspace-warning" key={i}>{x.description||readable(x)}</p>)}{m.unknowns.map((x,i)=><p key={i}>{x}</p>)}</section>}
+  {!!m.events?.length&&<details className="case-section" open><summary>Timeline <small>{m.events.length}</small></summary>{m.events.map((item,i)=><div className="timeline-event" key={i}><small>{String(item.date||'Date to check')}</small><p>{String(item.description||'')}</p></div>)}</details>}
+  <details className="case-section" open><summary>Evidence <small>{detail.attachments.length}</small></summary>{detail.attachments.map(a=><EvidencePreview key={a.id} attachment={a} caseId={detail.conversation.id}/>)}{!detail.attachments.length&&<p className="muted">Add an invoice, email, or screenshot using the attachment button.</p>}</details>
+  {!!facts.length&&<details className="case-section"><summary>Important facts <small>{facts.length}</small></summary>{facts.map(([key,fact])=><div className="case-fact" key={key}><span>{humanLabel(key)}</span><p>{fact.value}</p><small className="fact-badge">{factStatus(fact.status)}</small>{!!fact.provenance?.length&&<details><summary>Source details</summary>{fact.provenance.map((p,i)=><p className="muted" key={i}>{p.source_type==='document'?(detail.attachments.find(a=>a.id===p.source_id)?.filename||'Document'):'Your message'}{p.page?` · page ${p.page}`:''}{p.span?` · ${p.span}`:''}</p>)}</details>}</div>)}</details>}
+  {!!(m.parties?.length||m.locations?.length)&&<details className="case-section"><summary>People and places</summary>{[...(m.parties||[]),...(m.locations||[])].map((item,i)=><p key={i}>{String(item.name||item.value||'')} <small>{humanLabel(String(item.role||''))}</small></p>)}</details>}
+  {!!(m.actions_completed.length||m.responses_received?.length)&&<details className="case-section"><summary>Actions and responses</summary>{m.actions_completed.map((x,i)=><p key={i}>{x}</p>)}{m.responses_received?.map((x,i)=><p key={`r${i}`}>{String(x.description||x.content||'Response recorded')}</p>)}</details>}
+  {!!detail.drafts.length&&<details className="case-section"><summary>Drafts <small>{detail.drafts.length}</small></summary>{detail.drafts.map(d=><details key={d.id}><summary>{d.title} · {humanLabel(d.status)}</summary><DraftEditor draft={d} caseId={detail.conversation.id}/></details>)}</details>}
+  {!!m.questions_for_legal_review?.length&&<details className="case-section"><summary>Questions for a lawyer</summary>{m.questions_for_legal_review.map((x,i)=><p key={i}>{x}</p>)}</details>}
+  {!!detail.case_proposals?.length&&<details className="case-section"><summary>Case details awaiting review</summary><p className="muted">These are proposed details. They have not changed your saved case. Correct or restate the details in chat before using them.</p>{detail.case_proposals.map(proposal=><div key={proposal.message_id}>{proposal.base_version!==m.version&&<small className="muted">Earlier proposal — check against your latest case.</small>}{Object.entries(proposal.proposed_facts).filter(([key,fact])=>m.facts[key]?.value!==fact.value).map(([key,fact])=><p key={key}><b>{humanLabel(key)}</b>: {fact.value}</p>)}</div>)}</details>}
+  {!!detail.staged_patches?.length&&<details className="case-section"><summary>Details needing clarification <small>{detail.staged_patches.length}</small></summary><p className="muted">These proposals have not changed your saved case. Correct or clarify them in chat.</p>{detail.staged_patches.map(({patch,reason})=><div className="case-fact" key={patch.patch_id}><b>{humanLabel(patch.payload.key||patch.payload.role||'Proposed detail')}</b><p>{patch.payload.value||patch.payload.description||patch.payload.name}</p><small className="muted">{reason}</small></div>)}</details>}
+  <p className="case-privacy">Private to this browser. Your documents are kept outside the shared legal knowledge base.</p>
+</div>}
+
+type KnowledgeTab='overview'|'playbooks'|'procedures'|'sources'|'lawyer'
+export function KnowledgeBasePanel({data}:{data:KnowledgeBase}){const [tab,setTab]=useState<KnowledgeTab>('overview');return <div className="panel-content knowledge-panel">
+  <div className="knowledge-summary"><Database size={20}/><div><b>{data.total_passages} searchable passages</b><span>{data.vector_passages} currently indexed in Chroma · corpus {data.corpus_version}</span></div></div>
+  <div className={`index-state ${data.vector_index_enabled?'ready':'limited'}`}><i/>{data.vector_index_enabled?'Vector index connected':'Vector index unavailable; lexical retrieval remains available'}</div>
+  <div className="knowledge-tabs" role="tablist">{(['overview','playbooks','procedures','sources','lawyer'] as KnowledgeTab[]).map(item=><button role="tab" aria-selected={tab===item} className={tab===item?'active':''} onClick={()=>setTab(item)} key={item}>{item}</button>)}</div>
+  {tab==='overview'&&<>
+    <div className="review-state"><b>{data.review_status.replaceAll('_',' ')}</b><span>Version {data.knowledge_version} · checked {data.last_checked}</span></div>
+    <p className="knowledge-scope">{data.scope}</p>
+    <h3>Knowledge layers</h3><div className="layer-grid">{data.layers.map(layer=><div key={layer.id}><b>{layer.count??'—'}</b><span>{layer.label}</span><small>{layer.storage}</small></div>)}</div>
+    <h3>Retrieval pipeline</h3><div className="pipeline-chips">{data.retrieval_pipeline.map(item=><span key={item}>{item}</span>)}</div>
+    <h3>Storage boundary</h3><div className="storage-map">{data.storage_map.map(item=><div key={item.store}><b>{item.store}</b><span>{item.content}</span></div>)}</div>
+    <p className="knowledge-note">{data.separation_rule}</p>
+  </>}
+  {tab==='playbooks'&&<>
+    <h3>Intake playbooks</h3>{data.intake_playbooks.map(playbook=><details className="knowledge-card" key={playbook.playbook_id}><summary>{playbook.title}</summary><p>Fits: {playbook.applies_to.join(', ').replaceAll('_',' ')}</p><h4>Questions and purpose</h4>{playbook.questions.map(q=><div className="question-row" key={q.field}><b>{q.prompt}</b><span>{q.why}</span></div>)}<h4>Branching checks</h4>{playbook.branches.map(branch=><div className="branch-row" key={branch.if}><b>If {branch.if.replaceAll('_',' ')}</b><span>Ask: {branch.ask.join(', ').replaceAll('_',' ')}</span><small>{branch.reason}</small></div>)}</details>)}
+    <h3>Evidence playbooks</h3>{data.evidence_playbooks.map(item=><details className="knowledge-card evidence-card" key={item.evidence_type}><summary>{item.evidence_type.replaceAll('_',' ')}</summary><p>{item.request}</p><div className="evidence-meaning supports"><b>May support</b><span>{item.may_support.join(' · ')}</span></div><div className="evidence-meaning limits"><b>Does not automatically prove</b><span>{item.does_not_automatically_prove.join(' · ')}</span></div><h4>Check</h4><p>{item.authenticity_checks.join(' · ')}</p><h4>Preserve</h4><p>{item.preservation}</p></details>)}
+  </>}
+  {tab==='procedures'&&<>
+    <p className="knowledge-note">Route selection uses explicit inputs, source references, and exceptions. Similarity search alone never selects a forum or deadline.</p>
+    {data.procedures.map(route=><details className="knowledge-card" key={route.route_id}><summary>{route.title}</summary><p><b>May fit:</b> {route.when_may_fit}</p><p><b>Authority:</b> {route.authority}</p><h4>Required inputs</h4><ul>{route.required_inputs.map(x=><li key={x}>{x.replaceAll('_',' ')}</li>)}</ul>{route.routing_rules&&<><h4>Explicit routing rules</h4>{route.routing_rules.map(rule=><div className="branch-row" key={rule.rule}><b>{rule.rule.replaceAll('_',' ')}</b><span>Inputs: {rule.inputs.join(', ').replaceAll('_',' ')}</span><small>Exceptions: {rule.exceptions.join(' · ')}</small></div>)}</>}<h4>Prepare and act</h4><ul>{route.instructions.map(x=><li key={x}>{x}</li>)}</ul><p><b>What may follow:</b> {route.what_happens_next}</p><p className="limitation">{route.limitations}</p></details>)}
+  </>}
+  {tab==='sources'&&<><h3>Official sources and selected passages</h3>
+  <div className="knowledge-sources">{data.sources.map(source=><section key={source.source_id}>
+    <div className="source-head"><span>{source.source_type.replaceAll('_',' ')}</span><b>{source.verification_status.replaceAll('_',' ')}</b></div>
+    <h4>{source.title}</h4><p>{source.issuing_authority} · {source.jurisdiction}</p>
+    <div className="source-metrics"><span><b>{source.passage_count}</b> corpus passages</span><span><b>{source.vector_passage_count}</b> vector passages</span></div>
+    <details><summary>Indexed locators</summary><ul>{source.locators.map(locator=><li key={locator}>{locator}</li>)}</ul></details>
+    <p className="limitation">{source.known_limitations}</p>
+    <small>Retrieved {source.retrieved_at}{source.effective_date?` · Effective ${source.effective_date}`:''}</small>
+    <a href={source.canonical_url} target="_blank" rel="noreferrer">Open canonical source <ExternalLink size={14}/></a>
+  </section>)}</div><h3>Curated judgments</h3>{data.selected_judgments.map(item=><section className="judgment-card" key={item.judgment_id}><b>{item.case_name}</b><span>{item.court} · {item.decision_date} · {item.citation}</span><p>{item.holding_summary}</p><blockquote>“{item.exact_excerpt}” — {item.supporting_locator}</blockquote><p><b>Important distinctions:</b> {item.important_distinctions.join(' · ')}</p><p className="limitation">{item.use_rule} {item.treatment_status}.</p><a href={item.official_url} target="_blank" rel="noreferrer">Open official judgment <ExternalLink size={14}/></a></section>)}</>}
+  {tab==='lawyer'&&<>
+    <h3>Lawyer briefing pack</h3><ol className="pack-list">{data.lawyer_preparation.pack_sections.map(item=><li key={item}>{item.replaceAll('_',' ')}</li>)}</ol>
+    <h3>Consultation questions</h3>{data.lawyer_preparation.consultation_questions.map(item=><p className="workspace-line" key={item}>{item}</p>)}
+    <h3>Drafting structures</h3>{data.templates.map(item=><details className="knowledge-card" key={item.template_id}><summary>{item.title}</summary><p><b>Sections:</b> {item.sections.join(' · ').replaceAll('_',' ')}</p><p><b>Confirm first:</b> {item.required_confirmations.join(' · ').replaceAll('_',' ')}</p><p className="limitation"><b>Never invent:</b> {item.must_not_invent.join(' · ')}</p></details>)}
+    <h3>Verified referral guidance</h3>{data.referrals.map(item=><section className="referral-card" key={item.referral_id}><b>{item.title}</b><p>{item.provider}</p><p>Services described: {item.services_described.join(' · ')}</p><p className="limitation">Do not promise: {item.do_not_promise.join(' · ')}</p><a href={item.official_url} target="_blank" rel="noreferrer">Open official guidance <ExternalLink size={14}/></a></section>)}
+  </>}
+</div>}
+
+const arrow=<ArrowDown className="flow-arrow" size={16} aria-hidden/>
+function PrimaryWorkflow({data}:{data:AgentWorkflow}){return <div className="panel-content workflow-panel">
+  <div className="case-version">{data.version} · live backend definition</div><p className="workflow-intro">Research and review are selected according to the question and available evidence.</p>
+  <div className="flow-map">{data.nodes.map((node,index)=><div key={node.id}>{index>0&&arrow}<div className={`flow-node ${node.id==='verify'?'verify':''}`}><GitBranch size={17}/><div><b>{node.label}</b><span>{node.detail}</span></div></div></div>)}</div>
+  <h3>Decision rules</h3><div className="decision-list">{data.decisions.map((rule,index)=><div key={index}><b>IF</b><span>{rule.if}</span><strong>THEN</strong><p>{rule.then}</p></div>)}</div>
+  <h3>Turn limits</h3><div className="limit-grid"><span><b>{data.limits.model_calls_per_turn}</b> provider requests</span><span><b>{data.limits.retrieval_expansions}</b> research batches</span><span><b>{data.limits.revision_attempts}</b> repair attempt</span></div>
+  <details className="edge-details"><summary>Paths and conditions</summary>{data.edges.map((edge,index)=><div key={index}><code>{edge.from} → {edge.to}</code><span>{edge.condition}</span></div>)}</details>
+</div>}
+export function AgentWorkflowPanel({data}:{data:AgentWorkflow}){if(data.version.startsWith('primary-agent'))return <PrimaryWorkflow data={data}/>;const node=(id:string)=>data.nodes.find(item=>item.id===id)!;const card=(id:string)=><div className={`flow-node ${id==='verify'?'verify':''}`} key={id}>{id==='verify'?<ShieldCheck size={17}/>:id==='research'?<Database size={17}/>:<GitBranch size={17}/>}<div><b>{node(id).label}</b><span>{node(id).detail}</span></div></div>;return <div className="panel-content workflow-panel">
+  <div className="case-version">{data.version} · live backend definition</div><p className="workflow-intro">One message follows this route. Branch labels show the actual conditions used to choose the next node.</p>
+  <div className="flow-map">{card('checks')}{arrow}{card('context')}{arrow}{card('triage')}{arrow}{card('intake')}{arrow}
+    <div className="flow-decision"><div className="decision-label">IF needs_retrieval?</div><div className="decision-branches"><div><span className="branch yes">TRUE</span>{card('research')}{node('assess_information')&&<>{arrow}{card('assess_information')}{arrow}<div className="decision-label">IF public information gap?</div><div className="branch-note">Search only when a public information gap and budget permit. Otherwise continue with local support or clarification.</div>{arrow}{card('web_research')}</>}<ArrowDown className="flow-arrow" size={16}/></div><div><span className="branch no">FALSE</span><div className="branch-note">Skip research</div><ArrowDown className="flow-arrow" size={16}/></div></div></div>
+    {node('plan_resolution')&&<>{card('plan_resolution')}{arrow}</>}{node('execute_tasks')&&<>{card('execute_tasks')}{arrow}</>}{card('respond')}{arrow}{card('review')}{arrow}
+    <div className="flow-decision"><div className="decision-label">IF review passes?</div><div className="decision-branches"><div><span className="branch yes">PASS</span><div className="branch-note">Continue to hard gate</div><ArrowDown className="flow-arrow" size={16}/></div><div><span className="branch no">REVISE</span>{card('revise')}<ArrowDown className="flow-arrow" size={16}/></div></div></div>
+    <p className="muted">Checks apply to each claim independently. A failed lookup does not erase a supported draft. Revision starts only when generation and review both fit the budget.</p>{card('verify')}{arrow}
+    <div className="flow-decision"><div className="decision-label">IF verification passes?</div><div className="decision-branches"><div><span className="branch yes">APPROVED CLAIM</span>{card('persist')}</div><div><span className="branch no">AFFECTED CLAIM ONLY</span>{card('withhold')}<ArrowDown className="flow-arrow" size={16}/><div className="mini-persist">Keep supported help; explain unresolved tasks</div></div></div></div>
+  </div>
+  <h3>Decision rules</h3><div className="decision-list">{data.decisions.map((rule,i)=><div key={i}><b>IF</b><span>{rule.if}</span><strong>THEN</strong><p>{rule.then}</p></div>)}</div>
+  <h3>Turn limits</h3><div className="limit-grid"><span><b>{data.limits.model_calls_per_turn}</b> model calls</span><span><b>{data.limits.retrieval_expansions}</b> retrieval expansion</span><span><b>{data.limits.revision_attempts}</b> revision attempt</span></div>
+  <details className="edge-details"><summary>All graph edges and conditions</summary>{data.edges.map((edge,i)=><div key={i}><code>{edge.from} → {edge.to}</code><span>{edge.condition}</span></div>)}</details>
+</div>}

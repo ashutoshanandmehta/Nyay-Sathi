@@ -1,0 +1,23 @@
+{
+  "cases": 3,
+  "statuses": {
+    "amazon-two-fans": "partial",
+    "blinkit-expired-milk": "partial",
+    "employment-unpaid-salary": "partial"
+  },
+  "provider_requests": [],
+  "generation_search_requests": null,
+  "query_embedding_requests": null,
+  "generation_search_cap": 12,
+  "query_embedding_cap": 3,
+  "raw_output": "/Users/ashutoshanand/Downloads/Nyay sathi/evals/raw_outputs/live-three-public-prompts-20261106T172240Z.jsonl",
+  "report": "/Users/ashutoshanand/Downloads/Nyay sathi/evals/reports/three-public-prompts-20261106T172240Z.md",
+  "instrumentation_status": "unavailable_transport_mismatch",
+  "instrumentation_note": "Provider-level measurement unavailable: the initial runner intercepted httpx, while installed OpenAI 3.45 uses httpx2. Empty provider_requests is not zero API usage. Graph call counts and provider-returned aggregated token usage are available. The runner was corrected for future runs; no paid rerun was made.",
+  "reported_graph_model_calls": 12,
+  "token_usage": {
+    "input_tokens": 50533,
+    "output_tokens": 16504,
+    "total_tokens": 67037
+  }
+}

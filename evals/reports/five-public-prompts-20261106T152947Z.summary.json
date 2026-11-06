@@ -1,0 +1,66 @@
+{
+  "raw_output": "evals/raw_outputs/live-five-public-prompts-20261106T152947Z.jsonl",
+  "responses": [
+    {
+      "test_id": "amazon-delivery",
+      "status": "failed_or_limited",
+      "latency": 73.731,
+      "model_calls": 5,
+      "verification_codes": [
+        "missing_citation",
+        "unsupported_citation_marker",
+        "UNMATCHED_SOURCE_MARKERS"
+      ]
+    },
+    {
+      "test_id": "blinkit-milk",
+      "status": "failed_or_limited",
+      "latency": 51.184,
+      "model_calls": 4,
+      "verification_codes": [
+        "unsupported_research_answer",
+        "unsupported_research_answer",
+        "missing_situation_acknowledgement",
+        "unsupported_research_answer"
+      ]
+    },
+    {
+      "test_id": "goibibo-checkin",
+      "status": "failed_or_limited",
+      "latency": 60.418,
+      "model_calls": 4,
+      "verification_codes": [
+        "unsupported_research_answer",
+        "missing_citation",
+        "unsupported_citation_marker",
+        "unmatched_source_marker",
+        "unsupported_research_answer",
+        "unsupported_research_answer"
+      ]
+    },
+    {
+      "test_id": "chennai-wages",
+      "status": "passed_automated_review",
+      "latency": 81.505,
+      "model_calls": 5,
+      "verification_codes": [
+        "feedback_applied"
+      ]
+    },
+    {
+      "test_id": "refund-fraud",
+      "status": "failed_or_limited",
+      "latency": 93.381,
+      "model_calls": 5,
+      "verification_codes": [
+        "unsupported_research_answer",
+        "unsupported_research_answer",
+        "missing_citation",
+        "unsupported_research_answer",
+        "verification_metadata_in_visible_answer",
+        "unsupported_research_answer",
+        "unsupported_research_answer"
+      ]
+    }
+  ]
+}

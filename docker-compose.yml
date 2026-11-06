@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ORIGIN: http://localhost:5173
+      DATABASE_PATH: /app/runtime/nyay_saathi.sqlite3
+      CHECKPOINT_PATH: /app/runtime/checkpoints.sqlite3
+      CHROMA_PATH: /app/runtime/chroma
+      UPLOAD_PATH: /app/runtime/uploads
+      EXPORT_PATH: /app/runtime/exports
+      COOKIE_SECURE: "false"
+    volumes:
+      - nyay-runtime:/app/runtime
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+volumes:
+  nyay-runtime:

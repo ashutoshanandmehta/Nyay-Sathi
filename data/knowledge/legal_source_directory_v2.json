@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "policy": "Discovery starting points only. These links do not establish legal propositions or current applicability. Fetch and review exact supporting passages.",
+  "sources": [
+    {"authority": "India Code", "url": "https://www.indiacode.nic.in/", "purpose": "Current statutory text, provision identities and commencement references"},
+    {"authority": "Gazette of India", "url": "https://egazette.gov.in/", "purpose": "Notifications, amendments and commencement"},
+    {"authority": "Supreme Court of India", "url": "https://www.sci.gov.in/", "purpose": "Primary judgments; subsequent treatment must be separately assessed"},
+    {"authority": "Ministry of Home Affairs", "url": "https://www.mha.gov.in/emergency-response-support-system-erss", "purpose": "Verified source for India's 112 emergency reference; application reference checked 2026-11-07"},
+    {"authority": "National Consumer Helpline", "url": "https://consumerhelpline.gov.in/public/", "purpose": "Grievance submission and tracking; not adjudication or guaranteed relief"},
+    {"authority": "e-Jagriti", "url": "https://e-jagriti.gov.in/", "purpose": "Consumer commission platform; prefer official downloadable instructions when page extraction returns a JS shell"},
+    {"authority": "NALSA", "url": "https://nalsa.gov.in/", "purpose": "Legal services and eligibility resources"},
+    {"authority": "Maharashtra Labour Department", "url": "https://mahakamgar.maharashtra.gov.in/", "purpose": "Discover state-specific employment/wage procedures and current authoritative documents"}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "mode": "offline synthetic HTTP contracts, not real model accuracy",
+  "cases": 16,
+  "passed": 16,
+  "routing_matches": 16,
+  "unintended_case_mutations": 0,
+  "median_latency_ms": 29,
+  "live_model_calls": 0,
+  "token_consumption": 0,
+  "unsupported_authority_recommendations": "no live recommendations generated; adversarial validation covered in pytest",
+  "citation_errors": "not assessed by this offline response runner; covered separately in pytest",
+  "tool_honesty": "configuration-required states observed; execution claims tested with labelled doubles"
+}

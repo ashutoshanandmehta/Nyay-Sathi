@@ -1,0 +1,12 @@
+{
+  "mode": "synthetic fault-injection contracts only",
+  "cases": 12,
+  "passed": 12,
+  "expected_supported_tasks": 7,
+  "supported_tasks_preserved": 7,
+  "seeded_forbidden_text_escapes": 0,
+  "model_calls": 0,
+  "live_legal_accuracy": "not measured",
+  "live_latency": "not measured",
+  "source_filtering_loss": "covered by parser/provider unit tests; not measured on live results"
+}

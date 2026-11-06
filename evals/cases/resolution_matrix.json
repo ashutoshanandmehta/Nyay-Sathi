@@ -1,0 +1,16 @@
+{
+  "label":"Synthetic deterministic matrix; not live outputs or lawyer-reviewed cases",
+  "platforms":["amazon","flipkart","blinkit","instamart","agoda","oyo"],
+  "stages":[
+    {"id":"new","message":"I need help with my order from {platform}.","outcome":"unknown","recommended":"support"},
+    {"id":"submitted","message":"I already contacted {platform} support about my order.","outcome":"unknown","recommended":"grievance"},
+    {"id":"promised","message":"I contacted {platform} support. They promised a refund.","outcome":"promised_pending","recommended":"grievance"},
+    {"id":"processed","message":"I contacted {platform} support. They said the refund was processed.","outcome":"processed_not_credit_verified","recommended":"grievance"},
+    {"id":"rejected","message":"I contacted {platform} support. They rejected my refund request.","outcome":"unresolved_rejected","recommended":"grievance"},
+    {"id":"closed","message":"I contacted {platform} support. They closed my ticket.","outcome":"closed_by_recipient_outcome_unknown","recommended":"grievance"},
+    {"id":"credited","message":"I contacted {platform} support. I received the refund.","outcome":"remedy_reported_received","recommended":null},
+    {"id":"settled","message":"I contacted {platform} support. I accepted the settlement.","outcome":"settlement_reported_accepted","recommended":null}
+  ],
+  "requests":["What should I do next?","What evidence should I prepare?","Prepare a short chat message.","Write a professional email.","Explain the options in Hindi."],
+  "scenario_count":240
+}

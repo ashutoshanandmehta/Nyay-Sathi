@@ -1,0 +1,18 @@
+[
+  {"test_id":"general-ipo","message":"When did Jio release its IPO?","workflows":["general"],"case_change":false},
+  {"test_id":"explicit-animal-search","message":"Can you search whether I can feed cucumber to my cow?","workflows":["safety"],"case_change":false},
+  {"test_id":"hotel-employment","message":"My salary at a hotel is unpaid. What should I do?","workflows":["legal_handoff"],"case_change":true},
+  {"test_id":"hotel-consumer","message":"I ordered a hotel stay and the seller refused my refund","workflows":["consumer"],"case_change":true},
+  {"test_id":"unknown-company","message":"My seller Silver Lotus has not delivered my order of ₹800","workflows":["consumer"],"case_change":true},
+  {"test_id":"hindi-employment","message":"मेरा वेतन नहीं मिला, होटल में काम करता हूँ","workflows":["legal_handoff"],"case_change":true},
+  {"test_id":"hinglish-delivery","message":"Maine monitor mangaya lekin delivery nahi mili","workflows":["consumer"],"case_change":true},
+  {"test_id":"brand-alone","message":"Tell me about Blinkit","workflows":["general"],"case_change":false},
+  {"test_id":"industry-alone","message":"What is a hotel?","workflows":["general"],"case_change":false},
+  {"test_id":"mixed-request","message":"My refund of ₹800 is late? When did Jio release its IPO?","workflows":["consumer","general"],"case_change":true},
+  {"test_id":"mixed-safety","message":"I ordered milk and it smells bad. Is it safe to drink?","workflows":["consumer","safety"],"case_change":true},
+  {"test_id":"urgent-safety","message":"I cannot breathe after drinking milk","workflows":["safety"],"case_change":false},
+  {"test_id":"general-preserves-case","seed":"My defective phone cost ₹18000","message":"When did Jio release its IPO?","workflows":["general"],"case_change":false},
+  {"test_id":"different-domain","seed":"My defective phone cost ₹18000","message":"My employer owes my salary at a hotel","workflows":["legal_handoff"],"case_change":false},
+  {"test_id":"correction-continuity","seed":"My defective phone cost ₹18000","message":"Actually, it was ₹8000","workflows":["consumer"],"case_change":true},
+  {"test_id":"language-continuity","seed":"My defective phone cost ₹18000","message":"Explain in Hindi","workflows":["consumer"],"case_change":true}
+]

@@ -1,0 +1,163 @@
+{
+  "cases": 3,
+  "statuses": {
+    "amazon-two-fans": "deferred",
+    "blinkit-expired-milk": "deferred",
+    "employment-unpaid-salary": "deferred"
+  },
+  "provider_requests": [
+    {
+      "operation": "generation_search",
+      "case_id": "amazon-two-fans",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 2055,
+        "completion_tokens": 1674,
+        "total_tokens": 3729,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 2052,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 507,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 16.785
+    },
+    {
+      "operation": "embedding",
+      "case_id": "amazon-two-fans",
+      "status": "completed",
+      "http_status": 200,
+      "model": "text-embedding-3-small",
+      "token_usage": {
+        "prompt_tokens": 185,
+        "total_tokens": 185
+      },
+      "latency_seconds": 2.004
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "amazon-two-fans",
+      "status": "failed",
+      "error_type": "ReadTimeout",
+      "latency_seconds": 35.008
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "blinkit-expired-milk",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 1873,
+        "completion_tokens": 1372,
+        "total_tokens": 3245,
+        "prompt_tokens_details": {
+          "cached_tokens": 1350,
+          "cache_write_tokens": 520,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 669,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 13.776
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "blinkit-expired-milk",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-astra",
+      "token_usage": {
+        "input_tokens": 12906,
+        "input_tokens_details": {
+          "cache_write_tokens": 4373,
+          "cached_tokens": 0
+        },
+        "output_tokens": 350,
+        "output_tokens_details": {
+          "reasoning_tokens": 39
+        },
+        "total_tokens": 13256
+      },
+      "latency_seconds": 12.631
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "blinkit-expired-milk",
+      "status": "failed",
+      "error_type": "ReadTimeout",
+      "latency_seconds": 35.136
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "employment-unpaid-salary",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-luna",
+      "token_usage": {
+        "prompt_tokens": 2074,
+        "completion_tokens": 2254,
+        "total_tokens": 4328,
+        "prompt_tokens_details": {
+          "cached_tokens": 1350,
+          "cache_write_tokens": 721,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 693,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "latency_seconds": 18.265
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "employment-unpaid-salary",
+      "status": "completed",
+      "http_status": 200,
+      "model": "gpt-6-astra",
+      "token_usage": {
+        "input_tokens": 12695,
+        "input_tokens_details": {
+          "cache_write_tokens": 57,
+          "cached_tokens": 4312
+        },
+        "output_tokens": 565,
+        "output_tokens_details": {
+          "reasoning_tokens": 40
+        },
+        "total_tokens": 13260
+      },
+      "latency_seconds": 14.768
+    },
+    {
+      "operation": "generation_search",
+      "case_id": "employment-unpaid-salary",
+      "status": "failed",
+      "error_type": "ReadTimeout",
+      "latency_seconds": 35.139
+    }
+  ],
+  "reported_graph_model_calls": 8,
+  "instrumentation_status": "observed",
+  "generation_search_requests": 8,
+  "query_embedding_requests": 1,
+  "generation_search_cap": 12,
+  "query_embedding_cap": 3,
+  "raw_output": "/Users/ashutoshanand/Downloads/Nyay sathi/evals/raw_outputs/live-three-public-prompts-20261106T194415Z.jsonl",
+  "report": "/Users/ashutoshanand/Downloads/Nyay sathi/evals/reports/three-public-prompts-20261106T194415Z.md"
+}

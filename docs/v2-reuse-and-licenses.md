@@ -1,0 +1,13 @@
+# Reuse and licenses
+
+The V2 implementation copies the existing Nyay Saathi source and public knowledge assets from `/Users/ashutoshanand/Downloads/Nyay sathi`. `v1-source-manifest.json` records SHA-256 references for 211 source files present in both directories at snapshot time. The snapshot was captured during implementation, so intentional V2 differences are recorded separately; it is not a claim that the files were unchanged at that moment. V1 runtime/keys/uploads/environments were excluded. See `v1-readme-reference.md` for the preserved original README.
+
+No new third-party repository code was copied for the V2 agent. It reuses existing installed OpenAI, Pydantic, HTTPX, SQLite, LangGraph (legacy runner), React, Vite, PyMuPDF, OCR and export integrations. The primary runner, contracts, budget, review policy and concurrent research adapter are project code. Official API documentation informed protocol use, not a wholesale copied example.
+
+Inherited exact dependency versions remain in `backend/uv.lock` and `frontend/package-lock.json`. Existing third-party notices—including upstream commits for earlier attributed patterns—remain in `THIRD_PARTY_NOTICES.md`. No dependency upgrade or additional framework was needed. Existing transitive dependencies have their own licenses; this is not an exhaustive third-party compliance opinion.
+
+PyMuPDF 1.26.7 remains the PDF extraction/rendering engine to preserve existing PDF/OCR behavior. Its maintainer documents AGPL and commercial alternatives at [License and Copyright](https://pymupdf.readthedocs.io/en/latest/about.html#license-and-copyright). Before distribution, establish the intended application's license arrangement, meet applicable AGPL terms or obtain appropriate licensing; alternatively replace the isolated `services/pdf_backend.py` implementation and revalidate PDF extraction/OCR. No purchase, distribution decision or proprietary-release compliance is assumed by this implementation.
+
+The emergency reference was checked on 7 November 2026 against the [Ministry of Home Affairs ERSS page](https://www.mha.gov.in/emergency-response-support-system-erss), which identifies 112 as the nationwide emergency number. The application uses original protective wording and records the source and revalidation date; it does not promise response outcomes. Other law-directory links are discovery candidates, not certified propositions.
+
+Retained public legal text remains attributed to issuing authorities and canonical URLs. Corpus inclusion does not imply endorsement or current applicability. Existing known amendment/treatment limitations remain relevant.
