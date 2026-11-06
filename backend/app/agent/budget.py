@@ -15,6 +15,7 @@ class TurnBudget:
         self.requests = self.tokens = self.queries = self.documents = self.batches = 0
         self.projected_cost = 0.0
         self.projected_tokens = 0
+        self.reserved_tokens_total = 0
         self.reported_cost = 0.0
         self.cost_records = []
         self.unknown_cost = False
@@ -27,7 +28,7 @@ class TurnBudget:
         with self.lock:
             return (
                 self.remaining_time() > 0
-                and self.tokens < self.settings.agent_max_tokens
+                and self.tokens + self.projected_tokens < self.settings.agent_max_tokens
                 and self.requests + count + reserve <= self.settings.agent_max_requests
             )
 
@@ -39,7 +40,8 @@ class TurnBudget:
             projected_tokens = input_chars + self.settings.agent_max_output_tokens
             if (
                 self.remaining_time() <= 0
-                or self.projected_tokens + projected_tokens > self.settings.agent_max_tokens
+                or self.tokens + self.projected_tokens + projected_tokens
+                > self.settings.agent_max_tokens
                 or self.requests + 1 + reserve > self.settings.agent_max_requests
             ):
                 raise BudgetExhausted("Turn request/time/token allowance exhausted")
@@ -65,11 +67,15 @@ class TurnBudget:
                 self.projected_cost += estimate
             self.requests += 1
             self.projected_tokens += projected_tokens
+            self.reserved_tokens_total += projected_tokens
+            return projected_tokens
 
-    def report(self, usage, model=None, search=False):
+    def report(self, usage, model=None, search=False, reservation=None):
         with self.lock:
             if usage:
                 self.tokens += usage.get("total_tokens", 0)
+                if reservation is not None:
+                    self.projected_tokens = max(0, self.projected_tokens - reservation)
             else:
                 self.unknown_cost = True
             prices = self.settings.agent_pricing.get(model, {})
@@ -96,7 +102,8 @@ class TurnBudget:
             return {
                 "provider_requests_reserved": self.requests,
                 "reported_tokens": self.tokens,
-                "conservative_tokens_reserved": self.projected_tokens,
+                "conservative_tokens_reserved": self.reserved_tokens_total,
+                "outstanding_token_reservations": self.projected_tokens,
                 "queries": self.queries,
                 "documents_attempted": self.documents,
                 "research_batches": self.batches,

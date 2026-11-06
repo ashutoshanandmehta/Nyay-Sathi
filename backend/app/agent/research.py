@@ -222,7 +222,7 @@ class ResearchService:
             if remaining <= 0:
                 raise TimeoutError()
             # Reserve final agent continuation and independent review before paid discovery.
-            budget.reserve(
+            reservation = budget.reserve(
                 self.settings.openai_web_search_model,
                 len(query.encode()) + 2000,
                 reserve=2,
@@ -231,10 +231,18 @@ class ResearchService:
             try:
                 found, usage = self.provider.search_public(query, remaining)
             except Exception:
-                budget.report(None, model=self.settings.openai_web_search_model, search=True)
+                budget.report(
+                    None,
+                    model=self.settings.openai_web_search_model,
+                    search=True,
+                    reservation=reservation,
+                )
                 raise
             budget.report(
-                normalize_usage(usage), model=self.settings.openai_web_search_model, search=True
+                normalize_usage(usage),
+                model=self.settings.openai_web_search_model,
+                search=True,
+                reservation=reservation,
             )
             return query, key, found
 

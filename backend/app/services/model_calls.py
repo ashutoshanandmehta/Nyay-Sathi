@@ -167,6 +167,18 @@ class ModelCalls:
             try:
                 body = json.loads(response.read())
                 attempt["usage"] = normalize_usage(body.get("usage"))
+                if response.status_code >= 400 and isinstance(body.get("error"), dict):
+                    error = body["error"]
+                    attempt["provider_error"] = {
+                        key: error.get(key)
+                        for key in ("type", "code", "param")
+                        if error.get(key) is not None
+                    }
+                    # Provider messages describe the rejected field and are useful for
+                    # diagnostics. Keep them bounded; request and response bodies are
+                    # deliberately never persisted.
+                    if error.get("message"):
+                        attempt["provider_error"]["message"] = str(error["message"])[:500]
             except (ValueError, UnicodeError):
                 pass
 

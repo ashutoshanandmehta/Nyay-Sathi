@@ -80,6 +80,46 @@ def test_installed_sdk_serialization_parsing_and_usage_hooks(monkeypatch):
     assert scope.totals()["total_tokens"] == 130
 
 
+def test_sdk_tool_items_use_wire_aliases_for_stateless_replay(monkeypatch):
+    def handle(_request):
+        return httpx2.Response(
+            200,
+            json={
+                "id": "resp_tool_fixture",
+                "object": "response",
+                "created_at": 1,
+                "model": "fixture",
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "function_call",
+                        "id": "fc_fixture",
+                        "call_id": "call_fixture",
+                        "name": "research_legal_issue",
+                        "arguments": '{"questions":[],"fresh_required":false}',
+                        "status": "completed",
+                        "async": True,
+                    }
+                ],
+                "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+            },
+        )
+
+    monkeypatch.setattr(
+        "app.services.model_calls.DefaultHttpx2Client",
+        lambda **kw: httpx2.Client(transport=httpx2.MockTransport(handle), **kw),
+    )
+    settings = Settings(openai_api_key="fixture-not-real")
+    output, calls, answer = ResponsesProvider(settings).complete(
+        [{"role": "user", "content": "research"}],
+        "instructions",
+        TurnBudget(settings),
+    )
+    assert answer is None and calls
+    assert output[0]["async"] is True
+    assert "async_" not in output[0]
+
+
 @pytest.mark.parametrize(
     "response",
     [

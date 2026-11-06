@@ -338,6 +338,24 @@ def test_spend_cap_requires_prices_and_counts_failed_reserved_attempt():
     assert budget.snapshot()["cost_status"] == "unknown" and budget.requests == 1
 
 
+def test_reported_usage_releases_conservative_reservation_for_review():
+    settings = Settings(
+        openai_api_key=None,
+        agent_max_tokens=50_000,
+        agent_max_output_tokens=6_000,
+    )
+    budget = TurnBudget(settings)
+    reservation = budget.reserve("fixture", input_chars=30_000)
+    assert budget.snapshot()["outstanding_token_reservations"] == 36_000
+    budget.report(
+        {"input_tokens": 4_000, "output_tokens": 1_000, "total_tokens": 5_000},
+        model="fixture",
+        reservation=reservation,
+    )
+    assert budget.snapshot()["outstanding_token_reservations"] == 0
+    assert budget.reserve("review", input_chars=30_000) == 36_000
+
+
 def test_mechanical_gate_rejects_urls_wrong_ids_and_cycles():
     message = "I paid for a product."
     state = {"current_message": message, "message_id": "m", "memory": {}}

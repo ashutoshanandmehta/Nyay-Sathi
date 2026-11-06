@@ -54,7 +54,7 @@ class ResponsesProvider:
                 else 0
             )
         )
-        budget.reserve(model, size)
+        reservation = budget.reserve(model, size)
         settings = self.settings.model_copy(
             update={
                 "model_timeout_seconds": max(
@@ -85,8 +85,13 @@ class ResponsesProvider:
         try:
             with model_calls.sdk(settings, stage, model, factory=self.factory) as client:
                 response = client.responses.create(**kwargs)
-            data = response.model_dump(mode="json")
-            budget.report(normalize_usage(data.get("usage")), model=model)
+            # The SDK exposes reserved API names such as ``async`` as Python-safe
+            # attributes (``async_``). Stateless continuation replays these items
+            # to the API, so serialize with wire aliases rather than attribute names.
+            data = response.model_dump(mode="json", by_alias=True)
+            budget.report(
+                normalize_usage(data.get("usage")), model=model, reservation=reservation
+            )
             if data.get("status") != "completed":
                 raise ValueError("Provider returned incomplete output")
             output = data.get("output", [])
