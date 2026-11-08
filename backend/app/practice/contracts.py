@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -9,6 +10,10 @@ class StatutorySafeguard(BaseModel):
     act: str
     title: str
     relevance: str
+    # Set when the safeguard comes from the verified legal index.
+    passage_id: str | None = None
+    canonical_url: str | None = None
+    origin: str | None = None
 
 
 class CoachFeedback(BaseModel):
@@ -87,9 +92,12 @@ class RoleplaySetupResponse(BaseModel):
 
 
 class RoleplayStartRequest(BaseModel):
-    stakeholder: str
-    custom_stakeholder: str | None = None
+    stakeholder: str = Field(max_length=120)
+    custom_stakeholder: str | None = Field(default=None, max_length=120)
     language: str = "en"
+    # Echoed from /setup so starting a session needs no second extraction call.
+    case_title: str | None = Field(default=None, max_length=120)
+    case_synopsis: str | None = Field(default=None, max_length=400)
 
 
 class RoleplayStartResponse(BaseModel):
@@ -105,7 +113,12 @@ class RoleplayChatRequest(BaseModel):
     language: str = "en"
 
 
-class RoleplayChatResponse(BaseModel):
+class RoleplayReply(BaseModel):
     reply: str
-    turn_index: int
+    # False when the reply is safety guidance rather than the character speaking.
+    in_character: bool = True
+    notice: str | None = None
 
+
+class RoleplayChatResponse(RoleplayReply):
+    turn_index: int

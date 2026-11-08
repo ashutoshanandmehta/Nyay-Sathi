@@ -1,4 +1,4 @@
-import type { AgentWorkflow, Conversation, Detail, EscalationBundle, KnowledgeBase, Language, PracticeScenario, PracticeSession, PracticeTurn, RoleplaySetup, RoleplayStartResponse, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
+import type { AgentWorkflow, Conversation, Detail, EscalationBundle, KnowledgeBase, Language, PracticeScenario, PracticeSession, PracticeTurn, RoleplayChatResponse, RoleplaySetup, RoleplayStartResponse, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
 
 const csrf = () => document.cookie.split('; ').find(x => x.startsWith('nyay_csrf='))?.split('=').slice(1).join('=') ?? ''
 
@@ -55,9 +55,21 @@ export const api = {
   getPracticeSession:(cid:string,sid:string)=>call<PracticeSession>(`/api/conversations/${cid}/practice/sessions/${sid}`),
   practiceTurn:(cid:string,sid:string,user_argument:string,language:Language)=>call<PracticeTurn>(`/api/conversations/${cid}/practice/sessions/${sid}/turns`,{method:'POST',body:JSON.stringify({user_argument,language})}),
   exportPracticeActions:(cid:string,sid:string,action_titles:string[])=>call<{exported_count:number;status:string}>(`/api/conversations/${cid}/practice/sessions/${sid}/export-actions`,{method:'POST',body:JSON.stringify({action_titles})}),
-  roleplaySetup:(cid:string)=>call<RoleplaySetup>(`/api/conversations/${cid}/roleplay/setup`),
-  roleplayStart:(cid:string,stakeholder:string,customStakeholder?:string,language?:Language)=>call<RoleplayStartResponse>(`/api/conversations/${cid}/roleplay/start`,{method:'POST',body:JSON.stringify({stakeholder,custom_stakeholder:customStakeholder,language})}),
-  roleplayChat:(cid:string,sessionId:string,message:string,language?:Language)=>call<{reply:string;turn_index:number}>(`/api/conversations/${cid}/roleplay/chat?session_id=${sessionId}`,{method:'POST',body:JSON.stringify({message,language})}),
+  roleplaySetup:(cid:string,language:Language='en')=>call<RoleplaySetup>(`/api/conversations/${cid}/roleplay/setup?language=${language}`),
+  roleplayStart:(cid:string,stakeholder:string,customStakeholder?:string,language?:Language,setup?:RoleplaySetup|null)=>call<RoleplayStartResponse>(`/api/conversations/${cid}/roleplay/start`,{method:'POST',body:JSON.stringify({stakeholder,custom_stakeholder:customStakeholder,language,case_title:setup?.case_title,case_synopsis:setup?.case_synopsis})}),
+  roleplayChat:(cid:string,sessionId:string,message:string,language?:Language)=>call<RoleplayChatResponse>(`/api/conversations/${cid}/roleplay/chat?session_id=${sessionId}`,{method:'POST',body:JSON.stringify({message,language})}),
+  // Streams the character's reply: onDelta gets text as it is written, the promise the final result.
+  roleplayChatStream: async (cid:string,sessionId:string,message:string,language:Language,onDelta:(text:string)=>void):Promise<RoleplayChatResponse> => {
+    const response = await fetch(`/api/conversations/${cid}/roleplay/chat/stream?session_id=${sessionId}`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({message,language})})
+    if(!response.ok || !response.body) throw new Error(response.status===503?'Practice is busy right now. Please try again shortly.':'Could not get a reply. Please retry.')
+    const reader=response.body.getReader(), decoder=new TextDecoder();let buffer='',result:RoleplayChatResponse|null=null
+    while(true){const {done,value}=await reader.read();buffer+=decoder.decode(value,{stream:!done});let index:number
+      while((index=buffer.indexOf('\n\n'))>=0){const frame=buffer.slice(0,index);buffer=buffer.slice(index+2);const event=frame.split('\n').find(l=>l.startsWith('event: '))?.slice(7);const data=frame.split('\n').filter(l=>l.startsWith('data: ')).map(l=>l.slice(6)).join('\n');if(!data)continue;const payload=JSON.parse(data);if(event==='delta'&&typeof payload.text==='string')onDelta(payload.text);if(event==='result')result=payload;if(event==='error')throw new Error('This practice session has ended. Start a new one.')}
+      if(done)break
+    }
+    if(!result)throw new Error('Connection interrupted. Please retry.')
+    return result
+  },
 }
 
 interface AttachmentUpload { id:string; filename:string; extraction_status:string }

@@ -125,8 +125,8 @@ describe('roleplay arena',()=>{
   it('renders minimalist stakeholder selection, starts simulation, and sends turns',async()=>{
     cleanup()
     const mockSetup={
-      case_title:'Alcohol found in vehicle · Bihar',
-      case_synopsis:'Your brother is in custody and the car has been seized.',
+      case_title:'Liquor case · Bihar',
+      case_synopsis:'From what you told us: “My brother was taking his car from Patna.”',
       stakeholders:['Police officer','Opposing lawyer'],
     }
     const mockStartRes={
@@ -134,23 +134,25 @@ describe('roleplay arena',()=>{
       stakeholder:'Police officer',
       case_title:mockSetup.case_title,
       case_synopsis:mockSetup.case_synopsis,
-      opening_message:"What information do you need about your brother's case?",
+      opening_message:"I'm the officer at the station. What is your relation to the person, and what do you want to know?",
     }
     const mockChatRes={
       reply:'Do you have his FIR number or any arrest documents?',
       turn_index:1,
+      in_character:true,
+      notice:'Practise only with what really happened.',
     }
 
     vi.spyOn(api,'roleplaySetup').mockResolvedValue(mockSetup)
     vi.spyOn(api,'roleplayStart').mockResolvedValue(mockStartRes)
-    vi.spyOn(api,'roleplayChat').mockResolvedValue(mockChatRes)
+    vi.spyOn(api,'roleplayChatStream').mockImplementation(async(_cid,_sid,_msg,_lang,onDelta)=>{onDelta('Do you have his ');onDelta('FIR number or any arrest documents?');return mockChatRes})
 
     render(<PracticePanel caseId="c-test" setupDelayMs={20}/>)
 
     // Verify Reference 1 setup screen renders
     await waitFor(()=>expect(screen.getByText('Practice your conversation')).toBeInTheDocument())
-    expect(screen.getByText('Alcohol found in vehicle · Bihar')).toBeInTheDocument()
-    expect(screen.getByText('Your brother is in custody and the car has been seized.')).toBeInTheDocument()
+    expect(screen.getByText('Liquor case · Bihar')).toBeInTheDocument()
+    expect(screen.getByText('From what you told us: “My brother was taking his car from Patna.”')).toBeInTheDocument()
     expect(screen.getByText('Police officer')).toBeInTheDocument()
     expect(screen.getByText('Opposing lawyer')).toBeInTheDocument()
 
@@ -158,7 +160,9 @@ describe('roleplay arena',()=>{
     fireEvent.click(screen.getByRole('button',{name:/Start Practice/}))
 
     // Verify Reference 2 active chat screen renders after short delay
-    await waitFor(()=>expect(screen.getByText("What information do you need about your brother's case?")).toBeInTheDocument())
+    await waitFor(()=>expect(screen.getByText("I'm the officer at the station. What is your relation to the person, and what do you want to know?")).toBeInTheDocument())
+    // The setup summary is reused, so starting needs no second extraction call.
+    expect(api.roleplayStart).toHaveBeenCalledWith('c-test','Police officer',undefined,'en',mockSetup)
     expect(screen.getByText('Police officer')).toBeInTheDocument()
     expect(screen.getByText('End practice')).toBeInTheDocument()
 
@@ -168,6 +172,24 @@ describe('roleplay arena',()=>{
     fireEvent.submit(input.closest('form')!)
 
     await waitFor(()=>expect(screen.getByText('Do you have his FIR number or any arrest documents?')).toBeInTheDocument())
+    expect(screen.getByText('Practise only with what really happened.')).toBeInTheDocument()
+  })
+
+  it('shows safety guidance in place of the character',async()=>{
+    cleanup()
+    const setup={case_title:'Arrest or police case',case_synopsis:'Tell us about your case in the chat first.',stakeholders:['Police officer']}
+    vi.spyOn(api,'roleplaySetup').mockResolvedValue(setup)
+    vi.spyOn(api,'roleplayStart').mockResolvedValue({session_id:'s2',stakeholder:'Police officer',case_title:setup.case_title,case_synopsis:setup.case_synopsis,opening_message:'Who are you?'})
+    vi.spyOn(api,'roleplayChatStream').mockResolvedValue({reply:'Call 112 now if anyone is in danger.',turn_index:1,in_character:false,notice:'safety'})
+    render(<PracticePanel caseId="c-safe" setupDelayMs={0}/>)
+    await waitFor(()=>expect(screen.getByRole('button',{name:/Start Practice/})).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button',{name:/Start Practice/}))
+    await waitFor(()=>expect(screen.getByText('Who are you?')).toBeInTheDocument())
+    const input=screen.getByLabelText('Type your response')
+    fireEvent.change(input,{target:{value:'They are beating him right now'}})
+    fireEvent.submit(input.closest('form')!)
+    await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent('Call 112 now'))
+    expect(screen.queryByText('safety')).not.toBeInTheDocument()
   })
 })
 

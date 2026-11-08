@@ -30,6 +30,7 @@ export default function PracticePanel({
   const [messages, setMessages] = useState<RoleplayChatMessage[]>([])
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
+  const [streamingId, setStreamingId] = useState<string | null>(null)
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,13 +41,13 @@ export default function PracticePanel({
     if (sessionId) {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages.length, sessionId])
+  }, [messages, sessionId])
 
   async function loadSetup() {
     setLoading(true)
     setError('')
     try {
-      const data = await api.roleplaySetup(caseId)
+      const data = await api.roleplaySetup(caseId, language)
       setSetupData(data)
       if (data.stakeholders.length > 0) {
         setSelectedStakeholder(data.stakeholders[0])
@@ -80,25 +81,28 @@ export default function PracticePanel({
       setSetupStepText('Starting roleplay simulation...')
     }, Math.min(delay * 0.8, 2800))
 
+    // The persona is set up (and its opening line written) while the setup screen shows,
+    // so the chat opens after the longer of the two, not their sum.
+    const minimumSetup = new Promise(resolve => setTimeout(resolve, delay))
     try {
       const res = await api.roleplayStart(
         caseId,
         selectedStakeholder,
         selectedStakeholder === 'Someone else' ? customStakeholder.trim() : undefined,
-        language
+        language,
+        setupData
       )
-      setTimeout(() => {
-        setSessionId(res.session_id)
-        setActiveStakeholder(res.stakeholder)
-        setMessages([
-          {
-            id: 'm-0',
-            role: 'opponent',
-            text: res.opening_message,
-          },
-        ])
-        setIsSettingUp(false)
-      }, delay)
+      await minimumSetup
+      setSessionId(res.session_id)
+      setActiveStakeholder(res.stakeholder)
+      setMessages([
+        {
+          id: 'm-0',
+          role: 'opponent',
+          text: res.opening_message,
+        },
+      ])
+      setIsSettingUp(false)
     } catch (e) {
       clearTimeout(t1)
       clearTimeout(t2)
@@ -122,17 +126,29 @@ export default function PracticePanel({
     }
     setMessages(prev => [...prev, userMsg])
 
+    const replyId = `o-${Date.now()}`
+    let started = false
     try {
-      const res = await api.roleplayChat(caseId, sessionId, textToSend, language)
-      const opponentMsg: RoleplayChatMessage = {
-        id: `o-${Date.now()}`,
-        role: 'opponent',
+      const res = await api.roleplayChatStream(caseId, sessionId, textToSend, language, delta => {
+        if (!started) {
+          started = true
+          setStreamingId(replyId)
+          setMessages(prev => [...prev, { id: replyId, role: 'opponent', text: delta }])
+        } else {
+          setMessages(prev => prev.map(m => (m.id === replyId ? { ...m, text: m.text + delta } : m)))
+        }
+      })
+      const finalMsg: RoleplayChatMessage = {
+        id: replyId,
+        role: res.in_character === false ? 'safety' : 'opponent',
         text: res.reply,
+        notice: res.in_character === false ? null : res.notice,
       }
-      setMessages(prev => [...prev, opponentMsg])
+      setMessages(prev => (started ? prev.map(m => (m.id === replyId ? finalMsg : m)) : [...prev, finalMsg]))
     } catch (err) {
       setError((err as Error).message || 'Response error.')
     } finally {
+      setStreamingId(null)
       setSending(false)
     }
   }
@@ -193,7 +209,7 @@ export default function PracticePanel({
         <div className="roleplay-chat-header">
           <div className="roleplay-header-titles">
             <h3 className="roleplay-stakeholder-name">{activeStakeholder}</h3>
-            <span className="roleplay-subtitle">Practice simulation</span>
+            <span className="roleplay-subtitle">Practice simulation · in character, not legal advice</span>
           </div>
           <div className="roleplay-header-actions">
             <button type="button" className="roleplay-end-btn" onClick={endPractice}>
@@ -211,14 +227,19 @@ export default function PracticePanel({
         <div className="roleplay-messages-scroll">
           {messages.map(m => (
             <div key={m.id} className={`roleplay-message-row ${m.role}`}>
-              {m.role === 'opponent' ? (
-                <div className="roleplay-opponent-bubble">{m.text}</div>
+              {m.role === 'safety' ? (
+                <div className="roleplay-safety-bubble" role="alert">{m.text}</div>
+              ) : m.role === 'opponent' ? (
+                <div className="roleplay-opponent-bubble">
+                  {m.text}
+                  {m.notice && <small className="roleplay-notice">{m.notice}</small>}
+                </div>
               ) : (
                 <div className="roleplay-user-bubble">{m.text}</div>
               )}
             </div>
           ))}
-          {sending && (
+          {sending && !streamingId && (
             <div className="roleplay-message-row opponent">
               <div className="roleplay-typing-dots">
                 <span /><span /><span />

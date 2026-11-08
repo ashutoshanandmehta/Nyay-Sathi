@@ -1098,6 +1098,7 @@ class Database:
         self.get_conversation(owner_id, cid)
         sid, ts = str(uuid.uuid4()), now()
         with self.connect() as c:
+            # Objective and opening can carry the user's case summary: encrypt like turns.
             c.execute(
                 "INSERT INTO practice_sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)",
                 (
@@ -1108,8 +1109,8 @@ class Database:
                     domain,
                     opponent_role,
                     setting,
-                    objective,
-                    opening_statement,
+                    self.encrypt_case_field(cid, objective, _connection=c),
+                    self.encrypt_case_field(cid, opening_statement, _connection=c),
                     ts,
                     ts,
                 ),
@@ -1141,7 +1142,7 @@ class Database:
             ).fetchone()
             if not row:
                 raise KeyError("practice_session_not_found")
-            res = dict(row)
+            res = self._practice_session_row(cid, row, c)
             turns_rows = c.execute(
                 "SELECT * FROM practice_turns WHERE session_id=? ORDER BY turn_index ASC",
                 (session_id,),
@@ -1156,6 +1157,12 @@ class Database:
             res["turns"] = turns
             return res
 
+    def _practice_session_row(self, cid: str, row, connection) -> dict[str, Any]:
+        session = dict(row)
+        for key in ("objective", "opening_statement"):
+            session[key] = self.decrypt_case_field(cid, session[key], _connection=connection)
+        return session
+
     def list_practice_sessions(
         self, owner_id: str, cid: str
     ) -> list[dict[str, Any]]:
@@ -1167,7 +1174,7 @@ class Database:
             ).fetchall()
             out = []
             for r in rows:
-                sd = dict(r)
+                sd = self._practice_session_row(cid, r, c)
                 count = c.execute(
                     "SELECT COUNT(*) as cnt FROM practice_turns WHERE session_id=?",
                     (sd["id"],),

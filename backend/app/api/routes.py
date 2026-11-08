@@ -411,25 +411,85 @@ def import_transfer_package(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+def _check_model_circuit(
+    request: Request, owner: OwnerContext, conversation_id: str, cfg: Settings
+) -> None:
+    abuse = getattr(request.app.state, "abuse", None)
+    if abuse is None:
+        return
+    cb_ok, cb_reason = abuse.check_circuit_breaker(owner.owner_id, cfg)
+    if not cb_ok:
+        db(request).record_security_audit(
+            "model_circuit_breaker_tripped",
+            owner_id=owner.owner_id,
+            conversation_id=conversation_id,
+            metadata={"reason": cb_reason},
+        )
+        raise HTTPException(status_code=503, detail=cb_reason)
+
+
+def _practice_engine(
+    request: Request, owner: OwnerContext, conversation_id: str, *, with_index: bool = False
+) -> PracticeEngine:
+    """Practice shares the hourly model-call limits and, for drills, the agent's legal index."""
+    cfg = live_settings(request)
+    _check_model_circuit(request, owner, conversation_id, cfg)
+    index = None
+    if with_index:
+        state = request.app.state
+        research = getattr(getattr(state, "assistant_graph", None), "research", None)
+        index = getattr(research, "knowledge_index", None) or getattr(state, "practice_index", None)
+        if index is None:
+            from app.knowledge.search_index import OpenSearchLegalIndex
+
+            index = state.practice_index = OpenSearchLegalIndex(
+                cfg, getattr(state, "retriever", None)
+            )
+    return PracticeEngine(cfg, knowledge_index=index)
+
+
+def _record_practice_usage(request: Request, owner: OwnerContext, engine: PracticeEngine) -> None:
+    abuse = getattr(request.app.state, "abuse", None)
+    if abuse is not None:
+        abuse.record_turn_usage(owner.owner_id, engine.model_calls)
+
+
+def _recent_user_messages(database: Database, owner_id: str, conversation_id: str) -> list[str]:
+    msgs = database.messages(owner_id, conversation_id)
+    return [m["content"] for m in msgs if m.get("role") == "user"][-3:]
+
+
 @router.get("/conversations/{conversation_id}/roleplay/setup")
 def get_roleplay_setup(
     conversation_id: str,
     request: Request,
     owner: Annotated[OwnerContext, Depends(owner_context)],
+    language: Annotated[str, Query(max_length=12)] = "en",
 ):
     try:
         database = db(request)
         conv = database.get_conversation(owner.owner_id, conversation_id)
         memory, _ = database.load_memory(owner.owner_id, conversation_id)
         msgs = database.messages(owner.owner_id, conversation_id)
+        # Reopening the panel on an unchanged case reuses the summary instead of a new call.
+        cache = getattr(request.app.state, "roleplay_setups", None)
+        if cache is None:
+            cache = request.app.state.roleplay_setups = {}
+        key = (owner.owner_id, conversation_id, len(msgs), memory.version, language)
+        if key in cache:
+            return RoleplaySetupResponse(**cache[key])
         recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
-        engine = PracticeEngine(get_settings())
-        setup = engine.extract_roleplay_setup(memory, recent_user, conv.get("title", ""))
-        return RoleplaySetupResponse(
-            case_title=setup["case_title"],
-            case_synopsis=setup["case_synopsis"],
-            stakeholders=setup["stakeholders"],
-        )
+        engine = _practice_engine(request, owner, conversation_id)
+        try:
+            setup = engine.extract_roleplay_setup(
+                memory, recent_user, conv.get("title", ""), language
+            )
+        finally:
+            _record_practice_usage(request, owner, engine)
+        if len(cache) >= 512:
+            cache.pop(next(iter(cache)))
+        cache[key] = setup
+        return RoleplaySetupResponse(**setup)
     except KeyError as exc:
         raise http_not_found(exc) from exc
 
@@ -447,21 +507,30 @@ def start_roleplay_session(
         database = db(request)
         conv = database.get_conversation(owner.owner_id, conversation_id)
         memory, _ = database.load_memory(owner.owner_id, conversation_id)
-        msgs = database.messages(owner.owner_id, conversation_id)
-        recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
-        engine = PracticeEngine(get_settings())
-        setup = engine.extract_roleplay_setup(memory, recent_user, conv.get("title", ""))
-
+        engine = _practice_engine(request, owner, conversation_id)
         stakeholder = (
-            body.custom_stakeholder.strip()
-            if body.custom_stakeholder and body.custom_stakeholder.strip()
-            else body.stakeholder.strip()
+            (body.custom_stakeholder or "").strip() or body.stakeholder.strip() or "Opposing party"
         )
-        if not stakeholder:
-            stakeholder = "Opposing authority"
-
-        opening = engine.get_opening_message(stakeholder, setup["case_synopsis"])
+        try:
+            if body.case_synopsis and body.case_synopsis.strip():
+                setup = {
+                    "case_title": (body.case_title or "").strip() or conv.get("title", ""),
+                    "case_synopsis": body.case_synopsis.strip(),
+                }
+            else:
+                recent_user = _recent_user_messages(database, owner.owner_id, conversation_id)
+                setup = engine.extract_roleplay_setup(
+                    memory, recent_user, conv.get("title", ""), body.language
+                )
+            # Persona setup: the role and case go into the character's prompt, which writes
+            # the opening line during the panel's setup screen.
+            opening = engine.get_opening_message(
+                stakeholder, setup["case_synopsis"], body.language
+            )
+        finally:
+            _record_practice_usage(request, owner, engine)
         scenario_slug = "roleplay-" + re.sub(r"\W+", "-", stakeholder.lower()).strip("-")
+        # The synopsis is kept with the session, so every chat turn plays the same case.
         session = database.create_practice_session(
             owner.owner_id,
             conversation_id,
@@ -470,7 +539,7 @@ def start_roleplay_session(
             domain=memory.domain or "general",
             opponent_role=stakeholder,
             setting="Direct Conversation",
-            objective=f"Roleplay conversation with {stakeholder}",
+            objective=setup["case_synopsis"],
             opening_statement=opening,
         )
         return RoleplayStartResponse(
@@ -490,37 +559,91 @@ def start_roleplay_session(
 def chat_roleplay_turn(
     conversation_id: str,
     body: RoleplayChatRequest,
-    session_id: str = Query(...),
-    request: Request = None,
-    owner: Annotated[OwnerContext, Depends(owner_context)] = None,
+    session_id: Annotated[str, Query()],
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
 ):
     try:
         database = db(request)
         session = database.get_practice_session(owner.owner_id, conversation_id, session_id)
-        memory, _ = database.load_memory(owner.owner_id, conversation_id)
-        msgs = database.messages(owner.owner_id, conversation_id)
-        recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
-        engine = PracticeEngine(get_settings())
-        setup = engine.extract_roleplay_setup(memory, recent_user, "")
-
-        reply = engine.execute_roleplay_turn(
-            session["opponent_role"],
-            setup["case_synopsis"],
-            session.get("turns", []),
-            body.message,
-            body.language,
-        )
+        engine = _practice_engine(request, owner, conversation_id)
+        try:
+            result = engine.roleplay_turn(
+                session["opponent_role"],
+                session["objective"],
+                session.get("turns", []),
+                body.message,
+                body.language,
+                opening=session["opening_statement"],
+            )
+        finally:
+            _record_practice_usage(request, owner, engine)
         turn = database.add_practice_turn(
             owner.owner_id,
             conversation_id,
             session_id,
             body.message,
-            reply,
-            {},
+            result.reply,
+            {"in_character": result.in_character, "notice": result.notice},
         )
-        return RoleplayChatResponse(reply=reply, turn_index=turn["turn_index"])
+        return RoleplayChatResponse(**result.model_dump(), turn_index=turn["turn_index"])
     except KeyError as exc:
         raise http_not_found(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/roleplay/chat/stream", dependencies=[Depends(csrf_guard)]
+)
+def stream_roleplay_turn(
+    conversation_id: str,
+    body: RoleplayChatRequest,
+    session_id: Annotated[str, Query()],
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    """The character's reply as server-sent events: ``delta`` text, then one ``result``."""
+    database = db(request)
+    try:
+        session = database.get_practice_session(owner.owner_id, conversation_id, session_id)
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+    engine = _practice_engine(request, owner, conversation_id)
+
+    def events():
+        try:
+            result = None
+            for kind, value in engine.roleplay_stream(
+                session["opponent_role"],
+                session["objective"],
+                session.get("turns", []),
+                body.message,
+                body.language,
+                opening=session["opening_statement"],
+            ):
+                if kind == "delta":
+                    yield "event: delta\ndata: " + json.dumps({"text": value}) + "\n\n"
+                else:
+                    result = value
+            turn = database.add_practice_turn(
+                owner.owner_id,
+                conversation_id,
+                session_id,
+                body.message,
+                result.reply,
+                {"in_character": result.in_character, "notice": result.notice},
+            )
+            payload = {**result.model_dump(), "turn_index": turn["turn_index"]}
+            yield "event: result\ndata: " + json.dumps(payload) + "\n\n"
+        except KeyError:
+            yield 'event: error\ndata: {"status": 404, "detail": "practice_session_not_found"}\n\n'
+        finally:
+            _record_practice_usage(request, owner, engine)
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/conversations/{conversation_id}/practice/scenarios")
@@ -535,7 +658,7 @@ def get_practice_scenarios(
         memory, _ = database.load_memory(owner.owner_id, conversation_id)
         msgs = database.messages(owner.owner_id, conversation_id)
         recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
-        engine = PracticeEngine(get_settings())
+        engine = _practice_engine(request, owner, conversation_id, with_index=True)
         scenarios = engine.generate_scenarios(memory, conv.get("title", ""), recent_user)
         return [s.model_dump() for s in scenarios]
     except KeyError as exc:
@@ -557,7 +680,7 @@ def create_practice_session(
         memory, _ = database.load_memory(owner.owner_id, conversation_id)
         msgs = database.messages(owner.owner_id, conversation_id)
         recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
-        engine = PracticeEngine(get_settings())
+        engine = _practice_engine(request, owner, conversation_id, with_index=True)
         scenarios = engine.generate_scenarios(memory, conv.get("title", ""), recent_user)
 
         target_sc: PracticeScenario | None = None
@@ -648,10 +771,13 @@ def add_practice_turn(
             objective=session["objective"],
             opening_statement=session["opening_statement"],
         )
-        engine = PracticeEngine(get_settings())
-        opponent_reply, coach_feedback = engine.evaluate_and_respond(
-            scenario, session.get("turns", []), body.user_argument, body.language
-        )
+        engine = _practice_engine(request, owner, conversation_id, with_index=True)
+        try:
+            opponent_reply, coach_feedback = engine.evaluate_and_respond(
+                scenario, session.get("turns", []), body.user_argument, body.language
+            )
+        finally:
+            _record_practice_usage(request, owner, engine)
         turn = database.add_practice_turn(
             owner.owner_id,
             conversation_id,
@@ -750,16 +876,7 @@ async def _run_turn(
         raise http_not_found(exc) from exc
 
     abuse = getattr(request.app.state, "abuse", None)
-    if abuse is not None:
-        cb_ok, cb_reason = abuse.check_circuit_breaker(owner.owner_id, cfg)
-        if not cb_ok:
-            database.record_security_audit(
-                "model_circuit_breaker_tripped",
-                owner_id=owner.owner_id,
-                conversation_id=conversation_id,
-                metadata={"reason": cb_reason},
-            )
-            raise HTTPException(status_code=503, detail=cb_reason)
+    _check_model_circuit(request, owner, conversation_id, cfg)
 
     durable = TurnPersistence(database)
     digest = payload_hash(body.model_dump(mode="json"))

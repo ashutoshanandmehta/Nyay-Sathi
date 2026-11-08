@@ -98,7 +98,9 @@ async def security_and_limits(request: Request, call_next):
         hashlib.sha256(raw_cookie.encode("utf-8")).hexdigest()[:16] if raw_cookie else None
     )
     is_turn = request.method == "POST" and (
-        request.url.path.endswith("/turns") or request.url.path.endswith("/turns/stream")
+        request.url.path.endswith(
+            ("/turns", "/turns/stream", "/roleplay/chat", "/roleplay/chat/stream")
+        )
     )
     allowed, limit_reason = app.state.abuse.check_http_rate(
         ip_key=f"sub:{ip_key}",

@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     agent_max_passages: int = Field(default=8, ge=1, le=16)
     agent_passages_per_source: int = Field(default=4, ge=1, le=8)
     agent_reasoning_effort: str | None = None
+    # Roleplay replies are short and in character: favour speed. Unset to use the model default.
+    openai_roleplay_model: str | None = None
+    practice_reasoning_effort: str | None = "low"
     agent_max_cost_usd: float | None = Field(default=None, gt=0)
     # Empty pricing means unknown cost, never free usage. Set from dated provider pricing.
     agent_pricing: dict[str, dict[str, float]] = Field(default_factory=dict)

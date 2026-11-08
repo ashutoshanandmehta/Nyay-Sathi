@@ -42,6 +42,8 @@ export interface PracticeSession { id:string; conversation_id:string; scenario_i
 
 export interface RoleplaySetup { case_title: string; case_synopsis: string; stakeholders: string[] }
 export interface RoleplayStartResponse { session_id: string; stakeholder: string; case_title: string; case_synopsis: string; opening_message: string }
-export interface RoleplayChatMessage { id: string; role: 'opponent' | 'user'; text: string }
+export interface RoleplayChatResponse { reply: string; turn_index: number; in_character?: boolean; notice?: string | null }
+// A safety reply replaces the character's line; a notice is a short honesty note beside it.
+export interface RoleplayChatMessage { id: string; role: 'opponent' | 'user' | 'safety'; text: string; notice?: string | null }
 
 
