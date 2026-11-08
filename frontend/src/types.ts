@@ -42,6 +42,15 @@ export interface PracticeSession { id:string; conversation_id:string; scenario_i
 
 export interface RoleplaySetup { case_title: string; case_synopsis: string; stakeholders: string[] }
 export interface RoleplayStartResponse { session_id: string; stakeholder: string; case_title: string; case_synopsis: string; opening_message: string }
+export type DevspaceValue = string | number | boolean | null
+export interface DevspaceField { name: string; value: DevspaceValue; type: 'model' | 'choice' | 'boolean' | 'integer' | 'number' | 'text'; options?: string[]; min?: number; max?: number; restart_required: boolean }
+export interface DevspaceData {
+  api_key: { configured: boolean; masked: string }
+  groups: { title: string; fields: DevspaceField[] }[]
+  prompts: Record<'primary' | 'review' | 'roleplay_setup' | 'roleplay_persona' | 'roleplay_reply', string>
+  curl: Record<'turn_stream' | 'responses_api' | 'roleplay_chat', string>
+}
+export interface DevspaceSaveResult { saved: string[]; restart_required: string[]; configured: boolean }
 export interface RoleplayChatResponse { reply: string; turn_index: number; in_character?: boolean; notice?: string | null }
 // A safety reply replaces the character's line; a notice is a short honesty note beside it.
 export interface RoleplayChatMessage { id: string; role: 'opponent' | 'user' | 'safety'; text: string; notice?: string | null }

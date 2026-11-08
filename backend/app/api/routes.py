@@ -139,6 +139,7 @@ def bootstrap(
     return {
         "product": "Nyay Saathi",
         "ai_configured": cfg.ai_configured,
+        "devspace_enabled": cfg.devspace_enabled,
         "supported_languages": ["en", "hi", "hinglish"],
         "capabilities": CapabilityRegistry(cfg).snapshot(),
         "privacy_notice": (

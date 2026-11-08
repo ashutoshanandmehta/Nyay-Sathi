@@ -1,4 +1,4 @@
-import type { AgentWorkflow, Conversation, Detail, EscalationBundle, KnowledgeBase, Language, PracticeScenario, PracticeSession, PracticeTurn, RoleplayChatResponse, RoleplaySetup, RoleplayStartResponse, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
+import type { AgentWorkflow, Conversation, Detail, DevspaceData, DevspaceSaveResult, DevspaceValue, EscalationBundle, KnowledgeBase, Language, PracticeScenario, PracticeSession, PracticeTurn, RoleplayChatResponse, RoleplaySetup, RoleplayStartResponse, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
 
 const csrf = () => document.cookie.split('; ').find(x => x.startsWith('nyay_csrf='))?.split('=').slice(1).join('=') ?? ''
 
@@ -15,7 +15,15 @@ async function call<T>(url: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  bootstrap: () => call<{ai_configured:boolean;privacy_notice:string;disclaimer:string}>('/api/bootstrap'),
+  bootstrap: () => call<{ai_configured:boolean;devspace_enabled?:boolean;privacy_notice:string;disclaimer:string}>('/api/bootstrap'),
+  devspace: () => call<DevspaceData>('/api/system/devspace'),
+  // Field errors come back as {detail:{errors:{NAME:message}}}; they ride on the thrown error.
+  saveDevspace: async (updates:Record<string,DevspaceValue>, clearApiKey=false):Promise<DevspaceSaveResult> => {
+    const response = await fetch('/api/system/devspace',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({updates,clear_api_key:clearApiKey})})
+    const payload = await response.json().catch(()=>({}))
+    if(!response.ok){const errors=payload.detail?.errors||{};throw Object.assign(new Error(Object.keys(errors).length?'Some settings were not saved.':typeof payload.detail==='string'?payload.detail:'Could not save settings.'),{errors})}
+    return payload
+  },
   knowledgeBase: () => call<KnowledgeBase>('/api/system/knowledge-base'),
   agentWorkflow: () => call<AgentWorkflow>('/api/system/agent-workflow'),
   list: () => call<Conversation[]>('/api/conversations'),

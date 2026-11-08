@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { api } from '../api'
 import Composer from './Composer'
+import DevSpacePanel from './DevSpacePanel'
 import { AgentWorkflowPanel, CasePanel, KnowledgeBasePanel, Sources } from './Drawer'
 import MessageView from './MessageView'
 import PracticePanel from './PracticePanel'
@@ -193,3 +194,111 @@ describe('roleplay arena',()=>{
   })
 })
 
+
+const devspaceData={
+  api_key:{configured:true,masked:'sk-proj…tnIA'},
+  groups:[
+    {title:'Models',fields:[{name:'OPENAI_CHAT_MODEL',value:'gpt-6-luna',type:'model' as const,options:['gpt-6-luna','gpt-4o'],restart_required:false}]},
+    {title:'Agent caps',fields:[{name:'AGENT_MAX_REQUESTS',value:14,type:'integer' as const,min:1,max:24,restart_required:false},{name:'WEB_RESEARCH_ENABLED',value:true,type:'boolean' as const,restart_required:false}]},
+  ],
+  prompts:{primary:'You are Nyay Saathi',review:'Review',roleplay_setup:'Setup',roleplay_persona:'Persona',roleplay_reply:'Reply'},
+  curl:{turn_stream:'curl turn',responses_api:'curl https://api.openai.com/v1/responses',roleplay_chat:'curl roleplay'},
+}
+
+describe('sidebar case actions',()=>{
+  const conv=(id:string,title:string)=>({id,title,language:'en' as const,created_at:'',updated_at:''})
+
+  it('renames a case inline and deletes from its menu',async()=>{
+    cleanup();vi.restoreAllMocks()
+    const onRename=vi.fn(),onDelete=vi.fn()
+    render(<Sidebar open items={[conv('1','Refund case')]} active="1" onNew={()=>{}} onSelect={()=>{}} onClose={()=>{}} onKnowledge={()=>{}} onWorkflow={()=>{}} onRename={onRename} onDelete={onDelete}/>)
+    fireEvent.click(screen.getByLabelText('Chat actions for Refund case'))
+    expect(screen.getByRole('menuitem',{name:/Delete/})).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('menuitem',{name:/Rename/}))
+    const input=screen.getByLabelText('Chat title')
+    fireEvent.change(input,{target:{value:'Deposit dispute'}})
+    fireEvent.keyDown(input,{key:'Enter'})
+    expect(onRename).toHaveBeenCalledExactlyOnceWith('1','Deposit dispute')
+    expect(screen.queryByLabelText('Chat title')).toBeNull()
+
+    fireEvent.click(screen.getByLabelText('Chat actions for Refund case'))
+    fireEvent.click(screen.getByRole('menuitem',{name:/Rename/}))
+    fireEvent.keyDown(screen.getByLabelText('Chat title'),{key:'Escape'})
+    expect(onRename).toHaveBeenCalledOnce()
+
+    fireEvent.click(screen.getByLabelText('Chat actions for Refund case'))
+    fireEvent.click(screen.getByRole('menuitem',{name:/Delete/}))
+    expect(onDelete).toHaveBeenCalledWith('1')
+  })
+
+  it('places DevSpace under Agent Workflow',()=>{
+    cleanup()
+    const onDevspace=vi.fn()
+    render(<Sidebar open items={[]} onNew={()=>{}} onSelect={()=>{}} onClose={()=>{}} onKnowledge={()=>{}} onWorkflow={()=>{}} onDevspace={onDevspace}/>)
+    const tools=within(screen.getByLabelText('About this assistant')).getAllByRole('button').map(b=>b.querySelector('b')?.textContent)
+    expect(tools).toEqual(['Knowledge Base','Agent Workflow','DevSpace'])
+    fireEvent.click(screen.getByText('DevSpace'))
+    expect(onDevspace).toHaveBeenCalled()
+  })
+
+  it('deleting the open case opens the next one',async()=>{
+    cleanup();vi.restoreAllMocks()
+    Element.prototype.scrollIntoView=vi.fn()
+    const cases=[conv('c1','First'),conv('c2','Second'),conv('c3','Third')]
+    const detailFor=(id:string)=>({conversation:cases.find(c=>c.id===id)!,messages:[],safety_messages:[],case_memory:{version:0,domain:'unknown',facts:{},contradictions:[],unknowns:[],actions_completed:[],evidence:[]},summary:'',attachments:[],drafts:[]})
+    let remaining=cases
+    vi.spyOn(api,'bootstrap').mockResolvedValue({ai_configured:true,devspace_enabled:true,privacy_notice:'',disclaimer:''})
+    vi.spyOn(api,'list').mockImplementation(async()=>remaining)
+    const detail=vi.spyOn(api,'detail').mockImplementation(async id=>detailFor(id) as never)
+    vi.spyOn(api,'remove').mockImplementation(async id=>{remaining=remaining.filter(c=>c.id!==id);return {}})
+    vi.spyOn(window,'confirm').mockReturnValue(true)
+    render(<App/>)
+    await waitFor(()=>expect(detail).toHaveBeenCalledWith('c1'))
+    fireEvent.click(screen.getByLabelText('Chat actions for First'))
+    fireEvent.click(screen.getByRole('menuitem',{name:/Delete/}))
+    await waitFor(()=>expect(detail).toHaveBeenLastCalledWith('c2'))
+    expect(api.remove).toHaveBeenCalledWith('c1')
+    expect(screen.queryByLabelText('Chat actions for First')).toBeNull()
+  })
+})
+
+describe('DevSpace',()=>{
+  it('toggles the key mask, saves only changed fields, and copies cURL',async()=>{
+    cleanup();vi.restoreAllMocks()
+    vi.spyOn(api,'devspace').mockResolvedValue(devspaceData)
+    const save=vi.spyOn(api,'saveDevspace').mockResolvedValue({saved:['OPENAI_CHAT_MODEL'],restart_required:[],configured:true})
+    const writeText=vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator,'clipboard',{value:{writeText},configurable:true})
+    const onSaved=vi.fn()
+    render(<DevSpacePanel onSaved={onSaved}/>)
+    await waitFor(()=>expect(screen.getByText('Key active · sk-proj…tnIA')).toBeInTheDocument())
+
+    const key=screen.getByLabelText('OpenAI API key')
+    expect(key).toHaveAttribute('type','password')
+    fireEvent.click(screen.getByLabelText('Show key'))
+    expect(key).toHaveAttribute('type','text')
+
+    fireEvent.change(screen.getByLabelText('OPENAI_CHAT_MODEL'),{target:{value:'gpt-4o'}})
+    fireEvent.click(screen.getByRole('button',{name:'Save & Apply (1)'}))
+    await waitFor(()=>expect(save).toHaveBeenCalledWith({OPENAI_CHAT_MODEL:'gpt-4o'},false))
+    await waitFor(()=>expect(screen.getByRole('status')).toHaveTextContent('Saved and applied 1 setting.'))
+    expect(onSaved).toHaveBeenCalledWith({saved:['OPENAI_CHAT_MODEL'],restart_required:[],configured:true})
+
+    fireEvent.click(screen.getByRole('tab',{name:'Prompts & cURL'}))
+    const block=screen.getByText('Direct OpenAI Responses call').closest('.ds-block') as HTMLElement
+    fireEvent.click(within(block).getByRole('button',{name:/Copy/}))
+    await waitFor(()=>expect(writeText).toHaveBeenCalledWith('curl https://api.openai.com/v1/responses'))
+  })
+
+  it('shows field errors returned by the server',async()=>{
+    cleanup();vi.restoreAllMocks()
+    vi.spyOn(api,'devspace').mockResolvedValue(devspaceData)
+    vi.spyOn(api,'saveDevspace').mockRejectedValue(Object.assign(new Error('Some settings were not saved.'),{errors:{AGENT_MAX_REQUESTS:'Input should be less than or equal to 24'}}))
+    render(<DevSpacePanel/>)
+    await waitFor(()=>expect(screen.getByLabelText('AGENT_MAX_REQUESTS')).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText('AGENT_MAX_REQUESTS'),{target:{value:'99'}})
+    fireEvent.click(screen.getByRole('button',{name:'Save & Apply (1)'}))
+    await waitFor(()=>expect(screen.getByText('Input should be less than or equal to 24')).toBeInTheDocument())
+    expect(screen.getByRole('status')).toHaveTextContent('Some settings were not saved.')
+  })
+})

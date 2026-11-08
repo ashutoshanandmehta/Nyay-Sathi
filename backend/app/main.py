@@ -10,10 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.agent.runner import PrimaryAgent
+from app.api.devspace import router as devspace_router
 from app.api.routes import router
 from app.config import get_settings
 from app.db import Database
-from app.graph.workflow import AssistantGraph
 from app.knowledge.editorial import (
     EditorialDecision,
     EditorialProposal,
@@ -22,7 +22,7 @@ from app.knowledge.editorial import (
 )
 from app.knowledge.propositions import LegalKnowledgeFactory
 from app.platform.adapters import generate_trace_id, platform_readiness_report
-from app.rag.retrieval import HybridRetriever
+from app.runtime import build_runtime
 from app.security.abuse import AbuseController
 from app.security.ownership import OWNER_COOKIE, csrf_guard
 from app.services.knowledge import SharedKnowledgeService
@@ -50,12 +50,7 @@ settings = get_settings()
 app = FastAPI(title="Nyay Saathi API", version="0.2.0", docs_url="/api/docs", redoc_url=None)
 app.state.settings = settings
 app.state.db = Database(settings.database_path)
-app.state.retriever = HybridRetriever(settings)
-app.state.assistant_graph = (
-    PrimaryAgent(settings, app.state.retriever)
-    if settings.assistant_engine == "primary_agent"
-    else AssistantGraph(settings, app.state.retriever)
-)
+app.state.retriever, app.state.assistant_graph = build_runtime(settings)
 app.state.shared_knowledge = SharedKnowledgeService()
 app.state.knowledge_factory = LegalKnowledgeFactory()
 app.state.requests = defaultdict(deque)
@@ -379,3 +374,4 @@ def agent_workflow():
 
 
 app.include_router(router)
+app.include_router(devspace_router)

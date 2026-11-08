@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     agent_pricing: dict[str, dict[str, float]] = Field(default_factory=dict)
     agent_pricing_date: str | None = None
     live_eval_max_cost_usd: float = Field(default=0, ge=0)
+    # Bring-your-own-key: the person running this copy configures it from DevSpace.
+    # Set false when hosting a shared copy so visitors cannot change keys or limits.
+    devspace_enabled: bool = True
     cookie_secure: bool = False
     credential_signing_secret: str = "nyay-saathi-local-dev-credential-key-change-in-prod"
     allow_legacy_unsigned_cookie: bool = True
