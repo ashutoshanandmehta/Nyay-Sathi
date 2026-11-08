@@ -67,7 +67,7 @@ def terms(text):
     }
 
 
-def rank_passages(passages, query, limit):
+def rank_passages(passages, query, limit, per_source=2):
     wanted = terms(query)
     scored = []
     for p in passages:
@@ -82,15 +82,15 @@ def rank_passages(passages, query, limit):
             score += 0.2  # Known date is useful metadata, not proof of current law.
         scored.append((score, p))
     scored.sort(key=lambda x: x[0], reverse=True)
-    selected, hashes, per_source = [], set(), {}
+    selected, hashes, source_counts = [], set(), {}
     for _, passage in scored:
         digest = hashlib.sha256(passage["text"].encode()).hexdigest()
         key = passage["source_id"]
-        if digest in hashes or per_source.get(key, 0) >= 2:
+        if digest in hashes or source_counts.get(key, 0) >= per_source:
             continue
         selected.append(passage)
         hashes.add(digest)
-        per_source[key] = per_source.get(key, 0) + 1
+        source_counts[key] = source_counts.get(key, 0) + 1
         if len(selected) == limit:
             break
     return selected
@@ -155,13 +155,26 @@ class ResearchService:
         self.cache = cache or EvidenceCache(settings.database_path, settings.web_cache_ttl_seconds)
         self.knowledge_index = knowledge_index or OpenSearchLegalIndex(settings, retriever)
 
-    def retrieve_certified(self, query_text, *, jurisdiction="India", domain=None, limit=4):
+    def retrieve_certified(
+        self,
+        query_text,
+        *,
+        jurisdiction="India",
+        domain=None,
+        limit=4,
+        min_relative_score=0.0,
+        origin=None,
+        exclude_origin=None,
+    ):
         """Fast authority-first retrieval from OpenSearch/local certified propositions."""
         hits, diag = self.knowledge_index.search(
             query_text,
             jurisdiction=jurisdiction,
             domain=domain,
             limit=limit,
+            min_relative_score=min_relative_score,
+            origin=origin,
+            exclude_origin=exclude_origin,
         )
         return hits, diag
 
@@ -281,7 +294,8 @@ class ResearchService:
             reservation = budget.reserve(
                 self.settings.openai_web_search_model,
                 len(query.encode()) + 2000,
-                reserve=2,
+                # Keep the answer continuation, its review, and the repair reserve available.
+                reserve=2 + self.settings.agent_repair_reserve,
                 search=True,
             )
             try:
@@ -332,7 +346,7 @@ class ResearchService:
                 unique.setdefault(canonical_url(url), (candidate, query, key))
         ordered = sorted(unique.values(), key=lambda x: authority(x[0]["url"])[2], reverse=True)
         with budget.lock:
-            count = min(len(ordered), self.settings.agent_max_documents - budget.documents, 4)
+            count = min(len(ordered), self.settings.agent_max_documents - budget.documents)
             ordered = ordered[: max(0, count)]
             budget.documents += len(ordered)
 
@@ -365,7 +379,8 @@ class ResearchService:
                     + " Current legal applicability, completeness and subsequent judicial treatment require claim-specific assessment.",
                 )
                 usable.append(p)
-            selected = rank_passages(usable, query, 3)
+            per_source = self.settings.agent_passages_per_source
+            selected = rank_passages(usable, query, per_source, per_source=per_source)
             if not selected:
                 raise ValueError("No relevant extracted passage")
             source["passages"] = selected
@@ -410,7 +425,10 @@ class ResearchService:
             self.cache.put(key, selected)
             passages.extend(selected)
         selected = rank_passages(
-            passages, " ".join(q.query for q in request.questions), self.settings.agent_max_passages
+            passages,
+            " ".join(q.query for q in request.questions),
+            self.settings.agent_max_passages,
+            per_source=self.settings.agent_passages_per_source,
         )
         return {
             "status": "candidates_available" if selected else "no_supporting_evidence",

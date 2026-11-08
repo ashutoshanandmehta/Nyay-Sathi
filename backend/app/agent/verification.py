@@ -24,6 +24,27 @@ TEMPLATES = {
         "hi": "इस बार विश्वसनीय कानूनी निष्कर्ष के लिए ज़रूरी विवरण सत्यापित नहीं हो सके। उपलब्ध तथ्य और तैयारी उपयोगी हैं; किसी खास कानूनी रास्ते के लिए स्रोतों की और जांच चाहिए।",
         "hinglish": "Is turn mein reliable legal conclusion ke liye zaroori details verify nahi ho sakin. Available facts aur preparation useful hain; specific legal route ke sources aur check karne honge.",
     },
+    # Runtime referrals closing crisis, safety and liberty turns; they name help without asserting eligibility.
+    "handoff_liberty": {
+        "en": "Because someone's liberty is involved, speak to a criminal lawyer as soon as you can, ideally before any bail hearing or before giving a statement. If paying a lawyer is difficult, ask the District Legal Services Authority (DLSA) at the district court whether you qualify for free legal aid.",
+        "hi": "क्योंकि किसी की आज़ादी का सवाल है, जितनी जल्दी हो सके किसी आपराधिक मामलों के वकील से बात करें, बेहतर हो कि ज़मानत की सुनवाई या कोई बयान देने से पहले। अगर वकील की फीस देना मुश्किल है, तो ज़िला अदालत में ज़िला विधिक सेवा प्राधिकरण (DLSA) से पूछें कि क्या आप मुफ़्त कानूनी सहायता के पात्र हैं।",
+        "hinglish": "Kyunki kisi ki azaadi ka sawal hai, jitni jaldi ho sake kisi criminal lawyer se baat karein, behtar ho ki bail hearing ya koi statement dene se pehle. Agar lawyer ki fees dena mushkil hai, to district court mein District Legal Services Authority (DLSA) se poochhein ki kya aap free legal aid ke liye eligible hain.",
+    },
+    "handoff_safety": {
+        "en": "Once you are safe, a lawyer can help you get legal protection. If paying a lawyer is difficult, ask the District Legal Services Authority (DLSA) whether you qualify for free legal aid.",
+        "hi": "सुरक्षित होने के बाद, एक वकील आपको कानूनी सुरक्षा दिलाने में मदद कर सकता है। अगर वकील की फीस देना मुश्किल है, तो ज़िला विधिक सेवा प्राधिकरण (DLSA) से पूछें कि क्या आप मुफ़्त कानूनी सहायता के पात्र हैं।",
+        "hinglish": "Safe hone ke baad, ek lawyer aapko legal protection dilane mein madad kar sakta hai. Agar lawyer ki fees dena mushkil hai, to District Legal Services Authority (DLSA) se poochhein ki kya aap free legal aid ke liye eligible hain.",
+    },
+    "handoff_crisis": {
+        "en": "You don't have to face this alone. Please talk to someone you trust and a trained counsellor right now. When you feel ready, a lawyer or the District Legal Services Authority (DLSA) can help with the legal problem behind this.",
+        "hi": "आपको इसका सामना अकेले नहीं करना है। कृपया अभी किसी भरोसेमंद व्यक्ति और किसी प्रशिक्षित काउंसलर से बात करें। जब आप तैयार हों, तब कोई वकील या ज़िला विधिक सेवा प्राधिकरण (DLSA) इसके पीछे की कानूनी समस्या में मदद कर सकता है।",
+        "hinglish": "Aapko iska saamna akele nahi karna hai. Please abhi kisi bharosemand vyakti aur kisi trained counsellor se baat karein. Jab aap ready hon, tab koi lawyer ya District Legal Services Authority (DLSA) iske peeche ki legal problem mein madad kar sakta hai.",
+    },
+    "no_verified_answer": {
+        "en": "I couldn't verify enough reliable legal information to answer this safely just now, so I haven't given a legal conclusion. You can ask again with a few more details (your state, the dates, and what papers you have), or speak to a local lawyer or your District Legal Services Authority.",
+        "hi": "अभी मैं इसका सुरक्षित जवाब देने लायक भरोसेमंद कानूनी जानकारी सत्यापित नहीं कर सका, इसलिए मैंने कोई कानूनी निष्कर्ष नहीं दिया है। आप थोड़ी और जानकारी (आपका राज्य, तारीखें और आपके पास कौन से कागज़ हैं) के साथ फिर से पूछ सकते हैं, या किसी स्थानीय वकील या अपने ज़िला विधिक सेवा प्राधिकरण से बात कर सकते हैं।",
+        "hinglish": "Abhi main iska safe jawab dene layak reliable legal information verify nahi kar paya, isliye maine koi legal conclusion nahi diya hai. Aap thodi aur details (aapka state, dates, aur aapke paas kaun se papers hain) ke saath dobara pooch sakte hain, ya kisi local lawyer ya apne District Legal Services Authority se baat kar sakte hain.",
+    },
     "configuration": {
         "en": "AI configuration required: Your message is saved in this chat. Add the backend OpenAI configuration to enable researched answers. You can still organize documents and export your case.",
         "hi": "AI configuration required: आपका संदेश इस चैट में सुरक्षित है। शोध वाले जवाब चालू करने के लिए backend में OpenAI सेटअप करें। दस्तावेज़ व्यवस्थित करना और केस एक्सपोर्ट करना उपलब्ध है।",
@@ -42,6 +63,20 @@ DISGUISED_CONSEQUENTIAL_RE = re.compile(
     r"\b(?:call\s+\d{3,5}|helpline\s+\d{3,5}|\+?91[-\s]?\d{10})\b)",
     re.I,
 )
+
+# Labels do not prove meaning: precedent, ruling, time-limit and entitlement language goes to the
+# independent reviewer even when the model tags the claim "practical".
+REVIEW_REQUIRED_RE = re.compile(
+    r"\b(?:courts?|commissions?|tribunals?|forums?|bench|judges?|magistrates?)\b.{0,60}"
+    r"\b(?:held|holds|ruled|rules|ordered|directed|awarded|decided|struck|upheld|quashed)\b|"
+    r"\b(?:precedents?|rulings?|judg(?:e)?ments?|verdicts?|case\s+law|landmark|in\s+similar\s+cases|courts?\s+have)\b|"
+    r"\b\d+\s*(?:days?|weeks?|months?|years?|din)\b|"
+    r"\b(?:double|twice|triple)\s+the\b|\d+(?:\.\d+)?\s*%|"
+    r"\b(?:entitled|illegal|unlawful|offen[cs]es?|punishable|bailable|non-bailable|compoundable|liable|penalty|fine\s+of)\b|"
+    r"धारा|अदालत|न्यायालय|फैसला|कानूनन|अवैध|जुर्माना|दोगुना|\d+\s*दिन",
+    re.I,
+)
+CASE_NAME_RE = re.compile(r"\b[A-Z][\w.&'-]*(?:\s+[A-Z][\w.&'-]*)*\s+(?:v\.|vs\.?|versus)\s+[A-Z]")
 
 SECTION_REF_RE = re.compile(
     r"\b(?:sections?|secs?\.)\s*(\d+[A-Za-z]?)(?:\(\d+\))?(?:\s*(?:,|and|&|to|-|–)\s*(\d+[A-Za-z]?)(?:\(\d+\))?)?",
@@ -91,6 +126,16 @@ def _is_certified_or_official_public_entry(entry: dict) -> bool:
 
 def has_disguised_consequential_assertion(text: str) -> bool:
     return bool(DISGUISED_CONSEQUENTIAL_RE.search(text or ""))
+
+
+def needs_semantic_review(text: str) -> bool:
+    """True when wording may assert law, precedent or deadlines, so no deterministic approval."""
+    text = text or ""
+    return (
+        has_disguised_consequential_assertion(text)
+        or bool(REVIEW_REQUIRED_RE.search(text))
+        or bool(CASE_NAME_RE.search(text))
+    )
 
 
 def _extract_sections(text: str) -> set[str]:
@@ -240,7 +285,7 @@ def mechanical_checks(answer, registry):
             and claim.kind in {"factual", "practical", "document"}
             and claim.block_type not in {"recommended_route", "human_handoff"}
             and claim.text.strip()
-            and not has_disguised_consequential_assertion(claim.text)
+            and not needs_semantic_review(claim.text)
             and all(k in registry.entries and k not in public_ids for k in claim.evidence_ids)
         ):
             # Risk-calibrated publication: user-attributed facts, practical preparation, and
@@ -252,7 +297,7 @@ def mechanical_checks(answer, registry):
             and claim.grounding == "requires_confirmation"
             and "?" in claim.text
             and len(claim.text) <= 400
-            and not has_disguised_consequential_assertion(claim.text)
+            and not needs_semantic_review(claim.text)
         ):
             approved[claim.claim_id] = "non_assertive_clarification"
         else:

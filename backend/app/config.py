@@ -29,20 +29,25 @@ class Settings(BaseSettings):
     assistant_engine: Literal["primary_agent", "legacy"] = "primary_agent"
     agent_planning_mode: Literal["none", "embedded", "separate_planner"] = "embedded"
     vector_index_enabled: bool = False
-    agent_max_requests: int = Field(default=6, ge=1, le=8)
-    agent_max_rounds: int = Field(default=3, ge=1, le=4)
-    agent_max_tokens: int = Field(default=160000, ge=2000, le=200000)
+    # Upper caps, not targets: quality first, the agent uses only what a turn needs.
+    agent_max_requests: int = Field(default=14, ge=1, le=24)
+    agent_max_rounds: int = Field(default=5, ge=1, le=8)
+    agent_max_tokens: int = Field(default=400000, ge=2000, le=1000000)
     agent_max_output_tokens: int = Field(default=6000, ge=1000, le=16000)
     agent_context_chars: int = Field(default=36000, ge=8000, le=100000)
     agent_deadline_seconds: float = Field(default=180, ge=5, le=300)
     agent_repair_min_remaining_seconds: float = Field(default=25.0, ge=0.0, le=180.0)
-    agent_research_seconds: float = Field(default=20, ge=1, le=60)
-    agent_max_batches: int = Field(default=2, ge=0, le=2)
-    agent_max_queries: int = Field(default=3, ge=0, le=4)
-    agent_max_documents: int = Field(default=6, ge=0, le=8)
+    # Requests research may never consume: one repair plus its mandatory re-review.
+    agent_repair_reserve: int = Field(default=2, ge=0, le=6)
+    agent_max_repairs: int = Field(default=2, ge=0, le=3)
+    agent_research_seconds: float = Field(default=45, ge=1, le=120)
+    agent_max_batches: int = Field(default=3, ge=0, le=4)
+    agent_max_queries: int = Field(default=6, ge=0, le=8)
+    agent_max_documents: int = Field(default=10, ge=0, le=16)
     agent_fetch_concurrency: int = Field(default=3, ge=1, le=4)
     agent_search_concurrency: int = Field(default=2, ge=1, le=2)
-    agent_max_passages: int = Field(default=5, ge=1, le=8)
+    agent_max_passages: int = Field(default=8, ge=1, le=16)
+    agent_passages_per_source: int = Field(default=4, ge=1, le=8)
     agent_reasoning_effort: str | None = None
     agent_max_cost_usd: float | None = Field(default=None, gt=0)
     # Empty pricing means unknown cost, never free usage. Set from dated provider pricing.

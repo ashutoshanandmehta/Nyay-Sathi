@@ -337,6 +337,8 @@ def main() -> int:
                     ),
                     "no_generic_boilerplate_when_supported": (
                         "I could not verify the legal details needed" not in result["response"]
+                        and "I couldn't verify enough reliable legal information"
+                        not in result["response"]
                     ),
                     "draft_preserved_cleanly": (
                         len(result["approved_documents"]) == 1

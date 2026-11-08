@@ -218,6 +218,7 @@ def test_structured_resolution_blocks_and_optional_claim_rejection_resilience(cl
     meta = data["assistant_message"]["metadata"]
     assert meta["publication_status"] == "supported"
     assert "could not verify" not in data["assistant_message"]["content"].lower()
+    assert "couldn't verify" not in data["assistant_message"]["content"].lower()
     blocks = meta["resolution_blocks"]
     assert [b["block_type"] for b in blocks] == ["direct_answer", "immediate_actions"]
     assert blocks[0]["grounding"] == "verified_legal_source"
@@ -302,7 +303,8 @@ def test_urgent_followup_inherits_case_and_suppresses_duplicate_safety_banner(cl
     assert meta2["interpretation"]["tasks"][0]["intent"] == "legal_options"
     assert meta2["interpretation"]["tasks"][0]["case_link"] == "existing"
     assert meta2["interpretation"]["tasks"][0]["domain"] == "criminal"
-    assert all(b["block_type"] != "human_handoff" for b in meta2["resolution_blocks"])
+    handoffs = [b for b in meta2["resolution_blocks"] if b["block_type"] == "human_handoff"]
+    assert handoffs == [meta2["resolution_blocks"][-1]]
 
 
 def test_self_harm_and_domestic_violence_safety_contacts():

@@ -103,3 +103,19 @@ describe('numbered citations',()=>{
     expect(screen.getByRole('link',{name:/Website home page \(exact document not linked\)/})).toBeInTheDocument()
   })
 })
+
+describe('answer quality',()=>{
+  it('shows safety guidance once even though the saved answer text repeats it',()=>{
+    cleanup()
+    const safety='If you are in immediate danger, prioritise your safety.'
+    render(<MessageView message={{id:'s',role:'assistant',content:`${safety}\n\nAsk the police station where he is held.`,created_at:'',status:'complete',metadata:{safety_messages:[{type:'safety',content_id:'c1',text:safety,request_id:'r',sources:[]}]}}} onSources={()=>{}}/>)
+    expect(screen.getAllByText(safety)).toHaveLength(1)
+    expect(screen.getByRole('alert')).toHaveTextContent(safety)
+    expect(screen.getByText('Ask the police station where he is held.')).toBeInTheDocument()
+  })
+  it('labels verbatim official pack sources as not lawyer-reviewed',()=>{
+    cleanup()
+    render(<Sources sources={[{source_id:'bnss',passage_id:'pack-bnss-2023-s47',title:'Bharatiya Nagarik Suraksha Sanhita, 2023',locator:'Section 47: Person arrested to be informed of grounds of arrest',text:'47. (1) Every police officer…',canonical_url:'https://www.ncrb.mha.gov.in/uploads/SankalanPortal/DownloadPDF/BNSS2023.pdf',retrieved_at:'2026-11-08',limitations:'Not reviewed by a lawyer.',origin:'official_pack',citation_number:1}]}/>)
+    expect(screen.getByText('Official text, quoted exactly · not reviewed by a lawyer')).toBeInTheDocument()
+  })
+})

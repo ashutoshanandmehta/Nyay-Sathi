@@ -83,9 +83,9 @@ BLOCK_TITLES: dict[BlockType, dict[str, str]] = {
         "hinglish": "Important clarification",
     },
     "human_handoff": {
-        "en": "Licensed human escalation",
-        "hi": "वकील / मानव सहायता रेफरल",
-        "hinglish": "Licensed lawyer escalation",
+        "en": "When to involve a lawyer",
+        "hi": "वकील या मुफ़्त कानूनी सहायता कब लें",
+        "hinglish": "Lawyer kab involve karein",
     },
 }
 
@@ -120,7 +120,7 @@ def infer_block_type(claim: AnswerClaim) -> BlockType:
 
 def claim_uses_legal_source(claim: AnswerClaim, btype: BlockType) -> bool:
     """Only attach legal/official source citations to legal/procedural claims—never practical checklists."""
-    if btype in {"evidence_checklist", "document", "question", "human_handoff"}:
+    if btype in {"evidence_checklist", "document", "question"}:
         return False
     if claim.kind in {"practical", "factual", "quote"} and claim.grounding != "verified_legal_source":
         return False
@@ -209,6 +209,37 @@ def _physical_liberty_handoff_needed(answer: AgentAnswer, state: dict[str, Any])
     return answer.risk == "urgent"
 
 
+LIBERTY_RE = re.compile(
+    r"\b(?:jail|arrest\w*|custody|detain\w*|giraftar\w*|hirasat|lock-?up|bail|jamanat)\b"
+    r"|जेल|गिरफ्तार|हिरासत|जमानत",
+    re.I,
+)
+
+
+def handoff_template_id(answer: AgentAnswer, state: dict[str, Any]) -> str | None:
+    """Referral the runtime guarantees on crisis, safety and liberty turns, whatever the model wrote."""
+    categories = {m.get("category") for m in state.get("safety_messages") or []}
+    risks = set(answer.risk_types or [])
+    if answer.action_plan:
+        risks |= set(answer.action_plan.risk_types)
+    if "self_harm" in categories | risks:
+        return "handoff_crisis"
+    if "domestic_violence" in categories | risks:
+        return "handoff_safety"
+    if _physical_liberty_handoff_needed(answer, state):
+        return "handoff_liberty"
+    context = state.get("context") or {}
+    conversation = " ".join(
+        [state.get("current_message", "")]
+        + [t.get("content", "") for t in context.get("recent_turns", []) if t.get("role") == "user"]
+    )
+    delivered = (context.get("prior_assistant_coverage") or {}).get("delivered_block_types") or []
+    # Custody mentioned without an emergency: refer once per conversation, not on every turn.
+    if LIBERTY_RE.search(conversation) and "human_handoff" not in delivered:
+        return "handoff_liberty"
+    return None
+
+
 def effective_block_order(answer: AgentAnswer, state: dict[str, Any]) -> tuple[BlockType, ...]:
     """Place immediate_actions first on urgent safety turns; place recommended_route first on non-urgent disputes."""
     is_urgent = (
@@ -242,8 +273,6 @@ def assemble_resolution_blocks(
         if claim.claim_id not in accepted:
             continue
         btype = infer_block_type(claim)
-        if btype == "human_handoff":
-            continue
         if claim.in_document and claim.task_id not in doc_tasks_ok:
             continue
         rendered = format_claim_text(claim, lang_key)
@@ -284,7 +313,8 @@ def assemble_resolution_blocks(
     )
 
     blocks: list[dict[str, Any]] = []
-    for btype in order:
+    # The lawyer / legal-aid referral always closes the answer, whatever the ordering above.
+    for btype in (*order, "human_handoff"):
         entries = grouped[btype]
         if not entries:
             continue

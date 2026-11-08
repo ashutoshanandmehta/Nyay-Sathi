@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import time
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import httpx
 from rank_bm25 import BM25Okapi
 
 from app.knowledge.propositions import LegalKnowledgeFactory
+
+# Verbatim official sections built by scripts/build_official_packs.py (not lawyer-reviewed).
+OFFICIAL_PACKS_PATH = (
+    Path(__file__).resolve().parents[3] / "data" / "knowledge" / "official_law_packs_v1.json"
+)
 
 STOPWORDS = {
     "what",
@@ -94,9 +101,11 @@ class OpenSearchLegalIndex:
         retriever=None,
         factory: LegalKnowledgeFactory | None = None,
         http_client=None,
+        packs_path: Path | None = None,
     ):
         self.settings = settings
         self.factory = factory or LegalKnowledgeFactory()
+        self.packs_path = packs_path or OFFICIAL_PACKS_PATH
         self.http_client = http_client
         self.opensearch_url: str | None = getattr(settings, "opensearch_url", None)
         self.opensearch_index: str = getattr(
@@ -133,6 +142,21 @@ class OpenSearchLegalIndex:
             )
             self.documents.append(entry)
             seen.add(entry["passage_id"])
+
+        packs = json.loads(self.packs_path.read_text()) if self.packs_path.exists() else {}
+        for raw in packs.get("passages", []):
+            if raw["passage_id"] in seen:
+                continue
+            tags = " ".join(raw.get("keywords", []))
+            entry = {**raw, "certified_proposition": False, "origin_verified": True}
+            entry["_tokens"] = tokenize(
+                f"{raw['title']} {raw['locator']} {raw['text']} {tags}"
+            ) or ["law"]
+            entry["_scenario_tokens"] = set(tokenize(f"{tags} {raw['locator']}"))
+            entry["_trigrams"] = char_trigrams(f"{raw['locator']} {tags}")
+            entry["_state_terms"] = {t.casefold() for t in raw.get("state_terms", [])}
+            self.documents.append(entry)
+            seen.add(raw["passage_id"])
 
         for raw in getattr(retriever, "passages", []) or []:
             pid = raw.get("passage_id")
@@ -190,7 +214,12 @@ class OpenSearchLegalIndex:
 
     @staticmethod
     def _clean(doc: dict[str, Any]) -> dict[str, Any]:
-        return {k: v for k, v in doc.items() if not k.startswith("_")}
+        # Retrieval-only metadata (search tags, state place names) is not evidence for the model.
+        return {
+            k: v
+            for k, v in doc.items()
+            if not k.startswith("_") and k not in {"keywords", "state_terms"}
+        }
 
     def search(
         self,
@@ -201,6 +230,9 @@ class OpenSearchLegalIndex:
         as_of: date | None = None,
         limit: int = 5,
         certified_only: bool = False,
+        min_relative_score: float = 0.0,
+        origin: str | None = None,
+        exclude_origin: str | None = None,
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         started = time.perf_counter()
         query_hash = hashlib.sha256(query.casefold().strip().encode("utf-8")).hexdigest()[:16]
@@ -227,6 +259,9 @@ class OpenSearchLegalIndex:
             as_of=as_of,
             limit=limit,
             certified_only=certified_only,
+            min_relative_score=min_relative_score,
+            origin=origin,
+            exclude_origin=exclude_origin,
         )
         diag = self._record_diag(
             query_hash, "opensearch_local_hybrid", jurisdiction, domain, results, started
@@ -295,6 +330,9 @@ class OpenSearchLegalIndex:
         as_of: date | None,
         limit: int,
         certified_only: bool,
+        min_relative_score: float = 0.0,
+        origin: str | None = None,
+        exclude_origin: str | None = None,
     ) -> list[dict[str, Any]]:
         if not self.documents or not self._bm25:
             return []
@@ -313,7 +351,16 @@ class OpenSearchLegalIndex:
         for idx, doc in enumerate(self.documents):
             if certified_only and not doc.get("certified_proposition"):
                 continue
-            if wanted_jurisdictions:
+            if origin and doc.get("origin") != origin:
+                continue
+            if exclude_origin and doc.get("origin") == exclude_origin:
+                continue
+            state_terms = doc.get("_state_terms")
+            if state_terms:
+                # State law applies only when the question names that state or a place in it.
+                if not state_terms & q_set:
+                    continue
+            elif wanted_jurisdictions:
                 doc_j = (doc.get("jurisdiction") or "india").casefold()
                 if doc_j not in wanted_jurisdictions:
                     continue
@@ -351,15 +398,25 @@ class OpenSearchLegalIndex:
             scored.append((total, doc))
 
         scored.sort(key=lambda item: item[0], reverse=True)
+        # Drop the weak tail so loosely related items do not crowd out relevant law.
+        floor = scored[0][0] * min_relative_score if scored else 0.0
         selected: list[dict[str, Any]] = []
         seen_hashes: set[str] = set()
         per_source: dict[str, int] = {}
-        for _, doc in scored:
+        source_cap = getattr(self.settings, "agent_passages_per_source", 2)
+        for total, doc in scored:
+            if total < floor:
+                break
             h = doc["content_hash"]
             sid = doc["source_id"]
-            if h in seen_hashes or per_source.get(sid, 0) >= 2:
+            if h in seen_hashes or per_source.get(sid, 0) >= source_cap:
                 continue
-            if not doc.get("certified_proposition") and is_generic_index_or_snippet(doc, q_set):
+            # Curated sections match through their search tags; only scraped text needs this filter.
+            if (
+                not doc.get("certified_proposition")
+                and doc.get("origin") != "official_pack"
+                and is_generic_index_or_snippet(doc, q_set)
+            ):
                 continue
             selected.append(self._clean(doc))
             seen_hashes.add(h)

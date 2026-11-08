@@ -744,6 +744,7 @@ def test_extended_timeout_and_multi_turn_police_station_talking_points_continuit
     assert r2.status_code == 200
     body2 = r2.json()["assistant_message"]
     assert "could not verify" not in body2["content"].lower()
+    assert "couldn't verify" not in body2["content"].lower()
     assert "Duty Officer" in body2["content"]
     assert body2["metadata"]["publication_status"] == "supported"
     assert body2["metadata"]["interpretation"]["tasks"][0]["case_link"] == "existing"
@@ -991,7 +992,7 @@ def test_cross_block_contradiction_triggers_repair_unlocks_conflicting_claim_and
     assert content.index("Send your Order ID") < content.index("Save the invoice")
 
 
-def test_multiturn_coverage_marks_prior_sources_and_omits_human_handoff_card(
+def test_multiturn_coverage_marks_prior_sources_and_shows_only_runtime_referral(
     client, isolated_app
 ):
     cid = create_case(client)
@@ -1130,7 +1131,9 @@ def test_multiturn_coverage_marks_prior_sources_and_omits_human_handoff_card(
     r1 = post(client, cid, msg1)
     assert r1.status_code == 200
     blocks1 = r1.json()["assistant_message"]["metadata"]["resolution_blocks"]
-    assert all(b["block_type"] != "human_handoff" for b in blocks1)
+    # The unreviewed model referral never shows; the runtime referral closes the urgent turn.
+    handoffs1 = [b for b in blocks1 if b["block_type"] == "human_handoff"]
+    assert handoffs1 == [blocks1[-1]] and handoffs1[0]["claim_ids"] == ["runtime-handoff"]
 
     r2 = post(client, cid, "I think those officers were fake.")
     assert r2.status_code == 200
@@ -1144,7 +1147,8 @@ def test_multiturn_coverage_marks_prior_sources_and_omits_human_handoff_card(
     ]
     assert public_marked, "Previously cited certified source should be flagged on Turn 2"
     blocks2 = r2.json()["assistant_message"]["metadata"]["resolution_blocks"]
-    assert all(b["block_type"] != "human_handoff" for b in blocks2)
+    handoffs2 = [b for b in blocks2 if b["block_type"] == "human_handoff"]
+    assert handoffs2 == [blocks2[-1]] and handoffs2[0]["claim_ids"] == ["runtime-handoff"]
 
 
 def _certified_fixture(passage_id, locator, text):
@@ -1179,7 +1183,7 @@ def test_numbered_citations_follow_display_order_and_match_sources(client, isola
         "Section 175 BNSS: magistrate may order investigation.",
     )
     research = SimpleNamespace(
-        retrieve_certified=lambda query, jurisdiction="India", limit=4: (
+        retrieve_certified=lambda query, jurisdiction="India", limit=4, **_: (
             [fir, remedy],
             {"query_hash": "fixture"},
         )

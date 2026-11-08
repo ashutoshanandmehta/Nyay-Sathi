@@ -78,6 +78,8 @@ export default function MessageView({message,onSources,onRetry,onSpeech,onOpenCa
   const needsConfirmation=message.metadata?.events?.some(event=>event.status==='confirmation_required')
   const blocks=message.role==='assistant'?message.metadata?.resolution_blocks:undefined
   const safetyItems=message.role==='assistant'?message.metadata?.safety_messages:undefined
+  // The answer text repeats the safety guidance for exports and copying; the banner already shows it.
+  const answerText=(safetyItems||[]).reduce((text,item)=>item.text?text.replace(item.text,''):text,message.content).trim()
   const docBlock = blocks?.find(b => b.block_type === 'document')
 
   async function copyDoc(content: string) {
@@ -98,7 +100,7 @@ export default function MessageView({message,onSources,onRetry,onSpeech,onOpenCa
             </div>
           ))}
           <div className="prose-content">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={citationComponents(message.metadata?.sources, onSources)}>{message.content}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={citationComponents(message.metadata?.sources, onSources)}>{answerText}</ReactMarkdown>
           </div>
           {docBlock && (
             <div className="res-document-box">

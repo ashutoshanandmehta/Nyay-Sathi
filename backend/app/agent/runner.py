@@ -13,17 +13,18 @@ from app.agent.blocks import (
     claim_uses_legal_source,
     effective_block_order,
     format_claim_text,
+    handoff_template_id,
     infer_block_type,
 )
 from app.agent.budget import TurnBudget
 from app.agent.contracts import AgentAnswer, AgentTask, AnswerClaim, ResearchRequest
 from app.agent.provider import ResponsesProvider
 from app.agent.research import ResearchService
-from app.agent.safety import classify_urgent_context, safety_event
+from app.agent.safety import classify_urgent_context, detect_india_context, safety_event
 from app.agent.verification import (
     TEMPLATES,
-    has_disguised_consequential_assertion,
     mechanical_checks,
+    needs_semantic_review,
     propagate_dependencies,
     template_text,
 )
@@ -37,16 +38,48 @@ from app.schemas.models import CaseMemory
 from app.services.model_calls import model_calls
 from app.services.progress import publisher
 
+# Everyday words people use, mapped to the legal concepts the local packs are indexed under.
+CONCEPT_EXPANSIONS = (
+    (
+        re.compile(
+            r"\b(?:jail|arrest\w*|custody|giraftar\w*|hirasat|lock-?up|thana)\b|जेल|गिरफ्तार|हिरासत",
+            re.I,
+        ),
+        "bail custody arrest legal aid",
+    ),
+    (
+        re.compile(r"\b(?:jail|arrest\w*|custody|giraftar\w*|hirasat)\b|जेल|गिरफ्तार|हिरासत", re.I),
+        "free legal aid custody legal services",
+    ),
+    (
+        re.compile(r"\b(?:salary|wages?|tankhwah|vetan|payslip)\b|वेतन|तनख्वाह", re.I),
+        "wages payment claims",
+    ),
+    (re.compile(r"\b(?:lawyer|vakil|advocate)\b|वकील", re.I), "legal aid"),
+    (
+        re.compile(r"\b(?:car|vehicle|bike|scooter|truck|gaadi|gadi)\b|गाड़ी|गाडी", re.I),
+        "vehicle seized confiscation release penalty",
+    ),
+)
 
-def _public_prequery_terms(message: str, domain: str, urgent_continuation: bool) -> str:
+
+def matched_concepts(message: str) -> list[str]:
+    return [concepts for pattern, concepts in CONCEPT_EXPANSIONS if pattern.search(message)]
+
+
+def _public_prequery_terms(
+    message: str, domain: str, urgent_continuation: bool, emergency: bool = False
+) -> str:
     # Strip identifiers, numbers, emails and quoted personal strings before local index lookup.
     cleaned = re.sub(r"\S+@\S+|https?://\S+|\b\d[\d\-/.,]*\b|[\"“”'‘’][^\"“”'‘’]*[\"“”'‘’]", " ", message)
-    words = [w for w in re.findall(r"[A-Za-z\u0900-\u097f]{3,}", cleaned.casefold())][:24]
-    extras = []
+    words = [w for w in re.findall(r"[A-Za-z\u0900-\u097f]{3,}", cleaned.casefold())][:48]
+    extras = matched_concepts(message)
     if domain and domain not in {"unknown", "general"}:
         extras.append(domain)
     if urgent_continuation:
         extras.extend(["police", "bribe", "corruption", "emergency", "liberty"])
+    elif emergency:
+        extras.extend(["emergency", "response", "erss"])
     return " ".join(words + extras).strip()
 
 
@@ -68,18 +101,47 @@ class PrimaryAgent:
     def _pre_retrieve_certified(self, state):
         if not hasattr(self.research, "retrieve_certified"):
             return
+        # Follow-ups ("is that okay?") carry their topic in the user's earlier turns.
+        earlier = [
+            t.get("content", "")
+            for t in state.get("context", {}).get("recent_turns", [])
+            if t.get("role") == "user" and t.get("content") != state["current_message"]
+        ][-2:]
+        conversation_text = " ".join([state["current_message"], *reversed(earlier)])
         query_text = _public_prequery_terms(
-            state["current_message"],
+            conversation_text,
             state.get("memory", {}).get("domain", "unknown"),
             bool(state.get("urgent_continuation")),
+            emergency=bool(state.get("safety_messages")),
         )
         if len(query_text.split()) < 2:
             return
-        hits, diag = self.research.retrieve_certified(query_text, jurisdiction="India", limit=4)
-        certified_hits = [h for h in hits if h.get("certified_proposition")]
-        if certified_hits:
+        # Certified propositions keep their own top-4 lookup; packs are searched separately below.
+        hits, diag = self.research.retrieve_certified(
+            query_text, jurisdiction="India", limit=4, exclude_origin="official_pack"
+        )
+        trusted = [h for h in hits if h.get("certified_proposition")]
+        # Verbatim official sections go straight into the first call, so common questions need no
+        # live search round. Their own floor keeps loosely related sections out.
+        pack_hits, _ = self.research.retrieve_certified(
+            query_text,
+            jurisdiction="India",
+            limit=12,
+            min_relative_score=0.65,
+            origin="official_pack",
+        )
+        trusted += pack_hits
+        # Each everyday concept gets its own small lookup, so a strong topic (say, Bihar liquor
+        # law) cannot crowd out a needed one (free legal aid for someone in custody).
+        for concepts in matched_concepts(conversation_text):
+            extra, _ = self.research.retrieve_certified(
+                concepts, jurisdiction="India", limit=2, origin="official_pack"
+            )
+            trusted += extra
+        trusted = list({h["passage_id"]: h for h in trusted}.values())
+        if trusted:
             merged = {p["passage_id"]: p for p in state["passages"]}
-            for hit in certified_hits:
+            for hit in trusted:
                 merged.setdefault(hit["passage_id"], hit)
             state["passages"] = list(merged.values())[: self.settings.agent_max_passages * 2]
             state["tool_records"].append(
@@ -87,7 +149,12 @@ class PrimaryAgent:
                     "tool": "certified_knowledge_pack",
                     "status": "hit",
                     "query_hash": diag["query_hash"],
-                    "certified_hit_count": len(certified_hits),
+                    "certified_hit_count": sum(
+                        1 for h in trusted if h.get("certified_proposition")
+                    ),
+                    "official_pack_hit_count": sum(
+                        1 for h in trusted if h.get("origin") == "official_pack"
+                    ),
                 }
             )
 
@@ -127,11 +194,7 @@ class PrimaryAgent:
         def emit_safety(category=None, *, force=False):
             if state["safety_messages"] or (state.get("prior_safety_delivered") and not force):
                 return
-            india = "india" in state["current_message"].casefold() or any(
-                f.get("value", "").casefold() == "india"
-                for k, f in state["memory"].get("facts", {}).items()
-                if k in {"transaction_country", "country"}
-            )
+            india = detect_india_context(state["current_message"], state.get("memory"))
             cat = category or urgent_ctx["category"] or "emergency"
             if cat == "emergency_followup":
                 cat = "emergency"
@@ -176,28 +239,30 @@ class PrimaryAgent:
                                 for verdict in review.claims:
                                     if verdict.support != "supported":
                                         accepted.pop(verdict.claim_id, None)
-                            core_defects = [
-                                c.claim_id
-                                for c in answer.claims
-                                if c.claim_id not in accepted
-                                and not c.optional
-                                and infer_block_type(c) != "human_handoff"
-                            ]
                             min_repair_seconds = getattr(
                                 self.settings, "agent_repair_min_remaining_seconds", 25.0
                             )
-                            if (
+                            repairs = 0
+                            while (
                                 (
-                                    core_defects
+                                    any(
+                                        c.claim_id not in accepted
+                                        and not c.optional
+                                        and infer_block_type(c) != "human_handoff"
+                                        for c in answer.claims
+                                    )
                                     or not review.primary_question_answered
                                     or not review.next_action_useful
                                     or not review.cross_block_coherent
                                 )
+                                and repairs < self.settings.agent_max_repairs
                                 and rounds < self.settings.agent_max_rounds
                                 and budget.available(2)
                                 and budget.remaining_time() >= min_repair_seconds
                             ):
-                                event("revision")
+                                repairs += 1
+                                rounds += 1
+                                event("revision", attempt=repairs)
                                 original_patches = list(answer.case_patches)
                                 prior_accepted = dict(accepted)
                                 try:
@@ -240,6 +305,7 @@ class PrimaryAgent:
                                     self._preserve_safe_practical(
                                         answer, accepted, blocked, registry
                                     )
+                                    break
                         except Exception as exc:
                             event("review", "limited", error_type=type(exc).__name__)
                             patch_verdicts = []
@@ -325,7 +391,7 @@ class PrimaryAgent:
                 and claim.kind in {"factual", "practical", "document"}
                 and claim.block_type not in {"recommended_route", "human_handoff"}
                 and claim.text.strip()
-                and not has_disguised_consequential_assertion(claim.text)
+                and not needs_semantic_review(claim.text)
                 and all(k in registry.entries and k not in public_ids for k in claim.evidence_ids)
             ):
                 accepted[claim.claim_id] = "timeout_safe_practical_precaution"
@@ -418,7 +484,7 @@ class PrimaryAgent:
             event("primary", round=round_index + 1)
             allow_tools = (
                 round_index + 1 < self.settings.agent_max_rounds
-                and budget.available(3)
+                and budget.available(3, reserve=self.settings.agent_repair_reserve)
                 and budget.batches < self.settings.agent_max_batches
             )
             output, calls, answer = self.provider.complete(
@@ -554,6 +620,19 @@ class PrimaryAgent:
         )
 
     def _compose(self, answer, state, registry, accepted, patch_verdicts, review_fresh):
+        if not any(
+            c.claim_id in accepted and infer_block_type(c) == "human_handoff" for c in answer.claims
+        ) and (template_id := handoff_template_id(answer, state)):
+            referral = AnswerClaim(
+                claim_id="runtime-handoff",
+                task_id=answer.tasks[-1].task_id,
+                kind="template",
+                text="",
+                template_id=template_id,
+                block_type="human_handoff",
+            )
+            answer = answer.model_copy(update={"claims": [*answer.claims, referral]})
+            accepted = {**accepted, referral.claim_id: "approved_template"}
         segments = {s["id"]: s["text"] for s in segment_message(state["current_message"])}
         tasks = []
         domains = {
@@ -624,8 +703,6 @@ class PrimaryAgent:
                 if claim.claim_id not in accepted:
                     continue
                 btype = infer_block_type(claim)
-                if btype == "human_handoff":
-                    continue
                 text = format_claim_text(claim, language)
                 cited_ids = (
                     [k for k in dict.fromkeys(claim.evidence_ids) if k in registry.public_ids()]
@@ -703,13 +780,33 @@ class PrimaryAgent:
             or not pieces
         )
         # Generic "I could not verify..." text appears ONLY when no useful supported answer exists.
-        if not pieces:
-            pieces.append(template_text("limited_research", language))
+        # A runtime referral alone is not an answer, so the honest message still leads.
+        answered = any(
+            c.claim_id in accepted and c.claim_id != "runtime-handoff" for c in answer.claims
+        )
+        if not answered:
+            # Nothing else is published, so the text must not promise preparation "below".
+            pieces.insert(0, template_text("no_verified_answer", language))
 
         resolution_blocks = assemble_resolution_blocks(
             answer, accepted, registry, state, documents
         )
-        if not resolution_blocks and pieces:
+        if not answered:
+            resolution_blocks.insert(
+                0,
+                {
+                    "block_id": "block-limitation",
+                    "block_type": "limitation",
+                    "title": "Unresolved point",
+                    "content": pieces[0],
+                    "items": [],
+                    "claim_ids": [],
+                    "source_ids": [],
+                    "grounding": "requires_confirmation",
+                    "document_title": None,
+                },
+            )
+        elif not resolution_blocks and pieces:
             resolution_blocks = [
                 {
                     "block_id": "block-limitation",

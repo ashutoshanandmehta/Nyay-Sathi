@@ -1,7 +1,7 @@
 {
   "suite": "nyay-saathi-production-release-gates-v1",
   "mode": "offline_deterministic_zero_api_cost",
-  "passed": false,
+  "passed": true,
   "security_and_privacy_gates": {
     "envelope_encrypted_at_rest": true,
     "cryptographic_key_destruction_verified": true,
@@ -14,7 +14,7 @@
     {
       "scenario_id": "gate-consumer-amazon-refund",
       "turn_index": 1,
-      "elapsed_ms": 39.63,
+      "elapsed_ms": 37.77,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -38,7 +38,7 @@
     {
       "scenario_id": "gate-consumer-hotel-draft",
       "turn_index": 1,
-      "elapsed_ms": 35.85,
+      "elapsed_ms": 35.11,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -60,16 +60,17 @@
     {
       "scenario_id": "gate-urgent-police-followup-continuity",
       "turn_index": 1,
-      "elapsed_ms": 31.61,
+      "elapsed_ms": 32.4,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
-        "immediate_actions"
+        "immediate_actions",
+        "human_handoff"
       ],
       "checks": {
         "publication_status_matches": true,
-        "expected_blocks_present": false,
-        "certified_propositions_retrieved": false,
+        "expected_blocks_present": true,
+        "certified_propositions_retrieved": true,
         "safety_emitted_correctly": true,
         "safety_latency_under_500ms": true,
         "no_generic_boilerplate_when_supported": true,
@@ -81,16 +82,17 @@
     {
       "scenario_id": "gate-urgent-police-followup-continuity",
       "turn_index": 2,
-      "elapsed_ms": 31.25,
+      "elapsed_ms": 36.27,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
         "immediate_actions",
-        "evidence_checklist"
+        "evidence_checklist",
+        "human_handoff"
       ],
       "checks": {
         "publication_status_matches": true,
-        "expected_blocks_present": false,
+        "expected_blocks_present": true,
         "certified_propositions_retrieved": true,
         "safety_emitted_correctly": true,
         "safety_latency_under_500ms": true,
@@ -103,15 +105,16 @@
     {
       "scenario_id": "gate-urgent-adult-autonomy-interfaith",
       "turn_index": 1,
-      "elapsed_ms": 52.57,
+      "elapsed_ms": 38.64,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
-        "immediate_actions"
+        "immediate_actions",
+        "human_handoff"
       ],
       "checks": {
         "publication_status_matches": true,
-        "expected_blocks_present": false,
+        "expected_blocks_present": true,
         "certified_propositions_retrieved": true,
         "safety_emitted_correctly": true,
         "safety_latency_under_500ms": true,
@@ -124,15 +127,16 @@
     {
       "scenario_id": "gate-crisis-self-harm-helpline",
       "turn_index": 1,
-      "elapsed_ms": 28.33,
+      "elapsed_ms": 32.35,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
-        "immediate_actions"
+        "immediate_actions",
+        "human_handoff"
       ],
       "checks": {
         "publication_status_matches": true,
-        "expected_blocks_present": false,
+        "expected_blocks_present": true,
         "certified_propositions_retrieved": true,
         "safety_emitted_correctly": true,
         "safety_latency_under_500ms": true,
