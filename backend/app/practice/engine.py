@@ -53,6 +53,241 @@ class PracticeEngine:
     def __init__(self, settings=None):
         self.settings = settings or get_settings()
 
+    def extract_roleplay_setup(
+        self,
+        memory: CaseMemory | None,
+        recent_messages: list[str] | None = None,
+        title: str = "",
+    ) -> dict[str, Any]:
+        """Extract case title, 1-line synopsis, and 2-3 specific stakeholders via fast model call or deterministic fallback."""
+        domain = (memory.domain if memory else "unknown").lower()
+        facts_text = " ".join([f.value for f in (memory.facts.values() if memory else [])])
+        combined = f"{domain} {title} {facts_text} {' '.join(recent_messages or [])}".lower()
+
+        # If live OpenAI key is configured, attempt fast extraction
+        if self.settings.openai_api_key and self.settings.openai_api_key not in {"fixture", "test", ""}:
+            try:
+                from openai import OpenAI
+                client = OpenAI(api_key=self.settings.openai_api_key)
+                prompt = (
+                    f"User case title: {title}\n"
+                    f"Domain: {domain}\n"
+                    f"Facts: {facts_text[:1000]}\n"
+                    f"Recent messages: {' '.join(recent_messages or [])[:1000]}\n\n"
+                    "Extract:\n"
+                    "1. case_title: short 3-5 word title with dot separator (e.g. 'Alcohol found in vehicle · Bihar' or 'Refund refused · E-Commerce')\n"
+                    "2. case_synopsis: single concise plain sentence (e.g. 'Your brother is in custody and the car has been seized.')\n"
+                    "3. stakeholders: list of 2 or 3 specific Indian roles/authorities the user should practice talking to (e.g. ['Police officer', 'Opposing lawyer']). Do NOT include 'Someone else'.\n"
+                    "Return strict JSON: {\"case_title\": \"...\", \"case_synopsis\": \"...\", \"stakeholders\": [\"...\", \"...\"]}"
+                )
+                resp = client.chat.completions.create(
+                    model=self.settings.primary_model or "gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"},
+                    max_tokens=250,
+                    temperature=0.2,
+                )
+                raw = json.loads(resp.choices[0].message.content or "{}")
+                if raw.get("case_title") and raw.get("case_synopsis") and raw.get("stakeholders"):
+                    return {
+                        "case_title": raw["case_title"],
+                        "case_synopsis": raw["case_synopsis"],
+                        "stakeholders": raw["stakeholders"][:3],
+                    }
+            except Exception:
+                pass
+
+        # Deterministic domain-tailored fallback
+        if any(w in combined for w in ["bihar", "liquor", "alcohol", "sharab", "prohibition", "patna"]):
+            return {
+                "case_title": "Alcohol found in vehicle · Bihar",
+                "case_synopsis": "Your brother is in custody and the car has been seized.",
+                "stakeholders": ["Police officer", "Opposing lawyer"],
+            }
+        elif domain == "criminal" or any(w in combined for w in ["arrest", "police", "jail", "custody", "fir", "thana"]):
+            return {
+                "case_title": "Police Custody & Arrest · Criminal",
+                "case_synopsis": "A family member has been detained by police and property held.",
+                "stakeholders": ["Police officer", "Opposing lawyer"],
+            }
+        elif domain == "consumer" or any(w in combined for w in ["refund", "order", "delivery", "amazon", "flipkart", "defective"]):
+            return {
+                "case_title": "Refund Refused · E-Commerce",
+                "case_synopsis": "The order was rejected or marked delivered, and refund is withheld.",
+                "stakeholders": ["Customer support officer", "Seller / Merchant"],
+            }
+        elif domain in {"tenancy", "civil"} or any(w in combined for w in ["landlord", "tenant", "rent", "deposit", "flat"]):
+            return {
+                "case_title": "Security Deposit Withheld · Tenancy",
+                "case_synopsis": "The landlord is withholding your deposit citing repair damages.",
+                "stakeholders": ["Landlord", "Property broker"],
+            }
+        elif domain in {"employment", "labor"} or any(w in combined for w in ["salary", "wages", "employer", "unpaid", "boss"]):
+            return {
+                "case_title": "Unpaid Salary & Dues · Employment",
+                "case_synopsis": "Employer is refusing or delaying payment of earned wages.",
+                "stakeholders": ["HR manager", "Company director / Boss"],
+            }
+        return {
+            "case_title": title or "Dispute Discussion",
+            "case_synopsis": "The opposing party has rejected your requested remedy.",
+            "stakeholders": ["Opposing authority", "Opposing lawyer"],
+        }
+
+    def get_opening_message(self, stakeholder: str, case_synopsis: str) -> str:
+        """Produce the initial in-character opening challenge from the stakeholder."""
+        st = stakeholder.lower()
+        if "police" in st or "officer" in st or "daroga" in st or "sub-inspector" in st:
+            return "What information do you need about your brother's case?"
+        elif "lawyer" in st or "prosecutor" in st or "advocate" in st:
+            return "I represent the other side in this matter. What is your position regarding the allegations?"
+        elif "support" in st or "grievance" in st or "customer" in st:
+            return "Thank you for contacting support. Can you provide your complaint or order details?"
+        elif "seller" in st or "merchant" in st:
+            return "Our dispatch records indicate delivery was fulfilled. Why are you disputing this purchase?"
+        elif "landlord" in st or "owner" in st:
+            return "I inspected the premises after you vacated. The damages exceed normal usage. What did you want to discuss?"
+        elif "hr" in st or "director" in st or "boss" in st:
+            return "I received your message regarding final settlement. What specifically did you want to clarify about our policy?"
+        return "I have reviewed your communication. What is your justification?"
+
+    def is_concerned_authority(self, stakeholder: str, case_synopsis: str) -> bool:
+        """Check whether the selected stakeholder has jurisdiction or relevance to this case."""
+        st = stakeholder.lower()
+        cs = case_synopsis.lower()
+
+        # Explicit non-concerned roles
+        if any(w in st for w in ["income tax", "tax", "doctor", "hospital", "school", "principal", "teacher", "bank", "ticket collector"]):
+            return False
+
+        # Criminal / Bihar liquor cases
+        if any(w in cs for w in ["police", "arrest", "custody", "liquor", "alcohol", "jail", "fir", "bihar"]):
+            return any(
+                w in st
+                for w in [
+                    "police", "daroga", "thana", "lawyer", "advocate",
+                    "prosecutor", "excise", "magistrate", "judge", "investigating officer",
+                    "sub-inspector", "inspector", "custody", "checkpoint"
+                ]
+            )
+        # Consumer cases
+        if any(w in cs for w in ["refund", "order", "delivery", "amazon", "seller", "flipkart", "ecommerce"]):
+            return any(
+                w in st
+                for w in ["support", "grievance", "seller", "merchant", "courier", "delivery", "manager", "store", "company"]
+            )
+        # Tenancy cases
+        if any(w in cs for w in ["deposit", "rent", "landlord", "flat", "tenant"]):
+            return any(w in st for w in ["landlord", "owner", "broker", "agent", "flatmate", "neighbor"])
+        # Employment cases
+        if any(w in cs for w in ["salary", "wages", "employer", "dues"]):
+            return any(w in st for w in ["hr", "manager", "director", "boss", "employer", "labor", "founder"])
+        return True
+
+    def execute_roleplay_turn(
+        self,
+        stakeholder: str,
+        case_synopsis: str,
+        history: list[dict[str, Any]],
+        user_message: str,
+        language: str = "en",
+    ) -> str:
+        """Execute one ultra-fast in-character roleplay turn with authority-awareness and minimum gates."""
+        st = stakeholder.strip()
+
+        # 1. Authority Awareness: Non-concerned authority check
+        if not self.is_concerned_authority(st, case_synopsis):
+            st_lower = st.lower()
+            if "tax" in st_lower or "income" in st_lower:
+                return (
+                    "Why are you asking me about this? I am an Income Tax Officer, this is a local police and excise matter under the Bihar Prohibition Act. Go to the local thana or contact an advocate."
+                )
+            elif "doctor" in st_lower or "hospital" in st_lower:
+                return (
+                    "This is a medical facility. We provide medical treatment, not police case administration. Please approach the concerned police station."
+                )
+            elif "school" in st_lower or "teacher" in st_lower or "principal" in st_lower:
+                return (
+                    "This is a school administration office. We have no involvement in vehicle seizures or police arrests. Please contact the proper authorities."
+                )
+            else:
+                return (
+                    f"I am a {st}, and I have no jurisdiction or involvement in this matter. You are contacting the wrong authority; please approach the concerned department."
+                )
+
+        # 2. Concerned Authority: Live OpenAI call if configured
+        if self.settings.openai_api_key and self.settings.openai_api_key not in {"fixture", "test", ""}:
+            try:
+                from openai import OpenAI
+                client = OpenAI(api_key=self.settings.openai_api_key)
+                system_prompt = (
+                    f"You are an authentic Indian actor roleplaying strictly in-character as: {st}.\n"
+                    f"Case background: {case_synopsis}\n\n"
+                    "STRICT DIRECTIVES:\n"
+                    "1. Stay 100% in character. You are NOT an AI assistant, advisor, or chatbot.\n"
+                    "2. NEVER say 'As an AI...', NEVER give disclaimers or bulleted legal tips.\n"
+                    "3. Speak naturally, directly, and skeptically as this real-world Indian person would: demand paperwork (FIR, invoices, proof), probe holes in their story, or stand on rules.\n"
+                    "4. Keep your reply concise: 1 to 3 natural conversational sentences."
+                )
+                messages = [{"role": "system", "content": system_prompt}]
+                for h in history[-4:]:
+                    messages.append({"role": "assistant", "content": h.get("opponent_reply", "")})
+                    messages.append({"role": "user", "content": h.get("user_argument", "")})
+                messages.append({"role": "user", "content": user_message})
+
+                resp = client.chat.completions.create(
+                    model=self.settings.primary_model or "gpt-4o-mini",
+                    messages=messages,
+                    max_tokens=200,
+                    temperature=0.7,
+                )
+                reply = (resp.choices[0].message.content or "").strip()
+                if reply:
+                    return reply
+            except Exception:
+                pass
+
+        # 3. Deterministic in-character simulation (offline / test mode)
+        turn_idx = len(history) + 1
+        msg_lower = user_message.lower()
+
+        if "police" in st.lower() or "officer" in st.lower() or "daroga" in st.lower():
+            if turn_idx == 1:
+                return "Do you have his FIR number or any arrest documents?"
+            elif "fir" in msg_lower or "court" in msg_lower or "produced" in msg_lower:
+                return "He was produced before the CJM court earlier today. The FIR has been registered at the station. If you want a certified copy, apply through an advocate."
+            elif "lawyer" in msg_lower or "advocate" in msg_lower or "bail" in msg_lower:
+                return "Your lawyer can file a bail petition in court. At the station, we are completing the seizure memo for the vehicle and the recovered liquor."
+            else:
+                return "The car was intercepted with liquor in the boot. We need the registration papers, the driver's details, and valid identity documents before anything else."
+
+        elif "lawyer" in st.lower() or "prosecutor" in st.lower():
+            if turn_idx == 1:
+                return "The recovery of contraband was made directly from the vehicle. What statutory defense does your brother have under the Act?"
+            else:
+                return "Possession in transit carries a statutory presumption under the Special Act. We will be placing the seizure list before the Magistrate."
+
+        elif "support" in st.lower() or "grievance" in st.lower():
+            if turn_idx == 1:
+                return "The tracking system shows the parcel was delivered with OTP verification at your address. Do you have unboxing pictures or CCTV footage?"
+            else:
+                return "Under our seller guidelines, return claims after delivery confirmation require photographic proof. Without that, our policy does not allow a refund."
+
+        elif "landlord" in st.lower():
+            if turn_idx == 1:
+                return "The flat walls have scuffs and the bathroom tiles need deep cleaning. The painting quote is ₹35,000. Did you document the walls when you moved in?"
+            else:
+                return "Normal wear and tear doesn't mean leaving dirty walls. I have to deduct the painting contractor's bill from the deposit."
+
+        elif "hr" in st.lower() or "boss" in st.lower():
+            if turn_idx == 1:
+                return "Company cash flow is tight due to pending client payments. Everyone's exit settlement is on hold for 60 days. Have you completed handover?"
+            else:
+                return "If you sign our mutual settlement release form, we can expedite 60% of your pending dues this week."
+
+        return "We have noted your statement, but we stand by our official position. Bring your supporting documents if you wish to dispute this."
+
+
     def generate_scenarios(
         self,
         memory: CaseMemory | None,

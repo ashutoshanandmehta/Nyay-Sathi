@@ -40,3 +40,8 @@ export interface PracticeScenario { scenario_id:string; title:string; domain:str
 export interface PracticeTurn { id:string; session_id:string; turn_index:number; user_argument:string; opponent_reply:string; coach_feedback:CoachFeedback; created_at:string }
 export interface PracticeSession { id:string; conversation_id:string; scenario_id:string; title:string; domain:string; opponent_role:string; setting:string; objective:string; opening_statement:string; status:string; created_at:string; updated_at:string; turns:PracticeTurn[]; turn_count?:number }
 
+export interface RoleplaySetup { case_title: string; case_synopsis: string; stakeholders: string[] }
+export interface RoleplayStartResponse { session_id: string; stakeholder: string; case_title: string; case_synopsis: string; opening_message: string }
+export interface RoleplayChatMessage { id: string; role: 'opponent' | 'user'; text: string }
+
+

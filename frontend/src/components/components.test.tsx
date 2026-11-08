@@ -121,74 +121,53 @@ describe('answer quality',()=>{
   })
 })
 
-describe('practice arena',()=>{
-  it('renders scenarios, starts a drill, and displays coach feedback',async()=>{
+describe('roleplay arena',()=>{
+  it('renders minimalist stakeholder selection, starts simulation, and sends turns',async()=>{
     cleanup()
-    const mockScenarios=[{
-      scenario_id:'sc-1',
-      title:'Police Questioning: Vehicle Search',
-      domain:'criminal',
-      opponent_role:'Investigating Officer',
-      setting:'Thana Room',
-      objective:'Assert BNSS 38',
-      opening_statement:'Why was liquor found in your car?',
-      key_rights:['BNSS 38'],
-      suggested_first_response:'I exercise my right to an advocate.',
-    }]
-    const mockSession={
-      id:'sess-1',
-      conversation_id:'c-test',
-      scenario_id:'sc-1',
-      title:'Police Questioning: Vehicle Search',
-      domain:'criminal',
-      opponent_role:'Investigating Officer',
-      setting:'Thana Room',
-      objective:'Assert BNSS 38',
-      opening_statement:'Why was liquor found in your car?',
-      status:'active',
-      created_at:'2026-11-08',
-      updated_at:'2026-11-08',
-      turns:[],
+    const mockSetup={
+      case_title:'Alcohol found in vehicle · Bihar',
+      case_synopsis:'Your brother is in custody and the car has been seized.',
+      stakeholders:['Police officer','Opposing lawyer'],
     }
-    const mockTurn={
-      id:'t-1',
-      session_id:'sess-1',
+    const mockStartRes={
+      session_id:'sess-rp-1',
+      stakeholder:'Police officer',
+      case_title:mockSetup.case_title,
+      case_synopsis:mockSetup.case_synopsis,
+      opening_message:"What information do you need about your brother's case?",
+    }
+    const mockChatRes={
+      reply:'Do you have his FIR number or any arrest documents?',
       turn_index:1,
-      user_argument:'I was only a passenger and demand to consult my advocate under BNSS 38.',
-      opponent_reply:'We are recording your statement now.',
-      coach_feedback:{
-        assessment:'strong' as const,
-        strengths:['Invoked Section 38 BNSS'],
-        vulnerabilities:[],
-        statutory_safeguards:[{section:'Section 38',act:'BNSS 2023',title:'Right to advocate',relevance:'Consult advocate'}],
-        suggested_phrasing:'I request my advocate be present.',
-      },
-      created_at:'2026-11-08',
     }
 
-    vi.spyOn(api,'practiceScenarios').mockResolvedValue(mockScenarios)
-    vi.spyOn(api,'listPracticeSessions').mockResolvedValue([])
-    vi.spyOn(api,'startPracticeSession').mockResolvedValue(mockSession)
-    vi.spyOn(api,'practiceTurn').mockResolvedValue(mockTurn)
+    vi.spyOn(api,'roleplaySetup').mockResolvedValue(mockSetup)
+    vi.spyOn(api,'roleplayStart').mockResolvedValue(mockStartRes)
+    vi.spyOn(api,'roleplayChat').mockResolvedValue(mockChatRes)
 
-    render(<PracticePanel caseId="c-test"/>)
+    render(<PracticePanel caseId="c-test" setupDelayMs={20}/>)
 
-    // Verify scenario list
-    await waitFor(()=>expect(screen.getByText('Police Questioning: Vehicle Search')).toBeInTheDocument())
-    expect(screen.getByText('Opponent: Investigating Officer')).toBeInTheDocument()
+    // Verify Reference 1 setup screen renders
+    await waitFor(()=>expect(screen.getByText('Practice your conversation')).toBeInTheDocument())
+    expect(screen.getByText('Alcohol found in vehicle · Bihar')).toBeInTheDocument()
+    expect(screen.getByText('Your brother is in custody and the car has been seized.')).toBeInTheDocument()
+    expect(screen.getByText('Police officer')).toBeInTheDocument()
+    expect(screen.getByText('Opposing lawyer')).toBeInTheDocument()
 
-    // Start drill
-    fireEvent.click(screen.getByRole('button',{name:/Start This Practice Drill/}))
-    await waitFor(()=>expect(screen.getByText('Why was liquor found in your car?')).toBeInTheDocument())
+    // Click Start Practice
+    fireEvent.click(screen.getByRole('button',{name:/Start Practice/}))
 
-    // Submit turn
-    const input=screen.getByLabelText('Your counter-argument')
-    fireEvent.change(input,{target:{value:'I was only a passenger and demand to consult my advocate under BNSS 38.'}})
-    fireEvent.click(screen.getByRole('button',{name:/Argue/}))
+    // Verify Reference 2 active chat screen renders after short delay
+    await waitFor(()=>expect(screen.getByText("What information do you need about your brother's case?")).toBeInTheDocument())
+    expect(screen.getByText('Police officer')).toBeInTheDocument()
+    expect(screen.getByText('End practice')).toBeInTheDocument()
 
-    await waitFor(()=>expect(screen.getByText('Invoked Section 38 BNSS')).toBeInTheDocument())
-    expect(screen.getByText('We are recording your statement now.')).toBeInTheDocument()
-    expect(screen.getByText('🟢 Solid Position')).toBeInTheDocument()
+    // Send user message
+    const input=screen.getByLabelText('Type your response')
+    fireEvent.change(input,{target:{value:'I want to know which court he was produced before.'}})
+    fireEvent.submit(input.closest('form')!)
+
+    await waitFor(()=>expect(screen.getByText('Do you have his FIR number or any arrest documents?')).toBeInTheDocument())
   })
 })
 

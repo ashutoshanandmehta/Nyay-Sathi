@@ -21,6 +21,11 @@ from app.practice.contracts import (
     PracticeScenario,
     PracticeSessionCreate,
     PracticeTurnRequest,
+    RoleplayChatRequest,
+    RoleplayChatResponse,
+    RoleplaySetupResponse,
+    RoleplayStartRequest,
+    RoleplayStartResponse,
 )
 from app.practice.engine import PracticeEngine
 from app.resolution.documents import CorrespondenceExporter
@@ -404,6 +409,118 @@ def import_transfer_package(
             "encrypted_case_transfer_import_failed", owner_id=owner.owner_id
         )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/conversations/{conversation_id}/roleplay/setup")
+def get_roleplay_setup(
+    conversation_id: str,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        conv = database.get_conversation(owner.owner_id, conversation_id)
+        memory, _ = database.load_memory(owner.owner_id, conversation_id)
+        msgs = database.messages(owner.owner_id, conversation_id)
+        recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
+        engine = PracticeEngine(get_settings())
+        setup = engine.extract_roleplay_setup(memory, recent_user, conv.get("title", ""))
+        return RoleplaySetupResponse(
+            case_title=setup["case_title"],
+            case_synopsis=setup["case_synopsis"],
+            stakeholders=setup["stakeholders"],
+        )
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/roleplay/start", dependencies=[Depends(csrf_guard)]
+)
+def start_roleplay_session(
+    conversation_id: str,
+    body: RoleplayStartRequest,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        conv = database.get_conversation(owner.owner_id, conversation_id)
+        memory, _ = database.load_memory(owner.owner_id, conversation_id)
+        msgs = database.messages(owner.owner_id, conversation_id)
+        recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
+        engine = PracticeEngine(get_settings())
+        setup = engine.extract_roleplay_setup(memory, recent_user, conv.get("title", ""))
+
+        stakeholder = (
+            body.custom_stakeholder.strip()
+            if body.custom_stakeholder and body.custom_stakeholder.strip()
+            else body.stakeholder.strip()
+        )
+        if not stakeholder:
+            stakeholder = "Opposing authority"
+
+        opening = engine.get_opening_message(stakeholder, setup["case_synopsis"])
+        scenario_slug = "roleplay-" + re.sub(r"\W+", "-", stakeholder.lower()).strip("-")
+        session = database.create_practice_session(
+            owner.owner_id,
+            conversation_id,
+            scenario_id=scenario_slug,
+            title=f"Roleplay: {stakeholder}",
+            domain=memory.domain or "general",
+            opponent_role=stakeholder,
+            setting="Direct Conversation",
+            objective=f"Roleplay conversation with {stakeholder}",
+            opening_statement=opening,
+        )
+        return RoleplayStartResponse(
+            session_id=session["id"],
+            stakeholder=stakeholder,
+            case_title=setup["case_title"],
+            case_synopsis=setup["case_synopsis"],
+            opening_message=opening,
+        )
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/roleplay/chat", dependencies=[Depends(csrf_guard)]
+)
+def chat_roleplay_turn(
+    conversation_id: str,
+    body: RoleplayChatRequest,
+    session_id: str = Query(...),
+    request: Request = None,
+    owner: Annotated[OwnerContext, Depends(owner_context)] = None,
+):
+    try:
+        database = db(request)
+        session = database.get_practice_session(owner.owner_id, conversation_id, session_id)
+        memory, _ = database.load_memory(owner.owner_id, conversation_id)
+        msgs = database.messages(owner.owner_id, conversation_id)
+        recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
+        engine = PracticeEngine(get_settings())
+        setup = engine.extract_roleplay_setup(memory, recent_user, "")
+
+        reply = engine.execute_roleplay_turn(
+            session["opponent_role"],
+            setup["case_synopsis"],
+            session.get("turns", []),
+            body.message,
+            body.language,
+        )
+        turn = database.add_practice_turn(
+            owner.owner_id,
+            conversation_id,
+            session_id,
+            body.message,
+            reply,
+            {},
+        )
+        return RoleplayChatResponse(reply=reply, turn_index=turn["turn_index"])
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
 
 
 @router.get("/conversations/{conversation_id}/practice/scenarios")

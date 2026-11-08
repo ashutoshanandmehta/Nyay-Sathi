@@ -249,3 +249,62 @@ def test_practice_api_full_flow(client):
     tracker_actions = [a["title"] for a in actions_res.json().get("user_actions", [])]
     assert "Assert right to meet advocate under BNSS Section 38" in tracker_actions
 
+
+def test_roleplay_setup_and_chat_flow(client):
+    from tests.conftest import create_case
+
+    cid = create_case(client)
+
+    # 1. Setup endpoint
+    setup_res = client.get(f"/api/conversations/{cid}/roleplay/setup")
+    assert setup_res.status_code == 200
+    setup_data = setup_res.json()
+    assert "case_title" in setup_data
+    assert "case_synopsis" in setup_data
+    assert len(setup_data["stakeholders"]) >= 2
+
+    # 2. Start roleplay session
+    start_res = client.post(
+        f"/api/conversations/{cid}/roleplay/start",
+        json={"stakeholder": "Police officer"},
+    )
+    assert start_res.status_code == 200
+    start_data = start_res.json()
+    assert start_data["stakeholder"] == "Police officer"
+    assert "What information do you need" in start_data["opening_message"]
+    session_id = start_data["session_id"]
+
+    # 3. Chat turn
+    chat_res = client.post(
+        f"/api/conversations/{cid}/roleplay/chat?session_id={session_id}",
+        json={"message": "I want to know which court he was produced before and how to get his FIR."},
+    )
+    assert chat_res.status_code == 200
+    chat_data = chat_res.json()
+    assert chat_data["turn_index"] == 1
+    assert "FIR" in chat_data["reply"] or "court" in chat_data["reply"] or "documents" in chat_data["reply"]
+
+
+def test_roleplay_concerned_vs_non_concerned_authority():
+    engine = PracticeEngine()
+    case_synopsis = "Your brother is in custody and the car has been seized under the Bihar Prohibition Act."
+
+    # Concerned authority
+    assert engine.is_concerned_authority("Police officer", case_synopsis) is True
+    assert engine.is_concerned_authority("Opposing lawyer", case_synopsis) is True
+
+    # Non-concerned authority
+    assert engine.is_concerned_authority("Income Tax Officer", case_synopsis) is False
+    assert engine.is_concerned_authority("School Principal", case_synopsis) is False
+
+    # Non-concerned authority authentic response
+    unrelated_reply = engine.execute_roleplay_turn(
+        "Income Tax Officer",
+        case_synopsis,
+        [],
+        "Please release my brother's car!",
+    )
+    assert "Income Tax Officer" in unrelated_reply
+    assert "thana" in unrelated_reply or "police" in unrelated_reply or "jurisdiction" in unrelated_reply.lower()
+
+

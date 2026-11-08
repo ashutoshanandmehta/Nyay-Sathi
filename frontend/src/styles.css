@@ -171,3 +171,83 @@
 .help-hint-btn { border: 0; background: transparent; color: var(--green); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; padding: 0; }
 .send-arg-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; background: var(--green); color: #fff; border: 0; border-radius: 7px; padding: 7px 14px; font-size: 12.5px; font-weight: 600; }
 .send-arg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+/* Minimalist Roleplay Redesign Styles (Matching Reference 1 & 2) */
+.topbar-roleplay-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 8px; border: 0; background: transparent; font-size: 13px; font-weight: 600; }
+.topbar-roleplay-btn.unlocked { color: var(--green); cursor: pointer; }
+.topbar-roleplay-btn.unlocked:hover { background: #eef3f0; }
+.topbar-roleplay-btn.locked { color: var(--muted); opacity: 0.5; cursor: not-allowed; }
+
+.roleplay-drawer-container { display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 6px 14px 18px; color: #111; font-family: inherit; }
+.roleplay-drawer-container.active-chat-mode { padding: 4px 16px 14px; }
+
+/* Setup Top */
+.roleplay-setup-top { margin-bottom: 12px; }
+.roleplay-back-link { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; font-size: 14.5px; font-weight: 700; color: #111; cursor: pointer; padding: 0; }
+
+.roleplay-setup-content { display: flex; flex-direction: column; gap: 18px; }
+.roleplay-main-heading { font-size: 21px; font-weight: 700; color: #111; margin: 0; }
+.roleplay-main-subheading { font-size: 14px; color: #666; margin: 2px 0 0; }
+
+/* Case context box */
+.roleplay-case-box { margin-top: 6px; display: grid; gap: 3px; }
+.roleplay-case-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6e7370; }
+.roleplay-case-title { font-size: 16px; font-weight: 700; color: #111; margin: 2px 0 0; }
+.roleplay-case-desc { font-size: 13.5px; color: #444; margin: 0; line-height: 1.45; }
+
+/* Radio List */
+.roleplay-stakeholders-section { margin-top: 10px; display: grid; gap: 14px; }
+.roleplay-question-label { font-size: 14px; font-weight: 500; color: #222; }
+.roleplay-radios-list { display: grid; gap: 14px; }
+.roleplay-radio-row { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+.roleplay-radio-circle { width: 19px; height: 19px; border: 2px solid #bbb; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: border-color 0.15s ease; }
+.roleplay-radio-circle.selected { border-color: #000; background: #000; }
+.roleplay-radio-inner { width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+.roleplay-radio-text { font-size: 14.5px; font-weight: 500; color: #111; }
+.roleplay-custom-input-wrap input { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-family: inherit; margin-top: 4px; }
+
+/* Action Button */
+.roleplay-action-wrap { margin-top: 14px; }
+.roleplay-start-btn { width: 100%; background: #000; color: #fff; border: 0; border-radius: 99px; padding: 13px 20px; font-size: 14.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: background 0.15s ease; }
+.roleplay-start-btn:hover { background: #222; }
+.roleplay-start-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+/* 3-4s Transition Screen */
+.roleplay-setup-transition { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 350px; gap: 14px; text-align: center; }
+.roleplay-spinner-large { width: 34px; height: 34px; border: 3px solid #eee; border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
+.roleplay-setup-transition h4 { margin: 0; font-size: 16px; font-weight: 700; color: #111; }
+.roleplay-transition-status { font-size: 13.5px; color: #666; margin: 0; }
+
+.roleplay-loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 260px; gap: 12px; color: #777; font-size: 13.5px; }
+.roleplay-spinner { width: 26px; height: 26px; border: 2.5px solid #eee; border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
+.roleplay-inline-error { background: #fdeeee; border: 1px solid #f5c4c4; color: #882222; border-radius: 7px; padding: 7px 11px; font-size: 12px; }
+
+/* Active Chat Screen (Matching Reference 2) */
+.roleplay-chat-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+.roleplay-header-titles { display: grid; gap: 2px; }
+.roleplay-stakeholder-name { font-size: 17px; font-weight: 700; color: #111; margin: 0; }
+.roleplay-subtitle { font-size: 12.5px; color: #777; }
+.roleplay-end-btn { border: 1px solid #ddd; background: #fff; border-radius: 99px; padding: 6px 14px; font-size: 12.5px; font-weight: 500; color: #333; cursor: pointer; transition: background 0.15s ease; }
+.roleplay-end-btn:hover { background: #f5f5f5; }
+
+.roleplay-messages-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 22px; padding: 18px 0; overscroll-behavior: contain; }
+.roleplay-message-row { display: flex; width: 100%; }
+.roleplay-message-row.opponent { justify-content: flex-start; }
+.roleplay-message-row.user { justify-content: flex-end; }
+.roleplay-opponent-bubble { max-width: 86%; font-size: 15px; line-height: 1.55; color: #111; white-space: pre-wrap; }
+.roleplay-user-bubble { max-width: 82%; background: #ecefed; border-radius: 20px; padding: 12px 18px; font-size: 15px; line-height: 1.55; color: #111; white-space: pre-wrap; }
+
+.roleplay-typing-dots { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; background: #f5f5f5; border-radius: 99px; }
+.roleplay-typing-dots span { width: 6px; height: 6px; background: #999; border-radius: 50%; animation: pulse 1s infinite alternate; }
+.roleplay-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.roleplay-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* Composer Bottom */
+.roleplay-composer-bottom { padding-top: 10px; border-top: 1px solid #f0f0f0; flex-shrink: 0; }
+.roleplay-composer-form { display: flex; align-items: center; position: relative; width: 100%; }
+.roleplay-composer-form input { width: 100%; border: 1px solid #e2e2e2; border-radius: 24px; padding: 12px 48px 12px 18px; font-size: 14.5px; font-family: inherit; outline: none; background: #fff; color: #111; box-sizing: border-box; }
+.roleplay-composer-form input:focus { border-color: #777; }
+.roleplay-send-btn { position: absolute; right: 6px; width: 33px; height: 33px; border-radius: 50%; background: #000; color: #fff; border: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s ease; }
+.roleplay-send-btn:hover:not(:disabled) { background: #222; }
+.roleplay-send-btn:disabled { background: #e5e5e5; color: #aaa; cursor: not-allowed; }

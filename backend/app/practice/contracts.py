@@ -78,3 +78,34 @@ class PracticeSessionResponse(BaseModel):
 
 class PracticeExportRequest(BaseModel):
     action_titles: list[str] = Field(default_factory=list)
+
+
+class RoleplaySetupResponse(BaseModel):
+    case_title: str
+    case_synopsis: str
+    stakeholders: list[str] = Field(default_factory=list)
+
+
+class RoleplayStartRequest(BaseModel):
+    stakeholder: str
+    custom_stakeholder: str | None = None
+    language: str = "en"
+
+
+class RoleplayStartResponse(BaseModel):
+    session_id: str
+    stakeholder: str
+    case_title: str
+    case_synopsis: str
+    opening_message: str
+
+
+class RoleplayChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    language: str = "en"
+
+
+class RoleplayChatResponse(BaseModel):
+    reply: str
+    turn_index: int
+

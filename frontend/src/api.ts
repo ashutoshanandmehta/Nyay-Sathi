@@ -1,4 +1,4 @@
-import type { AgentWorkflow, Conversation, Detail, EscalationBundle, KnowledgeBase, Language, PracticeScenario, PracticeSession, PracticeTurn, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
+import type { AgentWorkflow, Conversation, Detail, EscalationBundle, KnowledgeBase, Language, PracticeScenario, PracticeSession, PracticeTurn, RoleplaySetup, RoleplayStartResponse, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
 
 const csrf = () => document.cookie.split('; ').find(x => x.startsWith('nyay_csrf='))?.split('=').slice(1).join('=') ?? ''
 
@@ -55,6 +55,9 @@ export const api = {
   getPracticeSession:(cid:string,sid:string)=>call<PracticeSession>(`/api/conversations/${cid}/practice/sessions/${sid}`),
   practiceTurn:(cid:string,sid:string,user_argument:string,language:Language)=>call<PracticeTurn>(`/api/conversations/${cid}/practice/sessions/${sid}/turns`,{method:'POST',body:JSON.stringify({user_argument,language})}),
   exportPracticeActions:(cid:string,sid:string,action_titles:string[])=>call<{exported_count:number;status:string}>(`/api/conversations/${cid}/practice/sessions/${sid}/export-actions`,{method:'POST',body:JSON.stringify({action_titles})}),
+  roleplaySetup:(cid:string)=>call<RoleplaySetup>(`/api/conversations/${cid}/roleplay/setup`),
+  roleplayStart:(cid:string,stakeholder:string,customStakeholder?:string,language?:Language)=>call<RoleplayStartResponse>(`/api/conversations/${cid}/roleplay/start`,{method:'POST',body:JSON.stringify({stakeholder,custom_stakeholder:customStakeholder,language})}),
+  roleplayChat:(cid:string,sessionId:string,message:string,language?:Language)=>call<{reply:string;turn_index:number}>(`/api/conversations/${cid}/roleplay/chat?session_id=${sessionId}`,{method:'POST',body:JSON.stringify({message,language})}),
 }
 
 interface AttachmentUpload { id:string; filename:string; extraction_status:string }

@@ -1,563 +1,313 @@
-import { AlertTriangle, ArrowRight, Award, CheckCircle2, ChevronDown, ChevronUp, Copy, HelpCircle, MessageSquare, Mic, MicOff, RotateCcw, Send, ShieldAlert, Sparkles, Swords, User, Volume2, X } from 'lucide-react'
+import { ArrowLeft, ArrowUp, ArrowRight, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
-import type { CoachFeedback, Detail, Language, PracticeScenario, PracticeSession, PracticeTurn } from '../types'
+import type { Language, RoleplayChatMessage, RoleplaySetup } from '../types'
 
 export default function PracticePanel({
   caseId,
   language = 'en',
-  onRefreshCase,
+  onClose,
+  setupDelayMs = 3400,
 }: {
   caseId: string
   language?: Language
-  onRefreshCase?: () => void
+  onClose?: () => void
+  setupDelayMs?: number
 }) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [scenarios, setScenarios] = useState<PracticeScenario[]>([])
-  const [activeSession, setActiveSession] = useState<PracticeSession | null>(null)
-  const [pastSessions, setPastSessions] = useState<PracticeSession[]>([])
-  const [selectedScenarioId, setSelectedScenarioId] = useState<string>('')
-  const [customPrompt, setCustomPrompt] = useState('')
-  const [showCustom, setShowCustom] = useState(false)
+  const [setupData, setSetupData] = useState<RoleplaySetup | null>(null)
+  const [selectedStakeholder, setSelectedStakeholder] = useState<string>('')
+  const [customStakeholder, setCustomStakeholder] = useState<string>('')
 
-  // Turn submission state
-  const [argumentText, setArgumentText] = useState('')
-  const [submittingTurn, setSubmittingTurn] = useState(false)
-  const [expandedCoachIdx, setExpandedCoachIdx] = useState<number | null>(null)
-  const [exportedStatus, setExportedStatus] = useState('')
-  const [recording, setRecording] = useState(false)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const threadBottomRef = useRef<HTMLDivElement>(null)
+  // 3-4 second setup transition state
+  const [isSettingUp, setIsSettingUp] = useState(false)
+  const [setupStepText, setSetupStepText] = useState('')
+
+  // Active chat session state
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [activeStakeholder, setActiveStakeholder] = useState<string>('')
+  const [messages, setMessages] = useState<RoleplayChatMessage[]>([])
+  const [inputText, setInputText] = useState('')
+  const [sending, setSending] = useState(false)
+  const chatBottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadScenariosAndSessions()
+    loadSetup()
   }, [caseId])
 
   useEffect(() => {
-    if (activeSession) {
-      threadBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-      if (activeSession.turns.length > 0) {
-        setExpandedCoachIdx(activeSession.turns.length - 1)
-      }
+    if (sessionId) {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [activeSession?.turns.length])
+  }, [messages.length, sessionId])
 
-  async function loadScenariosAndSessions() {
+  async function loadSetup() {
     setLoading(true)
     setError('')
     try {
-      const [scList, sessList] = await Promise.all([
-        api.practiceScenarios(caseId),
-        api.listPracticeSessions(caseId),
-      ])
-      setScenarios(scList)
-      setPastSessions(sessList)
-      if (scList.length > 0 && !selectedScenarioId) {
-        setSelectedScenarioId(scList[0].scenario_id)
+      const data = await api.roleplaySetup(caseId)
+      setSetupData(data)
+      if (data.stakeholders.length > 0) {
+        setSelectedStakeholder(data.stakeholders[0])
+      } else {
+        setSelectedStakeholder('Police officer')
       }
     } catch (e) {
-      setError((e as Error).message || 'Failed to load practice scenarios.')
+      setError((e as Error).message || 'Failed to load case context for roleplay.')
     } finally {
       setLoading(false)
     }
   }
 
-  async function startSession(scId: string) {
-    setLoading(true)
+  async function startRoleplay() {
+    if (!selectedStakeholder) return
     setError('')
+    setIsSettingUp(true)
+
+    const targetStakeholder =
+      selectedStakeholder === 'Someone else'
+        ? (customStakeholder.trim() || 'Opposing party')
+        : selectedStakeholder
+
+    setSetupStepText(`Setting up ${targetStakeholder} persona...`)
+
+    const delay = setupDelayMs
+    const t1 = setTimeout(() => {
+      setSetupStepText('Loading your case context...')
+    }, Math.min(delay * 0.4, 1400))
+    const t2 = setTimeout(() => {
+      setSetupStepText('Starting roleplay simulation...')
+    }, Math.min(delay * 0.8, 2800))
+
     try {
-      const payload: { scenario_id: string; custom_scenario?: string; language?: Language } = {
-        scenario_id: scId,
-        language,
-      }
-      if (scId === 'custom' && customPrompt.trim()) {
-        payload.custom_scenario = customPrompt.trim()
-      }
-      const session = await api.startPracticeSession(caseId, payload)
-      setActiveSession(session)
-      setExportedStatus('')
-      setArgumentText('')
+      const res = await api.roleplayStart(
+        caseId,
+        selectedStakeholder,
+        selectedStakeholder === 'Someone else' ? customStakeholder.trim() : undefined,
+        language
+      )
+      setTimeout(() => {
+        setSessionId(res.session_id)
+        setActiveStakeholder(res.stakeholder)
+        setMessages([
+          {
+            id: 'm-0',
+            role: 'opponent',
+            text: res.opening_message,
+          },
+        ])
+        setIsSettingUp(false)
+      }, delay)
     } catch (e) {
-      setError((e as Error).message || 'Could not start practice session.')
-    } finally {
-      setLoading(false)
+      clearTimeout(t1)
+      clearTimeout(t2)
+      setIsSettingUp(false)
+      setError((e as Error).message || 'Could not start roleplay session.')
     }
   }
 
-  async function resumeSession(sessionId: string) {
-    setLoading(true)
-    setError('')
-    try {
-      const session = await api.getPracticeSession(caseId, sessionId)
-      setActiveSession(session)
-      setExportedStatus('')
-    } catch (e) {
-      setError((e as Error).message || 'Could not load practice session.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function submitTurn(e?: React.FormEvent) {
+  async function sendMessage(e?: React.FormEvent) {
     if (e) e.preventDefault()
-    if (!activeSession || !argumentText.trim() || submittingTurn) return
-    const textToSend = argumentText.trim()
-    setSubmittingTurn(true)
+    if (!sessionId || !inputText.trim() || sending) return
+    const textToSend = inputText.trim()
+    setInputText('')
+    setSending(true)
     setError('')
-    try {
-      const turn = await api.practiceTurn(caseId, activeSession.id, textToSend, language)
-      setActiveSession(prev => {
-        if (!prev) return null
-        return {
-          ...prev,
-          turns: [...prev.turns, turn],
-        }
-      })
-      setArgumentText('')
-    } catch (err) {
-      setError((err as Error).message || 'Failed to evaluate turn.')
-    } finally {
-      setSubmittingTurn(false)
-    }
-  }
 
-  async function savePointsToCase() {
-    if (!activeSession || activeSession.turns.length === 0) return
-    setLoading(true)
-    try {
-      // Collect suggested phrasings and statutory safeguards as action items
-      const actions: string[] = []
-      activeSession.turns.forEach(t => {
-        if (t.coach_feedback.suggested_phrasing) {
-          actions.push(`Assert key defense: ${t.coach_feedback.suggested_phrasing.slice(0, 100)}...`)
-        }
-        t.coach_feedback.statutory_safeguards.forEach(s => {
-          actions.push(`Cite ${s.act} ${s.section} (${s.title})`)
-        })
-      })
-      const uniqueActions = Array.from(new Set(actions)).slice(0, 4)
-      const res = await api.exportPracticeActions(caseId, activeSession.id, uniqueActions)
-      setExportedStatus(`Saved ${res.exported_count} key arguments to Your case action tracker!`)
-      onRefreshCase?.()
-    } catch (e) {
-      setError((e as Error).message || 'Could not save actions to case.')
-    } finally {
-      setLoading(false)
+    const userMsg: RoleplayChatMessage = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      text: textToSend,
     }
-  }
+    setMessages(prev => [...prev, userMsg])
 
-  // Voice recording
-  async function toggleRecording() {
-    if (recording) {
-      mediaRecorderRef.current?.stop()
-      setRecording(false)
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        const recorder = new MediaRecorder(stream)
-        audioChunksRef.current = []
-        recorder.ondataavailable = e => {
-          if (e.data.size > 0) audioChunksRef.current.push(e.data)
-        }
-        recorder.onstop = async () => {
-          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-          const file = new File([blob], 'recording.webm', { type: 'audio/webm' })
-          try {
-            const res = await api.transcribe(file)
-            if (res.transcript) {
-              setArgumentText(prev => (prev ? `${prev} ${res.transcript}` : res.transcript))
-            }
-          } catch {
-            setError('Audio transcription failed. You can type your argument directly.')
-          }
-        }
-        mediaRecorderRef.current = recorder
-        recorder.start()
-        setRecording(true)
-      } catch {
-        setError('Microphone access denied or unsupported.')
+    try {
+      const res = await api.roleplayChat(caseId, sessionId, textToSend, language)
+      const opponentMsg: RoleplayChatMessage = {
+        id: `o-${Date.now()}`,
+        role: 'opponent',
+        text: res.reply,
       }
+      setMessages(prev => [...prev, opponentMsg])
+    } catch (err) {
+      setError((err as Error).message || 'Response error.')
+    } finally {
+      setSending(false)
     }
   }
 
-  if (loading && !activeSession) {
+  function endPractice() {
+    setSessionId(null)
+    setActiveStakeholder('')
+    setMessages([])
+    onClose?.()
+  }
+
+  // 1. LOADING STATE
+  if (loading && !setupData) {
     return (
-      <div className="panel-content practice-arena">
-        <div className="practice-loading">
-          <Swords className="spin-icon" size={24} />
-          <p>Preparing legal practice scenarios from your case...</p>
+      <div className="roleplay-drawer-container">
+        <div className="roleplay-loading-wrap">
+          <div className="roleplay-spinner" />
+          <p>Analyzing case background...</p>
         </div>
       </div>
     )
   }
 
-  // SCENARIO PICKER VIEW
-  if (!activeSession) {
+  // 2. 3-4 SECOND SETUP TRANSITION SCREEN
+  if (isSettingUp) {
     return (
-      <div className="panel-content practice-arena">
-        <div className="practice-header-hero">
-          <div className="practice-hero-tag">
-            <Swords size={15} />
-            <span>Argument Practice Arena</span>
+      <div className="roleplay-drawer-container">
+        <div className="roleplay-setup-transition">
+          <div className="roleplay-spinner-large" />
+          <h4>Preparing Roleplay</h4>
+          <p className="roleplay-transition-status">{setupStepText}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 3. ACTIVE CONVERSATIONAL CHAT SCREEN (Matches Reference 2)
+  if (sessionId) {
+    return (
+      <div className="roleplay-drawer-container active-chat-mode">
+        {/* Header */}
+        <div className="roleplay-chat-header">
+          <div className="roleplay-header-titles">
+            <h3 className="roleplay-stakeholder-name">{activeStakeholder}</h3>
+            <span className="roleplay-subtitle">Practice simulation</span>
           </div>
-          <h3>Simulate the Other Side & Practice Counter-Arguments</h3>
-          <p className="muted">
-            Face tough questioning from police, company officers, landlords, or opposing counsel.
-            Test your arguments safely before walking into real meetings or courtrooms.
+          <button type="button" className="roleplay-end-btn" onClick={endPractice}>
+            End practice
+          </button>
+        </div>
+
+        {error && <div className="roleplay-inline-error">{error}</div>}
+
+        {/* Message Stream */}
+        <div className="roleplay-messages-scroll">
+          {messages.map(m => (
+            <div key={m.id} className={`roleplay-message-row ${m.role}`}>
+              {m.role === 'opponent' ? (
+                <div className="roleplay-opponent-bubble">{m.text}</div>
+              ) : (
+                <div className="roleplay-user-bubble">{m.text}</div>
+              )}
+            </div>
+          ))}
+          {sending && (
+            <div className="roleplay-message-row opponent">
+              <div className="roleplay-typing-dots">
+                <span /><span /><span />
+              </div>
+            </div>
+          )}
+          <div ref={chatBottomRef} />
+        </div>
+
+        {/* Composer */}
+        <div className="roleplay-composer-bottom">
+          <form onSubmit={sendMessage} className="roleplay-composer-form">
+            <input
+              type="text"
+              aria-label="Type your response"
+              placeholder="Type your response..."
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              disabled={sending}
+              autoFocus
+            />
+            <button
+              type="submit"
+              disabled={!inputText.trim() || sending}
+              className="roleplay-send-btn"
+              aria-label="Send response"
+            >
+              <ArrowUp size={16} />
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  // 4. SETUP & STAKEHOLDER SELECTION SCREEN (Matches Reference 1)
+  const stakeholdersList = [
+    ...(setupData?.stakeholders || ['Police officer', 'Opposing lawyer']),
+    'Someone else',
+  ]
+
+  return (
+    <div className="roleplay-drawer-container">
+      {/* Top Title Bar */}
+      <div className="roleplay-setup-top">
+        <button type="button" className="roleplay-back-link" onClick={onClose}>
+          <ArrowLeft size={16} /> Practice Arena
+        </button>
+      </div>
+
+      <div className="roleplay-setup-content">
+        <h2 className="roleplay-main-heading">Practice your conversation</h2>
+        <p className="roleplay-main-subheading">Prepare for what the other side might say.</p>
+
+        {error && <div className="roleplay-inline-error">{error}</div>}
+
+        {/* Based on your case card */}
+        <div className="roleplay-case-box">
+          <span className="roleplay-case-tag">BASED ON YOUR CASE</span>
+          <h4 className="roleplay-case-title">{setupData?.case_title || 'Your Case'}</h4>
+          <p className="roleplay-case-desc">
+            {setupData?.case_synopsis || 'Incident details recorded from your conversation.'}
           </p>
         </div>
 
-        {error && <div className="practice-error-banner" role="alert">{error}</div>}
-
-        <div className="practice-scenarios-section">
-          <h4>Case-Tailored Scenarios</h4>
-          <div className="scenario-cards-list">
-            {scenarios.map(sc => {
-              const selected = selectedScenarioId === sc.scenario_id
+        {/* Radio List */}
+        <div className="roleplay-stakeholders-section">
+          <label className="roleplay-question-label">Who do you want to practice with?</label>
+          <div className="roleplay-radios-list" role="radiogroup">
+            {stakeholdersList.map(st => {
+              const isSelected = selectedStakeholder === st
               return (
                 <div
-                  key={sc.scenario_id}
-                  className={`scenario-card ${selected ? 'selected' : ''}`}
-                  onClick={() => {
-                    setSelectedScenarioId(sc.scenario_id)
-                    setShowCustom(false)
-                  }}
+                  key={st}
+                  className="roleplay-radio-row"
+                  onClick={() => setSelectedStakeholder(st)}
                 >
-                  <div className="scenario-card-top">
-                    <span className="scenario-domain-pill">{sc.domain.toUpperCase()}</span>
-                    <span className="scenario-role-badge">Opponent: {sc.opponent_role}</span>
+                  <div className={`roleplay-radio-circle ${isSelected ? 'selected' : ''}`}>
+                    {isSelected && <div className="roleplay-radio-inner" />}
                   </div>
-                  <h5>{sc.title}</h5>
-                  <p className="scenario-desc"><strong>Setting:</strong> {sc.setting}</p>
-                  <p className="scenario-objective"><strong>Your Goal:</strong> {sc.objective}</p>
-                  <div className="scenario-opening-preview">
-                    <small className="muted">Opponent opening line:</small>
-                    <blockquote>"{sc.opening_statement}"</blockquote>
-                  </div>
-                  {selected && (
-                    <button
-                      type="button"
-                      className="start-drill-btn"
-                      onClick={e => {
-                        e.stopPropagation()
-                        startSession(sc.scenario_id)
-                      }}
-                    >
-                      Start This Practice Drill <ArrowRight size={15} />
-                    </button>
-                  )}
+                  <span className="roleplay-radio-text">{st}</span>
                 </div>
               )
             })}
-
-            {/* Custom Scenario Card */}
-            <div
-              className={`scenario-card custom-scenario-card ${showCustom ? 'selected' : ''}`}
-              onClick={() => {
-                setShowCustom(true)
-                setSelectedScenarioId('custom')
-              }}
-            >
-              <div className="scenario-card-top">
-                <span className="scenario-domain-pill">CUSTOM</span>
-                <span className="scenario-role-badge">Opponent: You Choose</span>
-              </div>
-              <h5>Custom Dispute Scenario</h5>
-              <p className="scenario-desc">Practice for a specific conversation, authority, or challenge.</p>
-              {showCustom && (
-                <div className="custom-input-wrap" onClick={e => e.stopPropagation()}>
-                  <textarea
-                    placeholder="e.g. My landlord is refusing to return my security deposit saying painting costs ₹35,000..."
-                    value={customPrompt}
-                    onChange={e => setCustomPrompt(e.target.value)}
-                    rows={3}
-                  />
-                  <button
-                    type="button"
-                    disabled={!customPrompt.trim()}
-                    className="start-drill-btn"
-                    onClick={() => startSession('custom')}
-                  >
-                    Start Custom Drill <ArrowRight size={15} />
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
+
+          {selectedStakeholder === 'Someone else' && (
+            <div className="roleplay-custom-input-wrap">
+              <input
+                type="text"
+                placeholder="e.g. Income Tax Officer, Landlord, Grievance Officer..."
+                value={customStakeholder}
+                onChange={e => setCustomStakeholder(e.target.value)}
+                autoFocus
+              />
+            </div>
+          )}
         </div>
 
-        {pastSessions.length > 0 && (
-          <div className="past-sessions-section">
-            <h4>Past Practice Drills ({pastSessions.length})</h4>
-            <div className="past-sessions-list">
-              {pastSessions.map(ps => (
-                <div key={ps.id} className="past-session-item">
-                  <div>
-                    <strong>{ps.title}</strong>
-                    <div className="past-session-meta">
-                      <span>{ps.opponent_role}</span> · <span>{ps.turn_count || 0} rounds</span> · <span>{ps.status}</span>
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => resumeSession(ps.id)}>
-                    View / Resume
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // ACTIVE DRILL ARENA VIEW
-  const roundCount = activeSession.turns.length
-  const currentScenario =
-    scenarios.find(s => s.scenario_id === activeSession.scenario_id) || {
-      title: activeSession.title,
-      opponent_role: activeSession.opponent_role,
-      setting: activeSession.setting,
-      objective: activeSession.objective,
-      suggested_first_response: null,
-    }
-
-  return (
-    <div className="panel-content practice-arena-active">
-      {/* Top Session Bar */}
-      <div className="practice-active-header">
-        <div className="practice-header-meta">
+        {/* Start Button */}
+        <div className="roleplay-action-wrap">
           <button
             type="button"
-            className="practice-back-btn"
-            onClick={() => {
-              setActiveSession(null)
-              loadScenariosAndSessions()
-            }}
+            className="roleplay-start-btn"
+            onClick={startRoleplay}
+            disabled={selectedStakeholder === 'Someone else' && !customStakeholder.trim()}
           >
-            ← Switch Scenario
+            Start Practice <ArrowRight size={17} />
           </button>
-          <span className="hypothetical-watermark-pill">
-            Simulated Opposition · Strictly Hypothetical
-          </span>
         </div>
-        <h4>{activeSession.title}</h4>
-        <div className="active-details-row">
-          <span><strong>Opponent:</strong> {activeSession.opponent_role}</span>
-          <span><strong>Location:</strong> {activeSession.setting}</span>
-          <span className="practice-round-pill">Round {roundCount + 1} of 4</span>
-        </div>
-        <div className="active-goal-box">
-          <Award size={14} />
-          <span><strong>Objective:</strong> {activeSession.objective}</span>
-        </div>
-      </div>
-
-      {error && <div className="practice-error-banner" role="alert">{error}</div>}
-      {exportedStatus && <div className="practice-success-banner" role="status">{exportedStatus}</div>}
-
-      {/* Discussion Thread */}
-      <div className="practice-thread-scroll">
-        {/* Opening Opponent Challenge */}
-        <div className="practice-bubble opponent-bubble opening-turn">
-          <div className="bubble-header">
-            <span className="opponent-title-chip">
-              <Swords size={13} /> {activeSession.opponent_role}
-            </span>
-            <small className="turn-label">Initial Challenge</small>
-          </div>
-          <p className="bubble-content">{activeSession.opening_statement}</p>
-        </div>
-
-        {/* Turn History */}
-        {activeSession.turns.map((turn, idx) => {
-          const isExpanded = expandedCoachIdx === idx
-          const fb = turn.coach_feedback
-          return (
-            <div key={turn.id || idx} className="practice-turn-block">
-              {/* User Argument Bubble */}
-              <div className="practice-bubble user-bubble">
-                <div className="bubble-header">
-                  <span className="user-title-chip"><User size={13} /> Your Argument</span>
-                  <small className="turn-label">Round {turn.turn_index}</small>
-                </div>
-                <p className="bubble-content">{turn.user_argument}</p>
-              </div>
-
-              {/* Coach Evaluation Card */}
-              <div className={`practice-coach-card assessment-${fb.assessment}`}>
-                <div
-                  className="coach-card-header"
-                  onClick={() => setExpandedCoachIdx(isExpanded ? null : idx)}
-                >
-                  <div className="coach-header-left">
-                    <Sparkles size={16} />
-                    <strong>Defense Coach Analysis</strong>
-                    <span className={`assessment-badge badge-${fb.assessment}`}>
-                      {fb.assessment === 'strong' ? '🟢 Solid Position' : fb.assessment === 'caution' ? '🟡 Caution Needed' : '🔴 Risky Admission'}
-                    </span>
-                  </div>
-                  <button type="button" className="coach-toggle-btn" aria-label="Toggle analysis">
-                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </button>
-                </div>
-
-                {isExpanded && (
-                  <div className="coach-card-body">
-                    {fb.is_crisis && (
-                      <div className="crisis-alert-box" role="alert">
-                        <ShieldAlert size={16} />
-                        <div>
-                          <strong>Emergency Protocol:</strong>
-                          <p>{fb.crisis_text}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {fb.anti_fabrication_warning && (
-                      <div className="fabrication-warning-box">
-                        <AlertTriangle size={15} />
-                        <span>{fb.anti_fabrication_warning}</span>
-                      </div>
-                    )}
-
-                    {fb.strengths.length > 0 && (
-                      <div className="coach-points-section">
-                        <h6>Effective Points Made:</h6>
-                        <ul>
-                          {fb.strengths.map((s, i) => (
-                            <li key={i}>{s}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {fb.vulnerabilities.length > 0 && (
-                      <div className="coach-points-section vulnerabilities-section">
-                        <h6>Risks & Traps to Avoid:</h6>
-                        <ul>
-                          {fb.vulnerabilities.map((v, i) => (
-                            <li key={i}>{v}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {fb.statutory_safeguards.length > 0 && (
-                      <div className="coach-safeguards-section">
-                        <h6>Statutory Grounds You Can Assert:</h6>
-                        {fb.statutory_safeguards.map((safeguard, i) => (
-                          <div key={i} className="safeguard-item">
-                            <b>{safeguard.act} — {safeguard.section}: {safeguard.title}</b>
-                            <p>{safeguard.relevance}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {fb.suggested_phrasing && (
-                      <div className="coach-suggested-box">
-                        <div className="suggested-header">
-                          <h6>Truthful Suggested Phrasing:</h6>
-                          <button
-                            type="button"
-                            onClick={() => setArgumentText(fb.suggested_phrasing)}
-                            title="Copy to composer"
-                          >
-                            <Copy size={13} /> Use this phrasing
-                          </button>
-                        </div>
-                        <p>"{fb.suggested_phrasing}"</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Opponent Reply */}
-              <div className="practice-bubble opponent-bubble">
-                <div className="bubble-header">
-                  <span className="opponent-title-chip">
-                    <Swords size={13} /> {activeSession.opponent_role}
-                  </span>
-                  <small className="turn-label">Counter-Challenge</small>
-                </div>
-                <p className="bubble-content">{turn.opponent_reply}</p>
-              </div>
-            </div>
-          )
-        })}
-
-        {/* Readiness Wrap-Up Card when rounds reach 3+ */}
-        {roundCount >= 3 && (
-          <div className="practice-scorecard-card">
-            <div className="scorecard-head">
-              <Award size={18} />
-              <div>
-                <h5>Drill Milestones Completed</h5>
-                <p className="muted">You have successfully practiced the primary arguments and counter-points.</p>
-              </div>
-            </div>
-            <div className="scorecard-actions">
-              <button
-                type="button"
-                className="save-actions-btn"
-                disabled={loading}
-                onClick={savePointsToCase}
-              >
-                <CheckCircle2 size={15} /> Save Key Points to Your Case Actions
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div ref={threadBottomRef} />
-      </div>
-
-      {/* Argument Composer */}
-      <div className="practice-composer-wrapper">
-        <form onSubmit={submitTurn} className="practice-composer-form">
-          <textarea
-            aria-label="Your counter-argument"
-            placeholder={
-              roundCount === 0 && currentScenario.suggested_first_response
-                ? `e.g. "${currentScenario.suggested_first_response.slice(0, 100)}..."`
-                : "Type your argument or defense response to the opponent..."
-            }
-            value={argumentText}
-            onChange={e => setArgumentText(e.target.value)}
-            rows={2}
-            disabled={submittingTurn}
-          />
-          <div className="practice-composer-actions">
-            <button
-              type="button"
-              className={`mic-btn ${recording ? 'recording' : ''}`}
-              onClick={toggleRecording}
-              title={recording ? 'Stop recording' : 'Speak your argument'}
-              aria-label={recording ? 'Stop recording' : 'Speak your argument'}
-            >
-              {recording ? <MicOff size={16} /> : <Mic size={16} />}
-            </button>
-            {roundCount === 0 && currentScenario.suggested_first_response && (
-              <button
-                type="button"
-                className="help-hint-btn"
-                onClick={() => setArgumentText(currentScenario.suggested_first_response || '')}
-              >
-                <HelpCircle size={14} /> Suggest First Response
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={submittingTurn || !argumentText.trim()}
-              className="send-arg-btn"
-            >
-              {submittingTurn ? 'Analyzing…' : <><Send size={15} /> Argue</>}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   )
