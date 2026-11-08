@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { getTopicMeta } from '../icons'
 import type { Conversation, StreamEvent } from '../types'
 import AgentFlowWidget from './AgentFlowWidget'
 
@@ -92,7 +93,8 @@ export default function Sidebar({
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Conversation history">
       <div className="brand">
         <span>
-          <Scale size={22} /> Nyay Saathi
+          <Scale size={22} color="var(--jade)" aria-hidden="true" />
+          <b className="brand-text">Nyay Saathi</b>
         </span>
         <button className="mobile-close" onClick={onClose} aria-label="Close sidebar">
           <X />
@@ -104,75 +106,84 @@ export default function Sidebar({
 
       <div className="history-label">Your cases</div>
       <nav>
-        {items.map(c => (
-          <div key={c.id} className={`history-item-row ${menuFor === c.id ? 'menu-open' : ''}`}>
-            {editing === c.id ? (
-              <div className="history-item active editing">
-                <MessageSquare size={16} />
-                <input
-                  aria-label="Chat title"
-                  value={draft}
-                  maxLength={100}
-                  autoFocus
-                  onChange={e => setDraft(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      finishRename(c.id, true)
-                    } else if (e.key === 'Escape') finishRename(c.id, false)
-                  }}
-                  onBlur={() => finishRename(c.id, true)}
-                />
-              </div>
-            ) : (
-              <button
-                className={`history-item ${active === c.id ? 'active' : ''}`}
-                onClick={() => onSelect(c.id)}
-              >
-                <MessageSquare size={16} />
-                <span>
-                  <b>{c.title}</b>
-                  <small>{c.last_message || 'No messages yet'}</small>
-                </span>
-              </button>
-            )}
-            {editing !== c.id && (onRename || onDelete) && (
-              <button
-                className="history-actions"
-                aria-label={`Chat actions for ${c.title}`}
-                aria-haspopup="menu"
-                aria-expanded={menuFor === c.id}
-                onClick={e => {
-                  e.stopPropagation()
-                  setMenuFor(menuFor === c.id ? null : c.id)
-                }}
-              >
-                <MoreHorizontal size={15} />
-              </button>
-            )}
-            {menuFor === c.id && (
-              <div className="dropdown history-menu" role="menu">
-                {onRename && (
-                  <button role="menuitem" onClick={() => startRename(c)}>
-                    <Pencil /> Rename
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    role="menuitem"
-                    className="danger"
-                    onClick={() => {
-                      setMenuFor(null)
-                      void onDelete(c.id)
+        {items.map(c => {
+          const topicMeta = getTopicMeta(c.domain || c.title)
+          const TopicIcon = topicMeta.icon
+          return (
+            <div key={c.id} className={`history-item-row ${menuFor === c.id ? 'menu-open' : ''}`}>
+              {editing === c.id ? (
+                <div className="history-item active editing">
+                  <TopicIcon size={16} aria-hidden="true" style={{ color: 'var(--jade)' }} />
+                  <input
+                    aria-label="Chat title"
+                    value={draft}
+                    maxLength={100}
+                    autoFocus
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        finishRename(c.id, true)
+                      } else if (e.key === 'Escape') finishRename(c.id, false)
                     }}
-                  >
-                    <Trash2 /> Delete
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+                    onBlur={() => finishRename(c.id, true)}
+                  />
+                </div>
+              ) : (
+                <button
+                  className={`history-item ${active === c.id ? 'active' : ''}`}
+                  onClick={() => onSelect(c.id)}
+                >
+                  <TopicIcon
+                    size={16}
+                    aria-hidden="true"
+                    className="case-topic-icon"
+                    style={{ color: active === c.id ? 'var(--jade)' : 'var(--muted)' }}
+                  />
+                  <span>
+                    <b>{c.title}</b>
+                    <small>{c.last_message || 'No messages yet'}</small>
+                  </span>
+                </button>
+              )}
+              {editing !== c.id && (onRename || onDelete) && (
+                <button
+                  className="history-actions"
+                  aria-label={`Chat actions for ${c.title}`}
+                  aria-haspopup="menu"
+                  aria-expanded={menuFor === c.id}
+                  onClick={e => {
+                    e.stopPropagation()
+                    setMenuFor(menuFor === c.id ? null : c.id)
+                  }}
+                >
+                  <MoreHorizontal size={15} />
+                </button>
+              )}
+              {menuFor === c.id && (
+                <div className="dropdown history-menu" role="menu">
+                  {onRename && (
+                    <button role="menuitem" onClick={() => startRename(c)}>
+                      <Pencil /> Rename
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      role="menuitem"
+                      className="danger"
+                      onClick={() => {
+                        setMenuFor(null)
+                        void onDelete(c.id)
+                      }}
+                    >
+                      <Trash2 /> Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </nav>
 
       {/* Live Synchronized Agent Flow Animation in Vacated Vertical Space */}
@@ -182,7 +193,7 @@ export default function Sidebar({
         onOpenWorkflow={onWorkflow}
       />
 
-      {/* Full-width Settings Button & Footer */}
+      {/* Full-width Settings Button & Quick Access Links */}
       <div className="sidebar-footer">
         <button
           className="sidebar-settings-button"
@@ -193,6 +204,15 @@ export default function Sidebar({
           <Settings size={16} />
           <span>Settings</span>
         </button>
+        <div className="sidebar-quick-links" aria-label="Quick system drawers">
+          <button type="button" className="sidebar-quick-link" onClick={onKnowledge} title="Open Knowledge Base">
+            Knowledge Base
+          </button>
+          <span className="sidebar-quick-sep" aria-hidden="true">·</span>
+          <button type="button" className="sidebar-quick-link" onClick={onWorkflow} title="Open Agent Workflow">
+            Agent Workflow
+          </button>
+        </div>
       </div>
 
       <div className="sidebar-note">Chats stay available in this browser. Export anything you want to keep.</div>

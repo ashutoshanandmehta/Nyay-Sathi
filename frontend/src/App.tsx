@@ -5,6 +5,7 @@ import {
   Cpu,
   FileText,
   KeyRound,
+  Languages,
   Lock,
   Menu,
   MoreHorizontal,
@@ -24,7 +25,7 @@ import MessageView from './components/MessageView'
 import PracticePanel from './components/PracticePanel'
 import SettingsPanel, { type SettingsTab } from './components/SettingsPanel'
 import Sidebar from './components/Sidebar'
-import { STARTER_ICONS } from './icons'
+import { getTopicMeta, STARTER_ICONS } from './icons'
 import type { AgentWorkflow, Conversation, Detail, KnowledgeBase, Language, Message, Source, SafetyMessage, StreamEvent } from './types'
 
 const starterCards = [
@@ -125,8 +126,64 @@ export default function App(){
   return <div className="app-shell">
     <Sidebar open={sidebar} items={items} active={active} onNew={makeNew} onSelect={select} onClose={()=>setSidebar(false)} onKnowledge={showKnowledge} onWorkflow={showWorkflow} onRename={renameCase} onDelete={deleteCase} onDevspace={devspace?showDevspace:undefined} onSettings={showSettings} isStreaming={sending} streamEvents={streamEvents}/>{sidebar&&<div className="scrim" onClick={()=>setSidebar(false)}/>}
     <main className="chat-shell">
-      <header className="topbar"><button className="menu-button" onClick={()=>setSidebar(true)} aria-label="Open chat history"><Menu/></button><button className="mobile-new" onClick={makeNew} aria-label="New chat"><Plus/></button><div className="case-title"><b>{detail?.conversation.title||'Nyay Saathi'}</b>{configured||!devspace?<span>{configured?'AI legal information assistant':'AI setup required'}</span>:<button className="setup-link" onClick={showDevspace}>AI setup required · add your key</button>}</div><div className="top-actions"><select aria-label="Response language" value={language} onChange={e=>setLanguage(e.target.value as Language)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="hinglish">Hinglish</option></select>{hasSufficientContext?<button onClick={()=>setPanel('roleplay')} className="topbar-roleplay-btn unlocked" title="Practice roleplay with opposing stakeholders"><Swords size={16}/> Roleplay</button>:<button disabled className="topbar-roleplay-btn locked" title="Describe your situation first to unlock Roleplay"><Lock size={15}/> Roleplay</button>}<button onClick={()=>setPanel('case')}><PanelRight size={17}/> Your case</button><div className="menu-wrap"><button aria-label="Case menu" onClick={()=>setMenu(!menu)}><MoreHorizontal/></button>{menu&&<div className="dropdown"><button onClick={rename}><Pencil/> Rename chat</button><button onClick={()=>exportCase('docx')}><FileText/> Export DOCX</button><button onClick={()=>exportCase('pdf')}><FileText/> Export PDF</button><button onClick={()=>exportCase('json')}><FileText/> Export JSON</button><button className="danger" onClick={remove}><Trash2/> Delete chat</button></div>}</div></div></header>
-      {!configured&&<div className="config-banner"><ShieldCheck size={17}/><span>OpenAI is not configured. Your chats and case organisation work, but live AI answers and voice need the backend API key.{devspace&&<> <button className="setup-link" onClick={showDevspace}>Add it in DevSpace</button></>}</span></div>}
+      <header className="topbar">
+        <button className="menu-button" onClick={()=>setSidebar(true)} aria-label="Open chat history"><Menu/></button>
+        <button className="mobile-new" onClick={makeNew} aria-label="New chat"><Plus/></button>
+        <div className="case-title">
+          <div className="case-title-row">
+            <b>{detail?.conversation.title||'Nyay Saathi'}</b>
+            {detail?.case_memory?.domain && (() => {
+              const topic = getTopicMeta(detail.case_memory.domain)
+              const TopicIcon = topic.icon
+              return (
+                <span className="case-domain-chip" style={{ color: topic.colorVar, background: topic.bgVar }}>
+                  <TopicIcon size={12} aria-hidden="true" />
+                  <span>{topic.label}</span>
+                </span>
+              )
+            })()}
+          </div>
+          {configured||!devspace?<span>{configured?'AI legal information assistant':'AI setup required'}</span>:<button className="setup-link" onClick={showDevspace}>AI setup required · add your key</button>}
+        </div>
+        <div className="top-actions">
+          <div className="language-pill" title="Response language">
+            <Languages size={15} aria-hidden="true" color="var(--jade-ink)" />
+            <select aria-label="Response language" value={language} onChange={e=>setLanguage(e.target.value as Language)}>
+              <option value="en">English</option>
+              <option value="hi">हिन्दी</option>
+              <option value="hinglish">Hinglish</option>
+            </select>
+          </div>
+          {hasSufficientContext?(
+            <button onClick={()=>setPanel('roleplay')} className="topbar-roleplay-btn unlocked" title="Practice roleplay with opposing stakeholders">
+              <Swords size={16} aria-hidden="true"/> <span>Roleplay</span>
+            </button>
+          ):(
+            <button disabled className="topbar-roleplay-btn locked" title="Describe your situation first to unlock Roleplay">
+              <Lock size={15} aria-hidden="true"/> <span>Roleplay</span>
+            </button>
+          )}
+          <button onClick={()=>setPanel('case')} className="topbar-case-btn" title="Open Your case panel">
+            <PanelRight size={17} aria-hidden="true"/> <span>Your case</span>
+          </button>
+          <div className="menu-wrap">
+            <button aria-label="Case menu" onClick={()=>setMenu(!menu)}><MoreHorizontal/></button>
+            {menu&&<div className="dropdown">
+              <button onClick={rename}><Pencil size={15}/> Rename chat</button>
+              <button onClick={()=>exportCase('docx')}><FileText size={15}/> Export DOCX</button>
+              <button onClick={()=>exportCase('pdf')}><FileText size={15}/> Export PDF</button>
+              <button onClick={()=>exportCase('json')}><FileText size={15}/> Export JSON</button>
+              <button className="danger" onClick={remove}><Trash2 size={15}/> Delete chat</button>
+            </div>}
+          </div>
+        </div>
+      </header>
+      {!configured&&(
+        <div className="config-banner" role="alert">
+          <KeyRound size={17} aria-hidden="true" color="var(--warning)"/>
+          <span>OpenAI is not configured. Your chats and case organisation work, but live AI answers and voice need the backend API key.{devspace&&<> <button className="setup-link config-add-key-btn" onClick={showDevspace}>Add it in DevSpace</button></>}</span>
+        </div>
+      )}
       <section className="messages" aria-live="polite"><div className="message-column">
         {messages.map(m=><MessageView key={m.id} message={m} onSources={(s,focus)=>{setSources(s);setSourceFocus(focus);setPanel('sources')}} onRetry={m.status==='failed'?retry:undefined} onSpeech={m.role==='assistant'?()=>speech(m):undefined} onOpenCase={()=>setPanel('case')}/>)}
         {safety.filter(item=>!messages.some(m=>m.metadata?.safety_messages?.some(s=>s.request_id===item.request_id&&s.content_id===item.content_id))).map(item=>(
