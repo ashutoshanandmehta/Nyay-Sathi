@@ -1,8 +1,9 @@
-import { Check, Copy, FileText, RotateCcw, ShieldAlert, Volume2 } from 'lucide-react'
+import { Check, Copy, FileText, RotateCcw, Scale, Siren, Volume2 } from 'lucide-react'
 import { useState } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { GroundingLabel, Message, ResolutionBlock, Source } from '../types'
+import { BLOCK_TYPE_ICONS, GROUNDING_ICONS } from '../icons'
+import type { Message, ResolutionBlock, Source } from '../types'
 
 // The backend writes in-text citations as "[1](#cite-1)", numbered to match source.citation_number.
 const CITE_HREF=/^#cite-(\d+)$/
@@ -62,13 +63,6 @@ function citationComponents(sources:Source[]|undefined, onSources:(s:Source[], f
   }
 }
 
-const GROUNDING_LABELS: Record<GroundingLabel, string> = {
-  reported_by_user: 'Reported by you',
-  practical_precaution: 'Practical step',
-  verified_legal_source: 'Verified legal source',
-  requires_confirmation: 'Needs confirmation',
-}
-
 function BlockCard({block, onOpenCase}:{block:ResolutionBlock; onOpenCase?:()=>void}) {
   const [copiedDoc, setCopiedDoc] = useState(false)
   async function copyDoc() {
@@ -77,17 +71,28 @@ function BlockCard({block, onOpenCase}:{block:ResolutionBlock; onOpenCase?:()=>v
     setTimeout(() => setCopiedDoc(false), 1200)
   }
   const useList = block.items && block.items.length > 1
+  const blockMeta = BLOCK_TYPE_ICONS[block.block_type] || BLOCK_TYPE_ICONS.direct_answer
+  const BlockIcon = blockMeta.icon
+  const groundingMeta = GROUNDING_ICONS[block.grounding] || GROUNDING_ICONS.verified_legal_source
+  const GroundingIcon = groundingMeta.icon
+
   return (
     <section className={`res-block res-block-${block.block_type}`} data-block-type={block.block_type}>
       <div className="res-block-head">
-        <strong>{block.title}</strong>
-        <span className={`grounding-pill grounding-${block.grounding}`}>{GROUNDING_LABELS[block.grounding]}</span>
+        <div className="res-block-type-chip" style={{ color: blockMeta.colorVar }}>
+          <BlockIcon size={16} aria-hidden="true" />
+          <strong>{block.title}</strong>
+        </div>
+        <span className={`grounding-pill grounding-${block.grounding}`} title={groundingMeta.label}>
+          <GroundingIcon size={12} aria-hidden="true" />
+          <span>{groundingMeta.label}</span>
+        </span>
       </div>
       {block.block_type === 'document' ? (
         <div className="res-document-box">
           <pre>{block.content}</pre>
           <button type="button" className="doc-copy-btn" onClick={copyDoc}>
-            <FileText size={13} /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
+            <FileText size={13} aria-hidden="true" /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
           </button>
         </div>
       ) : useList && block.block_type === 'immediate_actions' ? (
@@ -99,7 +104,7 @@ function BlockCard({block, onOpenCase}:{block:ResolutionBlock; onOpenCase?:()=>v
       )}
       {block.block_type === 'human_handoff' && onOpenCase && (
         <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
-          Open Lawyer Escalation Bundle in Your case
+          <Scale size={14} aria-hidden="true" /> Open Lawyer Escalation Bundle in Your case
         </button>
       )}
     </section>
@@ -124,13 +129,15 @@ export default function MessageView({message,onSources,onRetry,onSpeech,onOpenCa
   }
 
   return <article className={`message ${message.role}`}>
-    <div className="avatar" aria-hidden>{message.role==='assistant'?'न्या':'You'}</div>
+    <div className="avatar" aria-hidden="true">
+      {message.role==='assistant'?<Scale size={16} />:'You'}
+    </div>
     <div className="message-body"><div className="message-role">{message.role==='assistant'?'Nyay Saathi':'You'}</div>
       {message.role==='assistant' ? (
         <div className="assistant-content">
           {safetyItems?.map(item => (
             <div className="safety-banner" key={item.content_id} role="alert">
-              <ShieldAlert size={16} aria-hidden />
+              <Siren size={18} aria-hidden="true" color="var(--danger)" />
               <p>{item.text}</p>
             </div>
           ))}

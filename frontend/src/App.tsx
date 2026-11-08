@@ -1,5 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, FileText, Lock, Menu, MessageSquareMore, MoreHorizontal, PanelRight, Pencil, Plus, ShieldAlert, ShieldCheck, Swords, Trash2 } from 'lucide-react'
+import {
+  BookOpen,
+  ChevronDown,
+  Cpu,
+  FileText,
+  KeyRound,
+  Lock,
+  Menu,
+  MoreHorizontal,
+  PanelRight,
+  Pencil,
+  Plus,
+  Search,
+  ShieldCheck,
+  Siren,
+  Swords,
+  Trash2,
+} from 'lucide-react'
 import { api } from './api'
 import Composer from './components/Composer'
 import { AgentWorkflowPanel, CasePanel, Drawer, KnowledgeBasePanel, Sources } from './components/Drawer'
@@ -7,9 +24,31 @@ import MessageView from './components/MessageView'
 import PracticePanel from './components/PracticePanel'
 import SettingsPanel, { type SettingsTab } from './components/SettingsPanel'
 import Sidebar from './components/Sidebar'
+import { STARTER_ICONS } from './icons'
 import type { AgentWorkflow, Conversation, Detail, KnowledgeBase, Language, Message, Source, SafetyMessage, StreamEvent } from './types'
 
-const starters=['My refund has not arrived','A product I bought is defective','My order was never delivered','The seller refuses the promised return']
+const starterCards = [
+  {
+    text: 'My refund has not arrived',
+    hint: 'Paid online, cancellation or return pending',
+    icon: STARTER_ICONS.refund.icon,
+  },
+  {
+    text: 'A product I bought is defective',
+    hint: 'Damaged item, seller refusing return or warranty repair',
+    icon: STARTER_ICONS.defective.icon,
+  },
+  {
+    text: 'My order was never delivered',
+    hint: 'Delivery deadline passed without response or refund',
+    icon: STARTER_ICONS.not_delivered.icon,
+  },
+  {
+    text: 'The seller refuses the promised return',
+    hint: 'Retailer or portal denied replacement under policy',
+    icon: STARTER_ICONS.return_refused.icon,
+  },
+]
 const welcome:Message={id:'welcome',role:'assistant',status:'complete',created_at:'',metadata:{},content:'Tell me what happened in your own words. I’ll help organise the facts, evidence, and practical next step. You can write in English, Hindi, or Hinglish.'}
 
 export default function App(){
@@ -93,7 +132,7 @@ export default function App(){
         {safety.filter(item=>!messages.some(m=>m.metadata?.safety_messages?.some(s=>s.request_id===item.request_id&&s.content_id===item.content_id))).map(item=>(
           <div className="safety-alert-card" role="alert" key={`${item.request_id}:${item.content_id}`}>
             <div className="safety-banner">
-              <ShieldAlert size={16} aria-hidden />
+              <Siren size={18} aria-hidden="true" color="var(--danger)" />
               <div>
                 <strong>Immediate Protective Advisory</strong>
                 <p>{item.text}</p>
@@ -101,8 +140,42 @@ export default function App(){
             </div>
           </div>
         ))}
-        {messages.length===1&&messages[0].id==='welcome'&&<div className="starters">{starters.map(s=><button key={s} onClick={()=>send(s)}><span>{s}</span><ChevronDown size={15}/></button>)}</div>}
-        {sending&&<div className="thinking" role="status"><i/><i/><i/><span>{progress}</span></div>}{error&&<div className="inline-error" role="alert">{error}</div>}<div ref={bottom}/>
+        {messages.length===1&&messages[0].id==='welcome'&&(
+          <div className="starters">
+            {starterCards.map(s=>{
+              const Icon = s.icon
+              return (
+                <button key={s.text} onClick={()=>send(s.text)}>
+                  <div className="starter-content">
+                    <div className="starter-title-row">
+                      <Icon size={16} className="starter-icon" aria-hidden="true" />
+                      <span className="starter-title">{s.text}</span>
+                    </div>
+                    <small className="starter-hint">{s.hint}</small>
+                  </div>
+                  <ChevronDown size={15} className="starter-chevron" aria-hidden="true" />
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {sending&&(
+          <div className="thinking" role="status">
+            <i/><i/><i/>
+            <span className="thinking-stage-wrap">
+              {progress.toLowerCase().includes('research')||progress.toLowerCase().includes('retriev')?(
+                <Search size={13} aria-hidden="true" />
+              ):progress.toLowerCase().includes('review')||progress.toLowerCase().includes('verif')?(
+                <ShieldCheck size={13} aria-hidden="true" />
+              ):progress.toLowerCase().includes('rule')||progress.toLowerCase().includes('context')?(
+                <BookOpen size={13} aria-hidden="true" />
+              ):(
+                <Cpu size={13} aria-hidden="true" />
+              )}
+              <span>{progress}</span>
+            </span>
+          </div>
+        )}{error&&<div className="inline-error" role="alert">{error}</div>}<div ref={bottom}/>
       </div></section>
       <Composer key={active} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}/>
     </main>
