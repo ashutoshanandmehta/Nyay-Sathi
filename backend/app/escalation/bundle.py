@@ -5,7 +5,17 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from app.answers.evidence import strip_citation_markers
 from app.schemas.models import CaseMemory, FactStatus
+
+
+def _unique(items) -> list[str]:
+    seen: dict[str, None] = {}
+    for item in items:
+        text = strip_citation_markers(str(item or "")).strip()
+        if text and text.casefold() not in {k.casefold() for k in seen}:
+            seen[text] = None
+    return list(seen)
 
 
 def build_escalation_bundle(
@@ -24,9 +34,17 @@ def build_escalation_bundle(
 
     Strictly excludes raw prompts, hidden chain-of-thought, and encrypted reasoning tokens.
     """
+    # Each reason names what actually happened in this case, not a catch-all category.
     reasons: list[str] = []
-    if safety_messages or memory.domain == "criminal" or memory.urgent_matters:
-        reasons.append("Immediate safety, police/officer coercion, or personal liberty concern.")
+    if memory.domain == "criminal":
+        reasons.append(
+            "Criminal matter: personal liberty may be at stake (arrest, custody or bail)."
+        )
+    if safety_messages:
+        reasons.append("Safety guidance was shown during this conversation.")
+    for item in memory.urgent_matters[:3]:
+        if item.get("reason"):
+            reasons.append(f"Urgent: {item['reason']}")
     if memory.contradictions:
         reasons.append("Material factual contradictions require human verification against originals.")
     if len(memory.unknowns) + len(memory.questions_for_legal_review) >= 2:
@@ -112,22 +130,29 @@ def build_escalation_bundle(
         for a in attachments
     ]
 
-    unresolved: list[str] = list(
-        dict.fromkeys(
-            list(memory.questions_for_legal_review)
-            + list(memory.legal_issues_for_review)
-            + list(memory.unknowns)
-        )
+    # Three different kinds of open point, kept apart so a lawyer reads each for what it is.
+    # The assistant's own clarifying questions to the user are not included: they are
+    # addressed to the user ("If you can share the FIR...") and their gaps appear as facts.
+    recent = [msg.get("metadata") or {} for msg in assistant_msgs[-3:]]
+    questions_for_counsel = _unique(
+        [
+            *memory.questions_for_legal_review,
+            *memory.legal_issues_for_review,
+            *(issue for meta in recent for issue in meta.get("legal_issues") or []),
+        ]
     )
-    for msg in assistant_msgs[-3:]:
-        meta = msg.get("metadata") or {}
-        for l_issue in meta.get("legal_issues") or []:
-            if l_issue not in unresolved:
-                unresolved.append(l_issue)
-        for blk in meta.get("resolution_blocks") or []:
-            if blk.get("block_type") in {"limitation", "question"} and blk.get("content"):
-                if blk["content"] not in unresolved:
-                    unresolved.append(blk["content"])
+    facts_to_establish = _unique(
+        [
+            *memory.unknowns,
+            *(issue for meta in recent for issue in meta.get("factual_issues") or []),
+        ]
+    )
+    not_confirmed = _unique(
+        blk.get("content")
+        for meta in recent
+        for blk in meta.get("resolution_blocks") or []
+        if blk.get("block_type") == "limitation"
+    )
 
     published_sources: dict[str, dict[str, Any]] = {}
     structured_findings: list[dict[str, Any]] = []
@@ -173,7 +198,7 @@ def build_escalation_bundle(
     ]
 
     return {
-        "bundle_version": "escalation-bundle-v1",
+        "bundle_version": "escalation-bundle-v2",
         "generated_at": datetime.now(UTC).isoformat(),
         "conversation_id": conversation["id"],
         "case_title": conversation["title"],
@@ -183,7 +208,7 @@ def build_escalation_bundle(
         "escalation_recommended": bool(reasons),
         "escalation_reasons": reasons
         or ["User-requested legal review or representation readiness package."],
-        "executive_summary": summary or "User-reported legal dispute workspace.",
+        "executive_summary": summary,
         "chronology": chronology,
         "facts_partition": {
             "reported_and_consistent": consistent_facts,
@@ -191,7 +216,9 @@ def build_escalation_bundle(
             "contradictions": list(memory.contradictions),
         },
         "evidence_index": evidence_index,
-        "unresolved_legal_questions": unresolved[:12],
+        "questions_for_counsel": questions_for_counsel[:10],
+        "facts_to_establish": facts_to_establish[:10],
+        "not_confirmed": not_confirmed[:6],
         "generated_drafts": prepared_drafts,
         "source_backed_analysis": {
             "findings": structured_findings[-8:],

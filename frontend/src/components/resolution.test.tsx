@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import JourneyPanel from './JourneyPanel'
 import MessageView from './MessageView'
 import { CasePanel } from './Drawer'
+import { api } from '../api'
 import type { Journey, RouteOption } from '../resolution'
 
 afterEach(cleanup)
@@ -51,5 +52,22 @@ describe('resolution preparation',()=>{
     expect(screen.getByText(/User-confirmed submission tracker/)).toBeInTheDocument()
     expect(screen.getByText(/Prepare Lawyer Escalation Bundle/)).toBeInTheDocument()
     expect(screen.getByText(/Privacy, retention & device transfer/)).toBeInTheDocument()
+  })
+  it('shows the escalation bundle content a lawyer needs, with downloads',async()=>{
+    vi.spyOn(api,'escalationBundle').mockResolvedValue({bundle_version:'escalation-bundle-v2',generated_at:'',case_title:'Liquor case',domain:'criminal',case_version:2,escalation_recommended:true,
+      escalation_reasons:['Criminal matter: personal liberty may be at stake (arrest, custody or bail).'],executive_summary:'',
+      chronology:[{timestamp:'2026-11-07T10:00:00Z',kind:'reported_event',summary:'Police stopped the car near Biharsharif',status:'user_reported'}],
+      facts_partition:{reported_and_consistent:[{key:'vehicle_owner',value:'Father',status:'user_allegation'}],uncertain_or_disputed:[],contradictions:[]},
+      evidence_index:[],questions_for_counsel:['Whether bail is available for the recorded offence'],facts_to_establish:['Which police station registered the FIR'],not_confirmed:['Current charges are not confirmed.'],
+      generated_drafts:[],source_backed_analysis:{findings:[],verified_sources:[{source_id:'s',title:'BNSS 2023',locator:'Section 480',canonical_url:'https://example.gov.in/bnss.pdf'}]},autonomy_notice:'No filing has been done for you.'})
+    render(<CasePanel detail={{conversation:{id:'c9',title:'Liquor case',language:'en',created_at:'',updated_at:''},messages:[],summary:'',attachments:[],drafts:[],case_memory:{version:2,domain:'criminal',facts:{},contradictions:[],unknowns:[],actions_completed:[],evidence:[]}}}/>)
+    fireEvent.click(screen.getByText(/Prepare Lawyer Escalation Bundle/))
+    await waitFor(()=>expect(screen.getByText('A lawyer should look at this')).toBeInTheDocument())
+    const card=within(document.querySelector('.bundle-card') as HTMLElement)
+    for(const heading of ['What happened','Facts you reported','Questions for your lawyer','Facts still to establish','Not yet confirmed by Nyay Saathi','Sources used'])expect(card.getByText(heading)).toBeInTheDocument()
+    expect(card.getByText('Police stopped the car near Biharsharif')).toBeInTheDocument()
+    expect(card.getByRole('link',{name:'BNSS 2023 · Section 480'})).toHaveAttribute('href','https://example.gov.in/bnss.pdf')
+    expect(card.getByRole('link',{name:'PDF'})).toHaveAttribute('href','/api/conversations/c9/export/pdf')
+    expect(card.queryByText('Evidence files')).toBeNull()
   })
 })

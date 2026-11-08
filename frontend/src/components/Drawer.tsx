@@ -39,6 +39,32 @@ function EvidencePreview({attachment,caseId,onRefresh}:{attachment:Detail['attac
   </details>
 }
 
+function BundleList({title,items}:{title:string;items:React.ReactNode[]}){
+  return items.length?<section><b>{title}</b><ul>{items.map((item,i)=><li key={i}>{item}</li>)}</ul></section>:null
+}
+
+function BundleCard({bundle,caseId}:{bundle:EscalationBundle;caseId:string}){
+  const facts=[
+    ...bundle.facts_partition.reported_and_consistent.map(f=><><span>{humanLabel(f.key)}:</span> {f.value}</>),
+    ...bundle.facts_partition.uncertain_or_disputed.map(f=><><span>{humanLabel(f.key)}:</span> {f.value} <em>(unconfirmed)</em></>),
+  ]
+  return <div className="bundle-card">
+    <b>{bundle.escalation_recommended?'A lawyer should look at this':'Ready for a lawyer consultation'}</b>
+    <ul>{bundle.escalation_reasons.map((r,i)=><li key={i}>{r}</li>)}</ul>
+    {bundle.executive_summary&&<p>{bundle.executive_summary}</p>}
+    <BundleList title="What happened" items={bundle.chronology.map(e=><>{e.timestamp&&<span>{String(e.timestamp).slice(0,10)}:</span>} {e.summary}</>)}/>
+    <BundleList title="Facts you reported" items={facts}/>
+    <BundleList title="Questions for your lawyer" items={bundle.questions_for_counsel}/>
+    <BundleList title="Facts still to establish" items={bundle.facts_to_establish}/>
+    <BundleList title="Not yet confirmed by Nyay Saathi" items={bundle.not_confirmed}/>
+    <BundleList title="Sources used" items={bundle.source_backed_analysis.verified_sources.map(s=>s.canonical_url?<a href={s.canonical_url} target="_blank" rel="noreferrer">{s.title}{s.locator?` · ${s.locator}`:''}</a>:<>{s.title}{s.locator?` · ${s.locator}`:''}</>)}/>
+    <BundleList title="Evidence files" items={bundle.evidence_index.map(e=>e.filename)}/>
+    <BundleList title="Drafts" items={bundle.generated_drafts.map(d=>`${d.title} (version ${d.version})`)}/>
+    <div className="bundle-downloads">Download for your lawyer: <a href={`/api/conversations/${caseId}/export/pdf`}>PDF</a> · <a href={`/api/conversations/${caseId}/export/docx`}>Word</a></div>
+    <small className="muted">{bundle.autonomy_notice}</small>
+  </div>
+}
+
 export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh?:()=>void;onImported?:(cid:string)=>void}){
   const m=detail.case_memory, facts=Object.entries(m.facts)
   const conflicts=m.contradictions.filter(x=>!(x as {resolved?:boolean}).resolved)
@@ -132,14 +158,9 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
 
     <details className="case-section">
       <summary>Lawyer escalation bundle</summary>
-      <p className="muted">Structured handoff with chronology, evidence index, unresolved legal questions, drafts, and verified sources — zero hidden AI reasoning.</p>
+      <p className="muted">A summary to share with a lawyer or legal-aid clinic: what happened, your facts, open questions and the sources used. It contains only what you told us and the sources shown.</p>
       <button type="button" className="workspace-btn" disabled={bundleLoading} onClick={loadBundle}><Scale size={14}/> {bundleLoading?'Preparing bundle…':'Prepare Lawyer Escalation Bundle'}</button>
-      {bundle&&<div className="bundle-card">
-        <b>{bundle.escalation_recommended?'Human legal review recommended':'Ready for advocate consultation'}</b>
-        <ul>{bundle.escalation_reasons.map((r,i)=><li key={i}>{r}</li>)}</ul>
-        <small>Chronology items: {bundle.chronology.length} · Evidence files: {bundle.evidence_index.length} · Verified sources: {bundle.source_backed_analysis.verified_sources.length} · Drafts: {bundle.generated_drafts.length}</small>
-        {!!bundle.unresolved_legal_questions.length&&<><b>Open questions for counsel</b><ul>{bundle.unresolved_legal_questions.slice(0,5).map((q,i)=><li key={i}>{q}</li>)}</ul></>}
-      </div>}
+      {bundle&&<BundleCard bundle={bundle} caseId={cid}/>}
       {!!m.questions_for_legal_review?.length&&m.questions_for_legal_review.map((x,i)=><p key={i}>{x}</p>)}
     </details>
 

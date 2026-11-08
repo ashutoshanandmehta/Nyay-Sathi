@@ -519,7 +519,7 @@ def test_active_workspace_actions_submissions_escalation_bundle_and_editorial(cl
     bundle_res = client.get(f"/api/conversations/{cid}/escalation-bundle")
     assert bundle_res.status_code == 200
     bundle = bundle_res.json()
-    assert bundle["bundle_version"] == "escalation-bundle-v1"
+    assert bundle["bundle_version"] == "escalation-bundle-v2"
     assert bundle["source_backed_analysis"]["contains_hidden_model_reasoning"] is False
     assert len(bundle["submission_trail"]) == 4
     assert bundle["chronology"]
