@@ -44,23 +44,29 @@ function BundleList({title,items}:{title:string;items:React.ReactNode[]}){
 }
 
 function BundleCard({bundle,caseId}:{bundle:EscalationBundle;caseId:string}){
-  const facts=[
-    ...bundle.facts_partition.reported_and_consistent.map(f=><><span>{humanLabel(f.key)}:</span> {f.value}</>),
-    ...bundle.facts_partition.uncertain_or_disputed.map(f=><><span>{humanLabel(f.key)}:</span> {f.value} <em>(unconfirmed)</em></>),
-  ]
+  const [download,setDownload]=useState<{busy?:string;text?:string;error?:boolean}>({})
+  async function save(format:'pdf'|'docx'){
+    setDownload({busy:format})
+    try{setDownload({text:`Downloaded ${await api.downloadEscalationBundle(caseId,format)}. Check your Downloads folder.`})}
+    catch(e){setDownload({text:(e as Error).message,error:true})}
+  }
   return <div className="bundle-card">
     <b>{bundle.escalation_recommended?'A lawyer should look at this':'Ready for a lawyer consultation'}</b>
-    <ul>{bundle.escalation_reasons.map((r,i)=><li key={i}>{r}</li>)}</ul>
-    {bundle.executive_summary&&<p>{bundle.executive_summary}</p>}
-    <BundleList title="What happened" items={bundle.chronology.map(e=><>{e.timestamp&&<span>{String(e.timestamp).slice(0,10)}:</span>} {e.summary}</>)}/>
-    <BundleList title="Facts you reported" items={facts}/>
-    <BundleList title="Questions for your lawyer" items={bundle.questions_for_counsel}/>
-    <BundleList title="Facts still to establish" items={bundle.facts_to_establish}/>
-    <BundleList title="Not yet confirmed by Nyay Saathi" items={bundle.not_confirmed}/>
-    <BundleList title="Sources used" items={bundle.source_backed_analysis.verified_sources.map(s=>s.canonical_url?<a href={s.canonical_url} target="_blank" rel="noreferrer">{s.title}{s.locator?` · ${s.locator}`:''}</a>:<>{s.title}{s.locator?` · ${s.locator}`:''}</>)}/>
+    <BundleList title="Reasons for review" items={bundle.escalation_reasons}/>
+    {bundle.executive_summary&&<section><b>Summary</b><p>{bundle.executive_summary}</p></section>}
+    <BundleList title="Chronology" items={bundle.chronology.map(e=><><span>{e.date}:</span> {e.summary}</>)}/>
+    <BundleList title="Facts stated by the client" items={bundle.stated_facts}/>
+    <BundleList title="Questions for counsel" items={bundle.questions_for_counsel}/>
+    <BundleList title="Facts to be established" items={bundle.facts_to_establish}/>
+    <BundleList title="Not yet verified by Nyay Saathi" items={bundle.not_confirmed}/>
+    <BundleList title="Sources relied on" items={bundle.source_backed_analysis.verified_sources.map(s=>s.canonical_url?<a href={s.canonical_url} target="_blank" rel="noreferrer">{s.title}{s.locator?` · ${s.locator}`:''}</a>:<>{s.title}{s.locator?` · ${s.locator}`:''}</>)}/>
     <BundleList title="Evidence files" items={bundle.evidence_index.map(e=>e.filename)}/>
     <BundleList title="Drafts" items={bundle.generated_drafts.map(d=>`${d.title} (version ${d.version})`)}/>
-    <div className="bundle-downloads">Download for your lawyer: <a href={`/api/conversations/${caseId}/export/pdf`}>PDF</a> · <a href={`/api/conversations/${caseId}/export/docx`}>Word</a></div>
+    <div className="bundle-downloads">Download for your lawyer:
+      <button type="button" disabled={!!download.busy} onClick={()=>void save('pdf')}>{download.busy==='pdf'?'Preparing…':'PDF'}</button>
+      <button type="button" disabled={!!download.busy} onClick={()=>void save('docx')}>{download.busy==='docx'?'Preparing…':'Word'}</button>
+    </div>
+    {download.text&&<small role="status" className={download.error?'bundle-error':'muted'}>{download.text}</small>}
     <small className="muted">{bundle.autonomy_notice}</small>
   </div>
 }

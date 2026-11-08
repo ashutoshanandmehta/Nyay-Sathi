@@ -2,20 +2,44 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 
+from app.agent.blocks import LIBERTY_RE
 from app.answers.evidence import strip_citation_markers
 from app.schemas.models import CaseMemory, FactStatus
+
+# Case notes are written as "User reports that ..."; a lawyer reads about "the client".
+REPORT_PREFIX_RE = re.compile(
+    r"^\s*(?:the\s+)?user\s+(?:reports|reported|says|said|states|stated|mentions|mentioned)"
+    r"(?:\s+that)?\s+",
+    re.I,
+)
+USER_RE = re.compile(r"\b(?:the\s+)?user(?='s\b|\b)", re.I)
+
+
+def formal_text(text: str) -> str:
+    """Third-person wording for a lawyer: no "User reports", "the client" for the user."""
+    text = strip_citation_markers(str(text or "")).strip()
+    text = REPORT_PREFIX_RE.sub("", text)
+    text = USER_RE.sub("the client", text)
+    text = re.sub(r"\.{2,}$", ".", text)
+    return text[:1].upper() + text[1:] if text else text
 
 
 def _unique(items) -> list[str]:
     seen: dict[str, None] = {}
     for item in items:
-        text = strip_citation_markers(str(item or "")).strip()
+        text = formal_text(item)
         if text and text.casefold() not in {k.casefold() for k in seen}:
             seen[text] = None
     return list(seen)
+
+
+def _date(value: Any) -> str:
+    match = re.match(r"\d{4}-\d{2}-\d{2}", str(value or ""))
+    return match.group(0) if match else "Date not stated"
 
 
 def build_escalation_bundle(
@@ -36,7 +60,12 @@ def build_escalation_bundle(
     """
     # Each reason names what actually happened in this case, not a catch-all category.
     reasons: list[str] = []
-    if memory.domain == "criminal":
+    case_text = " ".join(
+        [*(f.value for f in memory.facts.values()), *(str(e.get("description", "")) for e in memory.events)]
+        + [e.description for e in memory.journey.events]
+    )
+    # The domain label can be wrong ("other_legal" for an arrest); the facts decide.
+    if memory.domain == "criminal" or LIBERTY_RE.search(case_text):
         reasons.append(
             "Criminal matter: personal liberty may be at stake (arrest, custody or bail)."
         )
@@ -115,7 +144,15 @@ def build_escalation_bundle(
                 "grounding": "reported_by_user",
             }
         )
-    chronology.sort(key=lambda item: str(item.get("timestamp") or ""))
+    # The same event can arrive from the journey and from case notes: keep one, dated if possible.
+    merged: dict[str, dict[str, Any]] = {}
+    for item in chronology:
+        item["summary"] = formal_text(item["summary"])
+        item["date"] = _date(item.get("timestamp"))
+        key = re.sub(r"\W+", " ", item["summary"]).strip().casefold()
+        if key and (key not in merged or merged[key]["date"] == "Date not stated"):
+            merged[key] = item
+    chronology = sorted(merged.values(), key=lambda item: str(item.get("timestamp") or ""))
 
     evidence_index = [
         {
@@ -207,14 +244,22 @@ def build_escalation_bundle(
         "case_version": memory.version,
         "escalation_recommended": bool(reasons),
         "escalation_reasons": reasons
-        or ["User-requested legal review or representation readiness package."],
-        "executive_summary": summary,
+        or ["Requested by the client for legal review."],
+        # The stored summary is written for the model ("Domain: ..."); the formal brief
+        # (app/escalation/brief.py) writes the one a lawyer reads.
+        "executive_summary": "",
         "chronology": chronology,
         "facts_partition": {
             "reported_and_consistent": consistent_facts,
             "uncertain_or_disputed": uncertain_facts,
             "contradictions": list(memory.contradictions),
         },
+        "stated_facts": [
+            f"{f['key'].replace('_', ' ').capitalize()}: {formal_text(f['value'])}"
+            + (" (unconfirmed)" if f in uncertain_facts else "")
+            for f in consistent_facts + uncertain_facts
+        ],
+        "writing": "plain",
         "evidence_index": evidence_index,
         "questions_for_counsel": questions_for_counsel[:10],
         "facts_to_establish": facts_to_establish[:10],
@@ -228,6 +273,6 @@ def build_escalation_bundle(
         "submission_trail": submission_steps,
         "autonomy_notice": (
             "Nyay Saathi prepares analysis and drafts only. No filing, signature, payment, "
-            "or legal representation has been performed on the user's behalf."
+            "or legal representation has been performed on the client's behalf."
         ),
     }

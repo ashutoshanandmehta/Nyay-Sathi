@@ -14,7 +14,7 @@
     {
       "scenario_id": "gate-consumer-amazon-refund",
       "turn_index": 1,
-      "elapsed_ms": 43.72,
+      "elapsed_ms": 43.83,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -38,7 +38,7 @@
     {
       "scenario_id": "gate-consumer-hotel-draft",
       "turn_index": 1,
-      "elapsed_ms": 35.91,
+      "elapsed_ms": 35.25,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -60,7 +60,7 @@
     {
       "scenario_id": "gate-urgent-police-followup-continuity",
       "turn_index": 1,
-      "elapsed_ms": 33.9,
+      "elapsed_ms": 32.63,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -82,7 +82,7 @@
     {
       "scenario_id": "gate-urgent-police-followup-continuity",
       "turn_index": 2,
-      "elapsed_ms": 36.89,
+      "elapsed_ms": 34.75,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -105,7 +105,7 @@
     {
       "scenario_id": "gate-urgent-adult-autonomy-interfaith",
       "turn_index": 1,
-      "elapsed_ms": 38.64,
+      "elapsed_ms": 37.14,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -127,7 +127,7 @@
     {
       "scenario_id": "gate-crisis-self-harm-helpline",
       "turn_index": 1,
-      "elapsed_ms": 31.66,
+      "elapsed_ms": 30.61,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",

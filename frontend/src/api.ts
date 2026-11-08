@@ -50,6 +50,18 @@ export const api = {
   saveDraft: (cid:string, title:string, content:string) => call(`/api/conversations/${cid}/drafts`,{method:'POST',body:JSON.stringify({title,content})}),
   updateDraft:(cid:string,id:string,title:string,content:string,expected_version:number)=>call<{version:number}>(`/api/conversations/${cid}/drafts/${id}`,{method:'PATCH',body:JSON.stringify({title,content,expected_version})}),
   escalationBundle:(cid:string)=>call<EscalationBundle>(`/api/conversations/${cid}/escalation-bundle`),
+  // Fetched in the page and saved from a blob, so it behaves the same in every browser and
+  // failures are reported instead of silently opening nothing.
+  downloadEscalationBundle: async (cid:string, format:'pdf'|'docx') => {
+    const response = await fetch(`/api/conversations/${cid}/escalation-bundle/export/${format}`,{credentials:'include'})
+    if(!response.ok)throw new Error(response.status===503?'Busy right now. Please try again shortly.':'The file could not be prepared. Please try again.')
+    const filename = /filename="([^"]+)"/.exec(response.headers.get('content-disposition')||'')?.[1] || `nyay-saathi-lawyer-bundle.${format}`
+    const url = URL.createObjectURL(await response.blob())
+    const link = Object.assign(document.createElement('a'),{href:url,download:filename})
+    document.body.appendChild(link);link.click();link.remove()
+    setTimeout(()=>URL.revokeObjectURL(url),10_000)
+    return filename
+  },
   addUserAction:(cid:string,title:string,status:'pending'|'completed'|'skipped'='completed',notes='')=>call<UserActionItem>(`/api/conversations/${cid}/actions`,{method:'POST',body:JSON.stringify({title,status,notes})}),
   updateUserAction:(cid:string,actionId:string,status:'pending'|'completed'|'skipped',notes?:string)=>call<UserActionItem>(`/api/conversations/${cid}/actions/${actionId}`,{method:'PATCH',body:JSON.stringify({status,notes})}),
   recordSubmissionStep:(cid:string,target_channel:string,step:'previewed'|'consented'|'submitted_by_user'|'receipt_captured',draft_id?:string,receipt_reference='',notes='')=>call<SubmissionAuditStep>(`/api/conversations/${cid}/submissions`,{method:'POST',body:JSON.stringify({target_channel,step,draft_id,receipt_reference,notes})}),

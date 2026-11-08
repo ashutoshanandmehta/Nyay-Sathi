@@ -15,7 +15,9 @@ from pydantic import BaseModel, Field
 
 from app.config import Settings, get_settings
 from app.db import Database, MemoryConflict, now
+from app.escalation.brief import formalize
 from app.escalation.bundle import build_escalation_bundle
+from app.escalation.documents import write_bundle_docx, write_bundle_pdf
 from app.practice.contracts import (
     PracticeExportRequest,
     PracticeScenario,
@@ -241,27 +243,93 @@ def delete_conversation(
     return {"deleted": True, "cryptographic_key_destroyed": True, "physical_purge_scheduled": True}
 
 
+def _lawyer_bundle(request: Request, owner: OwnerContext, conversation_id: str) -> dict[str, Any]:
+    """The bundle in formal wording, cached per case state so the panel and the download
+    show the same text and repeated clicks make no new model call."""
+    database = db(request)
+    conv = database.get_conversation(owner.owner_id, conversation_id)
+    memory, summary = database.load_memory(owner.owner_id, conversation_id)
+    messages = database.messages(owner.owner_id, conversation_id)
+    attachments = database.attachments(owner.owner_id, conversation_id)
+    drafts = database.drafts(owner.owner_id, conversation_id)
+    safety = database.safety_messages(owner.owner_id, conversation_id)
+    actions = database.list_user_actions(owner.owner_id, conversation_id)
+    submissions = database.list_submission_steps(owner.owner_id, conversation_id)
+    cache = getattr(request.app.state, "bundle_cache", None)
+    if cache is None:
+        cache = request.app.state.bundle_cache = {}
+    key = (
+        owner.owner_id,
+        conversation_id,
+        memory.version,
+        len(messages),
+        tuple((d["id"], d["version"]) for d in drafts),
+        len(attachments),
+        len(safety),
+        tuple((a["id"], a["status"], a.get("updated_at")) for a in actions),
+        len(submissions),
+    )
+    if key in cache:
+        return cache[key]
+    bundle = build_escalation_bundle(
+        conversation=conv,
+        memory=memory,
+        summary=summary,
+        messages=messages,
+        attachments=attachments,
+        drafts=drafts,
+        safety_messages=safety,
+        user_actions=actions,
+        submission_steps=submissions,
+    )
+    cfg = live_settings(request)
+    if cfg.ai_configured:
+        _check_model_circuit(request, owner, conversation_id, cfg)
+        bundle, calls = formalize(bundle, cfg)
+        abuse = getattr(request.app.state, "abuse", None)
+        if abuse is not None:
+            abuse.record_turn_usage(owner.owner_id, calls)
+    if len(cache) >= 256:
+        cache.pop(next(iter(cache)))
+    cache[key] = bundle
+    return bundle
+
+
 @router.get("/conversations/{conversation_id}/escalation-bundle")
 def get_escalation_bundle(
     conversation_id: str, request: Request, owner: Annotated[OwnerContext, Depends(owner_context)]
 ):
     try:
-        database = db(request)
-        conv = database.get_conversation(owner.owner_id, conversation_id)
-        memory, summary = database.load_memory(owner.owner_id, conversation_id)
-        return build_escalation_bundle(
-            conversation=conv,
-            memory=memory,
-            summary=summary,
-            messages=database.messages(owner.owner_id, conversation_id),
-            attachments=database.attachments(owner.owner_id, conversation_id),
-            drafts=database.drafts(owner.owner_id, conversation_id),
-            safety_messages=database.safety_messages(owner.owner_id, conversation_id),
-            user_actions=database.list_user_actions(owner.owner_id, conversation_id),
-            submission_steps=database.list_submission_steps(owner.owner_id, conversation_id),
-        )
+        return _lawyer_bundle(request, owner, conversation_id)
     except KeyError as exc:
         raise http_not_found(exc) from exc
+
+
+@router.get("/conversations/{conversation_id}/escalation-bundle/export/{format}")
+def export_escalation_bundle(
+    conversation_id: str,
+    format: str,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    if format not in {"pdf", "docx"}:
+        raise HTTPException(status_code=404, detail="Unsupported export format")
+    try:
+        bundle = _lawyer_bundle(request, owner, conversation_id)
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+    target = live_settings(request).export_path / f"{conversation_id}-lawyer-bundle.{format}"
+    {"pdf": write_bundle_pdf, "docx": write_bundle_docx}[format](target, bundle)
+    media = {
+        "pdf": "application/pdf",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }[format]
+    return FileResponse(
+        target,
+        media_type=media,
+        filename=f"nyay-saathi-lawyer-bundle.{format}",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.post("/conversations/{conversation_id}/actions", dependencies=[Depends(csrf_guard)])

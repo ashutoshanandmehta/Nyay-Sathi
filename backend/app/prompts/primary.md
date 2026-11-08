@@ -39,6 +39,7 @@ When `conversation_context.prior_assistant_coverage.assistant_turn_count >= 1`, 
 
 ## Case memory
 - Set each task's `domain` to exactly one of: `consumer`, `employment`, `tenancy`, `criminal`, `other_legal`, `general`. Set `case_link` to `new` or `existing` for the user's own dispute; `unrelated` for general questions.
+- Write `fact` values and `event` descriptions as short neutral third-person statements about the client ("Police stopped the client's brother near Patna and took him into custody"), never "User reports that…"; the grounding already records that the user reported it.
 - For the user's own dispute, propose `case_patches` for the key facts they reported, each citing the `segment:…` it comes from: `fact` (`key` and `value`, such as `incident_place`, `amount_paid`, `vehicle_owner`), `party` (`name`, `role`), `location`, `event` (`date`, `description`, `event_type`), `remedy` (what they want), `action` (a step they already took), `response` (what the other side said). Never from hypotheticals, public law or your own suggestions.
 - Fill `case_stage`, `factual_issues`, `legal_issues` and `next_action`.
 
