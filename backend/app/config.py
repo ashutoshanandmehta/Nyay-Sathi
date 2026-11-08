@@ -21,18 +21,21 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_chat_model: str = "gpt-6-luna"
     openai_review_model: str = "gpt-6.1-sol"
+    openai_planner_model: str | None = None
     openai_embedding_model: str = "text-embedding-3-small"
     openai_transcription_model: str = "gpt-transcribe"
     openai_tts_model: str = "gpt-realtime-2.1-mini"
     openai_web_search_model: str = "gpt-6-astra"
     assistant_engine: Literal["primary_agent", "legacy"] = "primary_agent"
+    agent_planning_mode: Literal["none", "embedded", "separate_planner"] = "embedded"
     vector_index_enabled: bool = False
     agent_max_requests: int = Field(default=6, ge=1, le=8)
     agent_max_rounds: int = Field(default=3, ge=1, le=4)
     agent_max_tokens: int = Field(default=160000, ge=2000, le=200000)
     agent_max_output_tokens: int = Field(default=6000, ge=1000, le=16000)
     agent_context_chars: int = Field(default=36000, ge=8000, le=100000)
-    agent_deadline_seconds: float = Field(default=60, ge=5, le=180)
+    agent_deadline_seconds: float = Field(default=180, ge=5, le=300)
+    agent_repair_min_remaining_seconds: float = Field(default=25.0, ge=0.0, le=180.0)
     agent_research_seconds: float = Field(default=20, ge=1, le=60)
     agent_max_batches: int = Field(default=2, ge=0, le=2)
     agent_max_queries: int = Field(default=3, ge=0, le=4)
@@ -47,7 +50,32 @@ class Settings(BaseSettings):
     agent_pricing_date: str | None = None
     live_eval_max_cost_usd: float = Field(default=0, ge=0)
     cookie_secure: bool = False
+    credential_signing_secret: str = "nyay-saathi-local-dev-credential-key-change-in-prod"
+    allow_legacy_unsigned_cookie: bool = True
+    kms_master_key: str = "nyay-saathi-local-dev-kms-master-kek-change-in-prod"
+    kms_key_id: str = "local-kek-v1"
+    envelope_encryption_enabled: bool = True
+    retention_inactivity_days: int = Field(default=365, ge=30, le=3650)
+    require_explicit_attachment_consent: bool = False
+    pdf_engine: Literal["pymupdf", "pypdf"] = "pymupdf"
+
+    # National-scale pluggable infrastructure endpoints (optional; local adapters active when unset)
+    postgresql_dsn: str | None = None
+    redis_url: str | None = None
+    opensearch_url: str | None = None
+    opensearch_index: str = "nyay_legal_propositions_v1"
+    object_storage_bucket: str | None = None
+    temporal_target: str | None = None
+    otlp_endpoint: str | None = None
+    dr_region: str = "ap-south-2"
+    primary_region: str = "ap-south-1"
+
+    # Abuse & model-cost circuit breakers
     max_model_calls_per_turn: int = Field(default=8, ge=1, le=8)
+    device_hourly_model_call_limit: int = Field(default=120, ge=5, le=10000)
+    system_hourly_model_call_limit: int = Field(default=5000, ge=10, le=1000000)
+    device_hourly_cost_limit_usd: float = Field(default=5.0, gt=0)
+    system_hourly_cost_limit_usd: float = Field(default=250.0, gt=0)
     web_research_enabled: bool = True
     web_max_queries: int = Field(default=2, ge=1, le=2)
     web_max_documents: int = Field(default=3, ge=1, le=3)
@@ -59,8 +87,10 @@ class Settings(BaseSettings):
     live_eval_max_model_calls: int = Field(default=0, ge=0, le=100)
     max_upload_bytes: int = 10 * 1024 * 1024
     max_pdf_pages: int = 50
-    model_timeout_seconds: float = 65.0
+    model_timeout_seconds: float = 120.0
     requests_per_minute: int = Field(default=120, ge=10, le=6000)
+    device_requests_per_minute: int = Field(default=90, ge=5, le=6000)
+    turn_requests_per_minute: int = Field(default=30, ge=2, le=1000)
 
     @property
     def ai_configured(self) -> bool:

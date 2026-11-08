@@ -1,20 +1,36 @@
-import { ArrowDown, Database, ExternalLink, GitBranch, ShieldCheck, X } from 'lucide-react'
-import { useState } from 'react'
-import type { AgentWorkflow, Detail, KnowledgeBase, Source } from '../types'
+import { ArrowDown, CheckCircle2, Database, ExternalLink, GitBranch, Lock, Scale, ShieldCheck, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import type { AgentWorkflow, Detail, EscalationBundle, KnowledgeBase, Source } from '../types'
 import { api } from '../api'
 import JourneyPanel from './JourneyPanel'
 import DraftEditor from './DraftEditor'
 
 export function Drawer({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return <div className="panel-backdrop" onMouseDown={e=>{if(e.currentTarget===e.target)onClose()}}><aside className="panel"><header><h2>{title}</h2><button onClick={onClose} aria-label="Close panel"><X/></button></header>{children}</aside></div>}
-export function Sources({sources}:{sources:Source[]}){return <div className="panel-content source-list">{sources.map(s=><section key={s.passage_id}><div className="source-type">{s.source_type==='indian_official'?'Indian official origin · applicability assessed per claim':s.source_type==='foreign_official'?'Foreign official origin · Indian applicability not established':s.origin==='web'?(s.verification_status==='official_origin_pending_answer_review'?'Official origin · applicability needs review':'Public source · authority not verified'):'Saved official source'}</div><h3>{s.title}</h3><b>{s.locator}</b><blockquote>{s.text}</blockquote><p className="limitation">{s.limitations}</p><small>Retrieved {s.retrieved_at}{s.effective_date?` · Effective ${s.effective_date}`:''}{s.origin==='web'&&!s.effective_date?' · Effective date unknown':''}</small><a href={s.canonical_url} target="_blank" rel="noreferrer">Open source page <ExternalLink size={14}/></a></section>)}</div>}
+// A bare site root means the exact document is not linked; say so instead of implying it opens.
+const isSiteRoot=(url:string)=>{try{return new URL(url).pathname.replace(/\/+$/,'')===''}catch{return false}}
+export function Sources({sources,focus}:{sources:Source[];focus?:number}){
+  const list=useRef<HTMLDivElement>(null)
+  useEffect(()=>{if(focus)list.current?.querySelector(`[data-citation="${focus}"]`)?.scrollIntoView?.({block:'start',behavior:'smooth'})},[focus,sources])
+  return <div ref={list} className="panel-content source-list">{sources.map(s=><section key={s.passage_id} data-citation={s.citation_number} className={focus&&s.citation_number===focus?'source-focused':undefined}><div className="source-type">{s.source_type==='indian_official'?'Indian official origin · applicability assessed per claim':s.source_type==='foreign_official'?'Foreign official origin · Indian applicability not established':s.origin==='web'?(s.verification_status==='official_origin_pending_answer_review'?'Official origin · applicability needs review':'Public source · authority not verified'):'Saved official source'}</div><h3>{s.citation_number?<span className="citation-badge" aria-label={`Source ${s.citation_number}`}>{s.citation_number}</span>:null}{s.title}</h3><b>{s.locator}</b><blockquote>{s.text}</blockquote><p className="limitation">{s.limitations}</p><small>Retrieved {s.retrieved_at}{s.effective_date?` · Effective ${s.effective_date}`:''}{s.origin==='web'&&!s.effective_date?' · Effective date unknown':''}</small><a href={s.canonical_url} target="_blank" rel="noreferrer">{isSiteRoot(s.canonical_url)?'Website home page (exact document not linked)':'Open source page'} <ExternalLink size={14}/></a></section>)}</div>
+}
 const readable=(value:unknown)=>typeof value==='string'?value:JSON.stringify(value)
 const humanLabel=(value:string)=>value.replaceAll('_',' ').replace(/^./,v=>v.toUpperCase())
 const factStatus=(status:string)=>({user_allegation:'You said',user_confirmed:'Confirmed',document_statement:'From a document',assistant_inference:'Needs review'}[status]||humanLabel(status))
-function EvidencePreview({attachment,caseId}:{attachment:Detail['attachments'][number];caseId:string}){
+
+function EvidencePreview({attachment,caseId,onRefresh}:{attachment:Detail['attachments'][number];caseId:string;onRefresh?:()=>void}){
   const [text,setText]=useState(attachment.extracted_text),[status,setStatus]=useState(''),[saving,setSaving]=useState(false)
+  const [consent,setConsent]=useState<'consented'|'withheld'>(attachment.consent_status||'consented')
   const metadata=JSON.parse(attachment.metadata_json||'{}') as {pages?:{page:number;start:number;end:number}[]}
-  async function save(){setSaving(true);try{await api.correctAttachment(caseId,attachment.id,text);setStatus('Correction saved. Dependent drafts need review.')}catch{setStatus('Could not save. Your changes remain here.')}finally{setSaving(false)}}
-  return <details className="evidence-preview"><summary><span>{attachment.filename}</span><small>{attachment.extraction_status==='complete'?'Ready':humanLabel(attachment.extraction_status)}{metadata.pages?.length?` · ${metadata.pages.length} pages`:''}</small></summary>
+  async function save(){setSaving(true);try{await api.correctAttachment(caseId,attachment.id,text);setStatus('Correction saved. Dependent drafts need review.');onRefresh?.()}catch{setStatus('Could not save. Your changes remain here.')}finally{setSaving(false)}}
+  async function toggleConsent(){
+    const next=consent==='consented'?false:true
+    try{const res=await api.setAttachmentConsent(caseId,attachment.id,next);setConsent(res.consent_status);onRefresh?.()}catch{setStatus('Could not update attachment consent.')}
+  }
+  return <details className="evidence-preview"><summary><span>{attachment.filename}</span><small><span>{attachment.extraction_status==='complete'?'Ready':humanLabel(attachment.extraction_status)}</span> · <span>{consent==='consented'?'AI consent granted':'Withheld from AI'}</span>{metadata.pages?.length?` · ${metadata.pages.length} pages`:''}</small></summary>
+    <div className="workspace-inline-row">
+      <span className="muted">AI access to this file: <b>{consent==='consented'?'Permitted':'Withheld'}</b></span>
+      <button type="button" onClick={toggleConsent}>{consent==='consented'?'Withhold from AI':'Allow AI analysis'}</button>
+    </div>
     <p className="muted">Document contents are evidence of what is written, not independent proof of every statement.</p>
     {metadata.pages?.map(page=><details key={page.page}><summary>Page {page.page}</summary><pre>{attachment.extracted_text.slice(page.start,page.end)||'No readable text on this page.'}</pre></details>)}
     <label>Review or correct extracted text<textarea aria-label={`Extracted text from ${attachment.filename}`} value={text} onChange={e=>setText(e.target.value)}/></label>
@@ -22,22 +38,137 @@ function EvidencePreview({attachment,caseId}:{attachment:Detail['attachments'][n
     <button disabled={saving||text===attachment.extracted_text} onClick={save}>{saving?'Saving…':'Save correction'}</button><p role="status">{status}</p>
   </details>
 }
-export function CasePanel({detail}:{detail:Detail}){const m=detail.case_memory, facts=Object.entries(m.facts);const conflicts=m.contradictions.filter(x=>!(x as {resolved?:boolean}).resolved);const overview=facts.filter(([k])=>!['issue_type','requested_remedy'].includes(k)).slice(0,3).map(([,v])=>v.value).join(' ')||detail.messages.find(message=>message.role==='user'&&message.content.length>20)?.content.slice(0,500)||'Tell me what happened. Your case will take shape as we chat.';return <div className="panel-content case-workspace">
-  <div className="case-version">Private case · version {m.version}</div>
-  <section className="case-overview"><h3>What happened</h3><p>{overview}</p><span className="muted">Based on your account and supplied documents.</span><h3>What you want</h3><p>{m.requested_remedy||'We haven’t discussed your preferred resolution yet.'}</p></section>
-  {m.journey&&(m.journey.events.length>0||m.journey.recommendations.length>0)&&<JourneyPanel journey={m.journey} caseVersion={m.version}/>}
-  {!!(conflicts.length||m.unknowns.length)&&<section><h3>Needs your attention</h3>{conflicts.map((x,i)=><p className="workspace-warning" key={i}>{x.description||readable(x)}</p>)}{m.unknowns.map((x,i)=><p key={i}>{x}</p>)}</section>}
-  {!!m.events?.length&&<details className="case-section" open><summary>Timeline <small>{m.events.length}</small></summary>{m.events.map((item,i)=><div className="timeline-event" key={i}><small>{String(item.date||'Date to check')}</small><p>{String(item.description||'')}</p></div>)}</details>}
-  <details className="case-section" open><summary>Evidence <small>{detail.attachments.length}</small></summary>{detail.attachments.map(a=><EvidencePreview key={a.id} attachment={a} caseId={detail.conversation.id}/>)}{!detail.attachments.length&&<p className="muted">Add an invoice, email, or screenshot using the attachment button.</p>}</details>
-  {!!facts.length&&<details className="case-section"><summary>Important facts <small>{facts.length}</small></summary>{facts.map(([key,fact])=><div className="case-fact" key={key}><span>{humanLabel(key)}</span><p>{fact.value}</p><small className="fact-badge">{factStatus(fact.status)}</small>{!!fact.provenance?.length&&<details><summary>Source details</summary>{fact.provenance.map((p,i)=><p className="muted" key={i}>{p.source_type==='document'?(detail.attachments.find(a=>a.id===p.source_id)?.filename||'Document'):'Your message'}{p.page?` · page ${p.page}`:''}{p.span?` · ${p.span}`:''}</p>)}</details>}</div>)}</details>}
-  {!!(m.parties?.length||m.locations?.length)&&<details className="case-section"><summary>People and places</summary>{[...(m.parties||[]),...(m.locations||[])].map((item,i)=><p key={i}>{String(item.name||item.value||'')} <small>{humanLabel(String(item.role||''))}</small></p>)}</details>}
-  {!!(m.actions_completed.length||m.responses_received?.length)&&<details className="case-section"><summary>Actions and responses</summary>{m.actions_completed.map((x,i)=><p key={i}>{x}</p>)}{m.responses_received?.map((x,i)=><p key={`r${i}`}>{String(x.description||x.content||'Response recorded')}</p>)}</details>}
-  {!!detail.drafts.length&&<details className="case-section"><summary>Drafts <small>{detail.drafts.length}</small></summary>{detail.drafts.map(d=><details key={d.id}><summary>{d.title} · {humanLabel(d.status)}</summary><DraftEditor draft={d} caseId={detail.conversation.id}/></details>)}</details>}
-  {!!m.questions_for_legal_review?.length&&<details className="case-section"><summary>Questions for a lawyer</summary>{m.questions_for_legal_review.map((x,i)=><p key={i}>{x}</p>)}</details>}
-  {!!detail.case_proposals?.length&&<details className="case-section"><summary>Case details awaiting review</summary><p className="muted">These are proposed details. They have not changed your saved case. Correct or restate the details in chat before using them.</p>{detail.case_proposals.map(proposal=><div key={proposal.message_id}>{proposal.base_version!==m.version&&<small className="muted">Earlier proposal — check against your latest case.</small>}{Object.entries(proposal.proposed_facts).filter(([key,fact])=>m.facts[key]?.value!==fact.value).map(([key,fact])=><p key={key}><b>{humanLabel(key)}</b>: {fact.value}</p>)}</div>)}</details>}
-  {!!detail.staged_patches?.length&&<details className="case-section"><summary>Details needing clarification <small>{detail.staged_patches.length}</small></summary><p className="muted">These proposals have not changed your saved case. Correct or clarify them in chat.</p>{detail.staged_patches.map(({patch,reason})=><div className="case-fact" key={patch.patch_id}><b>{humanLabel(patch.payload.key||patch.payload.role||'Proposed detail')}</b><p>{patch.payload.value||patch.payload.description||patch.payload.name}</p><small className="muted">{reason}</small></div>)}</details>}
-  <p className="case-privacy">Private to this browser. Your documents are kept outside the shared legal knowledge base.</p>
-</div>}
+
+export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh?:()=>void;onImported?:(cid:string)=>void}){
+  const m=detail.case_memory, facts=Object.entries(m.facts)
+  const conflicts=m.contradictions.filter(x=>!(x as {resolved?:boolean}).resolved)
+  const overview=facts.filter(([k])=>!['issue_type','requested_remedy'].includes(k)).slice(0,3).map(([,v])=>v.value).join(' ')||detail.messages.find(message=>message.role==='user'&&message.content.length>20)?.content.slice(0,500)||'Tell me what happened. Your case will take shape as we chat.'
+  const latestAssistant=[...detail.messages].reverse().find(x=>x.role==='assistant'&&x.status==='complete')
+  const nextStep=latestAssistant?.metadata?.next_action || latestAssistant?.metadata?.resolution_blocks?.find(b=>b.block_type==='immediate_actions'||b.block_type==='recommended_route')?.content
+  const stage=latestAssistant?.metadata?.case_stage || (m.journey?.outcome && m.journey.outcome !== 'unknown' ? m.journey.outcome : 'intake')
+
+  const [actionTitle,setActionTitle]=useState(''),[actionBusy,setActionBusy]=useState(false)
+  const [subChannel,setSubChannel]=useState('Grievance Officer / Portal'),[subReceipt,setSubReceipt]=useState(''),[subMsg,setSubMsg]=useState('')
+  const [bundle,setBundle]=useState<EscalationBundle|null>(null),[bundleLoading,setBundleLoading]=useState(false)
+  const [passphrase,setPassphrase]=useState(''),[transferJson,setTransferJson]=useState(''),[transferMsg,setTransferMsg]=useState('')
+  const cid=detail.conversation.id
+
+  async function logAction(){
+    if(!actionTitle.trim()||actionBusy)return
+    setActionBusy(true)
+    try{await api.addUserAction(cid,actionTitle.trim(),'completed');setActionTitle('');onRefresh?.()}finally{setActionBusy(false)}
+  }
+  async function toggleAction(id:string,current:string){
+    const next=current==='completed'?'pending':'completed'
+    await api.updateUserAction(cid,id,next);onRefresh?.()
+  }
+  async function recordStep(step:'previewed'|'consented'|'submitted_by_user'|'receipt_captured'){
+    try{await api.recordSubmissionStep(cid,subChannel,step,detail.drafts[0]?.id,subReceipt);setSubMsg(`Recorded: ${humanLabel(step)}`);onRefresh?.()}catch(e){setSubMsg((e as Error).message)}
+  }
+  async function loadBundle(){
+    setBundleLoading(true)
+    try{setBundle(await api.escalationBundle(cid))}finally{setBundleLoading(false)}
+  }
+  async function exportPackage(){
+    try{const pkg=await api.exportTransfer(cid,passphrase);setTransferJson(JSON.stringify(pkg,null,2));setTransferMsg('Encrypted transfer package created. Save both this JSON and your passphrase.')}catch(e){setTransferMsg((e as Error).message)}
+  }
+  async function importPackage(){
+    try{const parsed=JSON.parse(transferJson) as Record<string,unknown>;const res=await api.importTransfer(parsed,passphrase);setTransferMsg('Case restored on this device.');onImported?.(res.conversation.id)}catch(e){setTransferMsg((e as Error).message)}
+  }
+
+  const verifiedFacts=facts.filter(([,f])=>f.status==='user_confirmed'||f.status==='document_statement')
+  const reportedFacts=facts.filter(([,f])=>f.status!=='user_confirmed'&&f.status!=='document_statement')
+
+  return <div className="panel-content case-workspace">
+    <div className="case-version">Private case · version {m.version} · stage: {humanLabel(stage)}</div>
+    <section className="case-overview">
+      <h3>What happened</h3><p>{overview}</p><span className="muted">Based on your account and supplied documents.</span>
+      <h3>What you want</h3><p>{m.requested_remedy||'We haven’t discussed your preferred resolution yet.'}</p>
+      {nextStep&&<div className="next-step-banner"><CheckCircle2 size={15}/><div><b>Recommended next step</b><p>{nextStep}</p></div></div>}
+    </section>
+
+    {m.journey&&(m.journey.events.length>0||m.journey.recommendations.length>0)&&<JourneyPanel journey={m.journey} caseVersion={m.version}/>}
+    {!!(conflicts.length||m.unknowns.length)&&<section><h3>Needs your attention</h3>{conflicts.map((x,i)=><p className="workspace-warning" key={i}>{x.description||readable(x)}</p>)}{m.unknowns.map((x,i)=><p key={i}>{x}</p>)}</section>}
+
+    <details className="case-section" open>
+      <summary>Action tracker <small>{(detail.user_actions?.length||0)+m.actions_completed.length}</small></summary>
+      <p className="muted">Record steps you took outside chat so your strategy adjusts automatically.</p>
+      <div className="workspace-form-row">
+        <input aria-label="Record completed action" placeholder="e.g. Sent grievance email with order screenshot" value={actionTitle} onChange={e=>setActionTitle(e.target.value)}/>
+        <button type="button" disabled={actionBusy||actionTitle.trim().length<2} onClick={logAction}>Add</button>
+      </div>
+      {detail.user_actions?.map(act=><div className="action-item" key={act.id}><label><input type="checkbox" checked={act.status==='completed'} onChange={()=>toggleAction(act.id,act.status)}/><span>{act.title}</span></label><small>{humanLabel(act.status)}</small></div>)}
+      {m.actions_completed.map((x,i)=><p className="workspace-line" key={i}>{x}</p>)}
+      {m.responses_received?.map((x,i)=><p className="workspace-line" key={`r${i}`}>{String(x.description||x.content||'Response recorded')}</p>)}
+    </details>
+
+    {!!m.events?.length&&<details className="case-section" open><summary>Timeline <small>{m.events.length}</small></summary>{m.events.map((item,i)=><div className="timeline-event" key={i}><small>{String(item.date||'Date to check')}</small><p>{String(item.description||'')}</p></div>)}</details>}
+    <details className="case-section" open><summary>Evidence <small>{detail.attachments.length}</small></summary>{detail.attachments.map(a=><EvidencePreview key={a.id} attachment={a} caseId={cid} onRefresh={onRefresh}/>)}{!detail.attachments.length&&<p className="muted">Add an invoice, email, or screenshot using the attachment button.</p>}</details>
+
+    {!!facts.length&&<details className="case-section"><summary>Important facts <small>{facts.length}</small></summary>
+      {!!verifiedFacts.length&&<p className="muted"><b>Confirmed / documentary ({verifiedFacts.length})</b> · Reported / pending check ({reportedFacts.length})</p>}
+      {facts.map(([key,fact])=><div className="case-fact" key={key}><span>{humanLabel(key)}</span><p>{fact.value}</p><small className="fact-badge">{factStatus(fact.status)}</small>{!!fact.provenance?.length&&<details><summary>Source details</summary>{fact.provenance.map((p,i)=><p className="muted" key={i}>{p.source_type==='document'?(detail.attachments.find(a=>a.id===p.source_id)?.filename||'Document'):'Your message'}{p.page?` · page ${p.page}`:''}{p.span?` · ${p.span}`:''}</p>)}</details>}</div>)}
+    </details>}
+
+    {!!(m.parties?.length||m.locations?.length)&&<details className="case-section"><summary>People and places</summary>{[...(m.parties||[]),...(m.locations||[])].map((item,i)=><p key={i}>{String(item.name||item.value||'')} <small>{humanLabel(String(item.role||''))}</small></p>)}</details>}
+    {!!detail.drafts.length&&<details className="case-section"><summary>Drafts <small>{detail.drafts.length}</small></summary>{detail.drafts.map(d=><details key={d.id}><summary>{d.title} · {humanLabel(d.status)}</summary><DraftEditor draft={d} caseId={cid}/></details>)}</details>}
+
+    <details className="case-section">
+      <summary>User-confirmed submission tracker <small>{detail.submission_steps?.length||0}</small></summary>
+      <p className="muted">Nyay Saathi never files, signs, or pays on your behalf. Confirm each stage yourself and store your acknowledgment reference.</p>
+      <div className="workspace-stack">
+        <input aria-label="Target forum or channel" value={subChannel} onChange={e=>setSubChannel(e.target.value)} placeholder="Forum / Grievance Officer"/>
+        <input aria-label="Submission receipt or ticket reference" value={subReceipt} onChange={e=>setSubReceipt(e.target.value)} placeholder="Docket / NCH / Ticket number (optional)"/>
+        <div className="step-buttons">
+          <button type="button" onClick={()=>recordStep('previewed')}>1. Previewed</button>
+          <button type="button" onClick={()=>recordStep('consented')}>2. Explicit consent</button>
+          <button type="button" onClick={()=>recordStep('submitted_by_user')}>3. I submitted</button>
+          <button type="button" onClick={()=>recordStep('receipt_captured')}>4. Save receipt</button>
+        </div>
+        {subMsg&&<small className="muted">{subMsg}</small>}
+        {detail.submission_steps?.map(s=><div className="workspace-line" key={s.id}><b>{humanLabel(s.step)}</b> · {s.target_channel}{s.receipt_reference?` · Ref: ${s.receipt_reference}`:''}</div>)}
+      </div>
+    </details>
+
+    <details className="case-section">
+      <summary>Lawyer escalation bundle</summary>
+      <p className="muted">Structured handoff with chronology, evidence index, unresolved legal questions, drafts, and verified sources — zero hidden AI reasoning.</p>
+      <button type="button" className="workspace-btn" disabled={bundleLoading} onClick={loadBundle}><Scale size={14}/> {bundleLoading?'Preparing bundle…':'Prepare Lawyer Escalation Bundle'}</button>
+      {bundle&&<div className="bundle-card">
+        <b>{bundle.escalation_recommended?'Human legal review recommended':'Ready for advocate consultation'}</b>
+        <ul>{bundle.escalation_reasons.map((r,i)=><li key={i}>{r}</li>)}</ul>
+        <small>Chronology items: {bundle.chronology.length} · Evidence files: {bundle.evidence_index.length} · Verified sources: {bundle.source_backed_analysis.verified_sources.length} · Drafts: {bundle.generated_drafts.length}</small>
+        {!!bundle.unresolved_legal_questions.length&&<><b>Open questions for counsel</b><ul>{bundle.unresolved_legal_questions.slice(0,5).map((q,i)=><li key={i}>{q}</li>)}</ul></>}
+      </div>}
+      {!!m.questions_for_legal_review?.length&&m.questions_for_legal_review.map((x,i)=><p key={i}>{x}</p>)}
+    </details>
+
+    {!!detail.case_proposals?.length&&<details className="case-section"><summary>Case details awaiting review</summary><p className="muted">These are proposed details. They have not changed your saved case. Correct or restate the details in chat before using them.</p>{detail.case_proposals.map(proposal=><div key={proposal.message_id}>{proposal.base_version!==m.version&&<small className="muted">Earlier proposal — check against your latest case.</small>}{Object.entries(proposal.proposed_facts).filter(([key,fact])=>m.facts[key]?.value!==fact.value).map(([key,fact])=><p key={key}><b>{humanLabel(key)}</b>: {fact.value}</p>)}</div>)}</details>}
+    {!!detail.staged_patches?.length&&<details className="case-section"><summary>Details needing clarification <small>{detail.staged_patches.length}</small></summary><p className="muted">These proposals have not changed your saved case. Correct or clarify them in chat.</p>{detail.staged_patches.map(({patch,reason})=><div className="case-fact" key={patch.patch_id}><b>{humanLabel(patch.payload.key||patch.payload.role||'Proposed detail')}</b><p>{patch.payload.value||patch.payload.description||patch.payload.name}</p><small className="muted">{reason}</small></div>)}</details>}
+
+    <details className="case-section">
+      <summary>Privacy, retention & device transfer</summary>
+      <div className="workspace-stack">
+        <p className="muted"><Lock size={12}/> Per-case envelope encryption: <b>{detail.encryption?.envelope_encrypted?'Active':'Local'}</b> · Auto-purge after <b>{detail.retention?.days_remaining??365} days</b> of inactivity (delete anytime from Case menu).</p>
+        <label className="consent-check">
+          <input type="checkbox" checked={!!detail.quality_review_consent?.opted_in} onChange={async e=>{await api.setQualityConsent(cid,e.target.checked);onRefresh?.()}}/>
+          <span>Optional: allow de-identified quality review sampling (never used for cross-case training or ad profiling)</span>
+        </label>
+        <p className="workspace-warning">Guest warning: No phone or email is stored. Losing both this browser credential and your encrypted transfer package permanently loses access.</p>
+        <input type="password" aria-label="Transfer passphrase" placeholder="Passphrase (min 8 chars)" value={passphrase} onChange={e=>setPassphrase(e.target.value)}/>
+        <div className="step-buttons">
+          <button type="button" disabled={passphrase.length<8} onClick={exportPackage}>Export encrypted transfer</button>
+          <button type="button" disabled={passphrase.length<8||!transferJson.trim()} onClick={importPackage}>Import transfer JSON</button>
+        </div>
+        {transferJson&&<textarea aria-label="Encrypted transfer JSON" className="transfer-box" value={transferJson} onChange={e=>setTransferJson(e.target.value)}/>}
+        {!transferJson&&<button type="button" className="text-action" onClick={()=>setTransferJson(' ')}>Paste an existing transfer package to import…</button>}
+        {transferMsg&&<small className="muted">{transferMsg}</small>}
+      </div>
+    </details>
+
+    <p className="case-privacy">Private to this browser. Your documents are kept outside the shared legal knowledge base.</p>
+  </div>
+}
 
 type KnowledgeTab='overview'|'playbooks'|'procedures'|'sources'|'lawyer'
 export function KnowledgeBasePanel({data}:{data:KnowledgeBase}){const [tab,setTab]=useState<KnowledgeTab>('overview');return <div className="panel-content knowledge-panel">

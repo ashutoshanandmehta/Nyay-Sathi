@@ -22,6 +22,13 @@ class TurnPersistence:
     def __init__(self, database):
         self.db = database
 
+    def _decode_row(self, cid: str, row) -> dict:
+        item = dict(row)
+        for col in ("verified_json", "result_json"):
+            if item.get(col):
+                item[col] = self.db.decrypt_case_field(cid, item[col])
+        return item
+
     def get(self, owner, cid, request_id, digest=None):
         self.db.get_conversation(owner, cid)
         with self.db.connect() as conn:
@@ -33,7 +40,7 @@ class TurnPersistence:
             raise RequestConflict(
                 "The request ID already belongs to a different message or attachments"
             )
-        return dict(row) if row else None
+        return self._decode_row(cid, row) if row else None
 
     def begin(self, owner, cid, request_id, digest):
         self.get(owner, cid, request_id, digest)
@@ -44,7 +51,8 @@ class TurnPersistence:
                 (cid,),
             ).fetchall()
             for row in running:
-                payload = json.loads(row["verified_json"] or "{}")
+                raw_v = self.db.decrypt_case_field(cid, row["verified_json"] or "{}", _connection=conn)
+                payload = json.loads(raw_v or "{}")
                 try:
                     if payload.get("worker_pid", 0) <= 0:
                         raise ProcessLookupError()
@@ -87,9 +95,10 @@ class TurnPersistence:
     def reviewed(self, owner, cid, request_id, snapshot):
         self.db.get_conversation(owner, cid)
         with self.db.connect() as conn:
+            enc = self.db.encrypt_case_field(cid, json.dumps(snapshot, default=str), _connection=conn)
             conn.execute(
                 "UPDATE turn_executions SET status='reviewed', verified_json=?, updated_at=? WHERE conversation_id=? AND request_id=? AND status='running'",
-                (json.dumps(snapshot), now(), cid, request_id),
+                (enc, now(), cid, request_id),
             )
 
     def commit(self, owner, cid, request_id):
@@ -112,7 +121,6 @@ class TurnPersistence:
         )
         with self.db.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            # Recheck the receipt under the write lock: concurrent retries cannot apply twice.
             current = conn.execute(
                 "SELECT receipt_json FROM turn_executions WHERE conversation_id=? AND request_id=?",
                 (cid, request_id),
@@ -185,8 +193,6 @@ class TurnPersistence:
         receipt = self.commit(owner, cid, request_id)
         snapshot = json.loads(record["verified_json"])
         state, user = snapshot["state"], snapshot["user"]
-        # Only now may output describe a completed state change. Model-generated
-        # persistence claims were excluded before this transaction was attempted.
         metadata = {
             key: state.get(key, default)
             for key, default in {
@@ -199,6 +205,11 @@ class TurnPersistence:
                 "tool_records": [],
                 "unit_outcomes": [],
                 "resolution_plan": {},
+                "resolution_blocks": [],
+                "factual_issues": [],
+                "legal_issues": [],
+                "case_stage": None,
+                "next_action": None,
                 "publication_status": None,
                 "assistance_status": None,
                 "document_status": None,
@@ -223,7 +234,8 @@ class TurnPersistence:
                 (cid, request_id),
             ).fetchone()
             if completed and completed[0]:
-                return json.loads(completed[0])
+                dec = self.db.decrypt_case_field(cid, completed[0], _connection=conn)
+                return json.loads(dec)
             assistant = self.db.add_message(
                 cid,
                 "assistant",
@@ -243,8 +255,9 @@ class TurnPersistence:
                 "token_usage": state.get("token_usage", {}),
                 "ai_configured": snapshot["ai_configured"],
             }
+            enc_res = self.db.encrypt_case_field(cid, json.dumps(result, default=str), _connection=conn)
             conn.execute(
                 "UPDATE turn_executions SET status='completed', result_json=?, updated_at=? WHERE conversation_id=? AND request_id=?",
-                (json.dumps(result), now(), cid, request_id),
+                (enc_res, now(), cid, request_id),
             )
         return result

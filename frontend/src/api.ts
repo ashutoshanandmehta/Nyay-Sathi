@@ -1,4 +1,4 @@
-import type { AgentWorkflow, Conversation, Detail, KnowledgeBase, Language, StreamEvent } from './types'
+import type { AgentWorkflow, Conversation, Detail, EscalationBundle, KnowledgeBase, Language, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
 
 const csrf = () => document.cookie.split('; ').find(x => x.startsWith('nyay_csrf='))?.split('=').slice(1).join('=') ?? ''
 
@@ -36,10 +36,19 @@ export const api = {
     if(!completed)throw new Error('Connection interrupted. Your message may still be processing; retry safely.')
   },
   correctAttachment:(cid:string,id:string,extracted_text:string)=>call(`/api/conversations/${cid}/attachments/${id}`,{method:'PATCH',body:JSON.stringify({extracted_text})}),
-  upload: async (id: string, file: File) => { const body=new FormData(); body.append('file',file); return call<Attachment>(`/api/conversations/${id}/attachments`,{method:'POST',body}) },
+  setAttachmentConsent:(cid:string,id:string,consented:boolean)=>call<{attachment_id:string;consent_status:'consented'|'withheld'}>(`/api/conversations/${cid}/attachments/${id}/consent`,{method:'POST',body:JSON.stringify({consented})}),
+  upload: async (id: string, file: File) => { const body=new FormData(); body.append('file',file); return call<AttachmentUpload>(`/api/conversations/${id}/attachments`,{method:'POST',body}) },
   transcribe: async (file: File) => { const body=new FormData(); body.append('file',file); return call<{transcript:string}>('/api/audio/transcribe',{method:'POST',body}) },
   saveDraft: (cid:string, title:string, content:string) => call(`/api/conversations/${cid}/drafts`,{method:'POST',body:JSON.stringify({title,content})}),
   updateDraft:(cid:string,id:string,title:string,content:string,expected_version:number)=>call<{version:number}>(`/api/conversations/${cid}/drafts/${id}`,{method:'PATCH',body:JSON.stringify({title,content,expected_version})}),
+  escalationBundle:(cid:string)=>call<EscalationBundle>(`/api/conversations/${cid}/escalation-bundle`),
+  addUserAction:(cid:string,title:string,status:'pending'|'completed'|'skipped'='completed',notes='')=>call<UserActionItem>(`/api/conversations/${cid}/actions`,{method:'POST',body:JSON.stringify({title,status,notes})}),
+  updateUserAction:(cid:string,actionId:string,status:'pending'|'completed'|'skipped',notes?:string)=>call<UserActionItem>(`/api/conversations/${cid}/actions/${actionId}`,{method:'PATCH',body:JSON.stringify({status,notes})}),
+  recordSubmissionStep:(cid:string,target_channel:string,step:'previewed'|'consented'|'submitted_by_user'|'receipt_captured',draft_id?:string,receipt_reference='',notes='')=>call<SubmissionAuditStep>(`/api/conversations/${cid}/submissions`,{method:'POST',body:JSON.stringify({target_channel,step,draft_id,receipt_reference,notes})}),
+  setQualityConsent:(cid:string,opted_in:boolean)=>call<{opted_in:boolean}>(`/api/conversations/${cid}/quality-consent`,{method:'POST',body:JSON.stringify({opted_in})}),
+  exportTransfer:(cid:string,passphrase:string)=>call<Record<string,unknown>>(`/api/conversations/${cid}/transfer/export`,{method:'POST',body:JSON.stringify({passphrase})}),
+  importTransfer:(bundle:Record<string,unknown>,passphrase:string)=>call<{imported:boolean;conversation:Conversation}>('/api/conversations/transfer/import',{method:'POST',body:JSON.stringify({bundle,passphrase})}),
+  rotateCredential:()=>call<{rotated:boolean;csrf_token:string}>('/api/privacy/rotate-credential',{method:'POST',body:'{}'}),
 }
 
-interface Attachment { id:string; filename:string; extraction_status:string }
+interface AttachmentUpload { id:string; filename:string; extraction_status:string }

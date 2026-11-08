@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from app.answers.evidence import strip_citation_markers
 from app.schemas.models import CaseMemory
 from app.services.evidence import EvidenceSearchService
 
@@ -50,6 +51,26 @@ class ContextBuilder:
         confirmation_scope = bool(memory.last_proposed_fact_keys and last_tasks and
             last_assistant.get("metadata", {}).get("case_update_allowed") and
             all(t.get("domain") in {"consumer", "employment", "tenancy", "criminal", "other_legal"} for t in last_tasks))
+        prior_assistant = [m for m in recent_messages if m.get("role") == "assistant"]
+        covered_source_ids: list[str] = []
+        delivered_block_types: list[str] = []
+        prior_next_actions: list[str] = []
+        for msg in prior_assistant:
+            meta = msg.get("metadata") or {}
+            for src in meta.get("sources") or []:
+                sid = src.get("source_id")
+                if sid and sid not in covered_source_ids:
+                    covered_source_ids.append(sid)
+            for blk in meta.get("resolution_blocks") or []:
+                bt = blk.get("block_type")
+                if bt and bt not in delivered_block_types:
+                    delivered_block_types.append(bt)
+                for sid in blk.get("source_ids") or []:
+                    if sid and sid not in covered_source_ids:
+                        covered_source_ids.append(sid)
+            na = meta.get("next_action")
+            if na and na not in prior_next_actions:
+                prior_next_actions.append(na)
         context: dict[str, Any] = {
             "current_message": current_message,
             "case_confirmation_eligible": confirmation_scope,
@@ -73,9 +94,25 @@ class ContextBuilder:
             "questions_for_legal_review": memory.questions_for_legal_review[-10:],
             "urgent_matters": memory.urgent_matters[-6:],
             "complaint_journey": self.for_model(memory.model_dump(mode="json"))["journey"],
+            "prior_assistant_coverage": {
+                "assistant_turn_count": len(prior_assistant),
+                "covered_source_ids": covered_source_ids[:16],
+                "delivered_block_types": delivered_block_types,
+                "prior_next_actions": prior_next_actions[-3:],
+                "evidence_checklist_already_shown": "evidence_checklist" in delivered_block_types,
+            },
             "rolling_summary": summary,
             "recent_turns": [
-                {"id": m["id"], "role": m["role"], "content": m["content"][:3000]}
+                {
+                    "id": m["id"],
+                    "role": m["role"],
+                    # Citation numbers are per message; the model would otherwise reuse stale ones.
+                    "content": (
+                        strip_citation_markers(m["content"])
+                        if m["role"] == "assistant"
+                        else m["content"]
+                    )[:3000],
+                }
                 for m in recent_messages[-10:]
             ],
             "relevant_evidence": relevant_evidence,

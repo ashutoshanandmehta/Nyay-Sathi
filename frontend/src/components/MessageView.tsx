@@ -1,17 +1,123 @@
-import { Check, Copy, RotateCcw, Volume2 } from 'lucide-react'
+import { Check, Copy, FileText, RotateCcw, ShieldAlert, Volume2 } from 'lucide-react'
 import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { Message, Source } from '../types'
+import type { GroundingLabel, Message, ResolutionBlock, Source } from '../types'
 
-export default function MessageView({message,onSources,onRetry,onSpeech}:{message:Message;onSources:(s:Source[])=>void;onRetry?:()=>void;onSpeech?:()=>void}) {
+// The backend writes in-text citations as "[1](#cite-1)", numbered to match source.citation_number.
+const CITE_HREF=/^#cite-(\d+)$/
+const CITE_MARKER=/\[(\d+)\]\(#cite-\d+\)/g
+
+function plainCitations(content:string, sources?:Source[]) {
+  const text=content.replace(CITE_MARKER,'[$1]')
+  const numbered=(sources||[]).filter(s=>s.citation_number)
+  if(!numbered.length) return text
+  return `${text}\n\nSources:\n${numbered.map(s=>`[${s.citation_number}] ${s.title} — ${s.locator}${s.canonical_url?` — ${s.canonical_url}`:''}`).join('\n')}`
+}
+
+function citationComponents(sources:Source[]|undefined, onSources:(s:Source[], focus?:number)=>void):Components {
+  return {
+    a: ({href, children}) => {
+      const match=CITE_HREF.exec(href||'')
+      if(!match) return <a href={href}>{children}</a>
+      const number=Number(match[1]), source=sources?.find(s=>s.citation_number===number)
+      if(!source) return <span className="cite-chip cite-chip-missing">{number}</span>
+      return <button type="button" className="cite-chip" title={`${source.title} — ${source.locator}`} aria-label={`Source ${number}: ${source.title}`} onClick={()=>onSources(sources!, number)}>{number}</button>
+    },
+  }
+}
+
+const GROUNDING_LABELS: Record<GroundingLabel, string> = {
+  reported_by_user: 'Reported by you',
+  practical_precaution: 'Practical step',
+  verified_legal_source: 'Verified legal source',
+  requires_confirmation: 'Needs confirmation',
+}
+
+function BlockCard({block, onOpenCase}:{block:ResolutionBlock; onOpenCase?:()=>void}) {
+  const [copiedDoc, setCopiedDoc] = useState(false)
+  async function copyDoc() {
+    await navigator.clipboard.writeText(block.content)
+    setCopiedDoc(true)
+    setTimeout(() => setCopiedDoc(false), 1200)
+  }
+  const useList = block.items && block.items.length > 1
+  return (
+    <section className={`res-block res-block-${block.block_type}`} data-block-type={block.block_type}>
+      <div className="res-block-head">
+        <strong>{block.title}</strong>
+        <span className={`grounding-pill grounding-${block.grounding}`}>{GROUNDING_LABELS[block.grounding]}</span>
+      </div>
+      {block.block_type === 'document' ? (
+        <div className="res-document-box">
+          <pre>{block.content}</pre>
+          <button type="button" className="doc-copy-btn" onClick={copyDoc}>
+            <FileText size={13} /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
+          </button>
+        </div>
+      ) : useList && block.block_type === 'immediate_actions' ? (
+        <ol className="res-list">{block.items.map((item, idx) => <li key={idx}>{item}</li>)}</ol>
+      ) : useList ? (
+        <ul className="res-list">{block.items.map((item, idx) => <li key={idx}>{item}</li>)}</ul>
+      ) : (
+        <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>{block.content}</ReactMarkdown>
+      )}
+      {block.block_type === 'human_handoff' && onOpenCase && (
+        <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
+          Open Lawyer Escalation Bundle in Your case
+        </button>
+      )}
+    </section>
+  )
+}
+
+export default function MessageView({message,onSources,onRetry,onSpeech,onOpenCase}:{message:Message;onSources:(s:Source[], focus?:number)=>void;onRetry?:()=>void;onSpeech?:()=>void;onOpenCase?:()=>void}) {
   const [copied,setCopied]=useState(false)
-  async function copy(){await navigator.clipboard.writeText(message.content);setCopied(true);setTimeout(()=>setCopied(false),1200)}
+  const [copiedDoc,setCopiedDoc]=useState(false)
+  async function copy(){await navigator.clipboard.writeText(plainCitations(message.content,message.metadata?.sources));setCopied(true);setTimeout(()=>setCopied(false),1200)}
   const needsConfirmation=message.metadata?.events?.some(event=>event.status==='confirmation_required')
+  const blocks=message.role==='assistant'?message.metadata?.resolution_blocks:undefined
+  const safetyItems=message.role==='assistant'?message.metadata?.safety_messages:undefined
+  const docBlock = blocks?.find(b => b.block_type === 'document')
+
+  async function copyDoc(content: string) {
+    await navigator.clipboard.writeText(content)
+    setCopiedDoc(true)
+    setTimeout(() => setCopiedDoc(false), 1200)
+  }
+
   return <article className={`message ${message.role}`}>
     <div className="avatar" aria-hidden>{message.role==='assistant'?'न्या':'You'}</div>
     <div className="message-body"><div className="message-role">{message.role==='assistant'?'Nyay Saathi':'You'}</div>
-      {message.role==='assistant'?<ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>{message.content}</ReactMarkdown>:<p>{message.content}</p>}
+      {message.role==='assistant' ? (
+        <div className="assistant-content">
+          {safetyItems?.map(item => (
+            <div className="safety-banner" key={item.content_id} role="alert">
+              <ShieldAlert size={16} aria-hidden />
+              <p>{item.text}</p>
+            </div>
+          ))}
+          <div className="prose-content">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={citationComponents(message.metadata?.sources, onSources)}>{message.content}</ReactMarkdown>
+          </div>
+          {docBlock && (
+            <div className="res-document-box">
+              {docBlock.document_title && <div className="res-document-title"><strong>{docBlock.document_title}</strong></div>}
+              <pre>{docBlock.content}</pre>
+              <button type="button" className="doc-copy-btn" onClick={() => copyDoc(docBlock.content)}>
+                <FileText size={13} /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
+              </button>
+            </div>
+          )}
+          {blocks?.some(b => b.block_type === 'human_handoff') && onOpenCase && (
+            <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
+              Open Lawyer Escalation Bundle in Your case
+            </button>
+          )}
+        </div>
+      ) : (
+        <p>{message.content}</p>
+      )}
       {message.metadata?.publication_status==='partial'&&<small className="muted" role="note">Some help is ready. Unverified parts have been left out.</small>}
       {!!message.metadata?.attachment_ids?.length&&<small className="muted">{message.metadata.attachment_ids.length} attached document(s) · view in Your case</small>}
       {needsConfirmation&&<div className="confirmation-card" role="note"><b>One detail needs review</b><span>Reply naturally with the correct detail. You do not need to use a special confirmation phrase.</span></div>}

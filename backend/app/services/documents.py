@@ -4,11 +4,12 @@ import re
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import UploadFile
 from PIL import Image
 
+from app.security.abuse import inspect_extracted_text, inspect_upload_bytes
 from app.services.pdf_backend import open_pdf, page_image_bytes
 
 ALLOWED = {
@@ -55,7 +56,12 @@ def _ocr(image: Image.Image) -> tuple[str, str]:
         return "", "ocr_failed"
 
 
-def extract_document(data: bytes, mime: str, max_pages: int) -> tuple[str, str, dict[str, Any]]:
+def extract_document(
+    data: bytes,
+    mime: str,
+    max_pages: int,
+    pdf_engine: Literal["pymupdf", "pypdf"] = "pymupdf",
+) -> tuple[str, str, dict[str, Any]]:
     metadata: dict[str, Any] = {"pages": [], "embedded_instructions_untrusted": False}
     if mime == "text/plain":
         text = data.decode("utf-8")
@@ -64,7 +70,7 @@ def extract_document(data: bytes, mime: str, max_pages: int) -> tuple[str, str, 
         text, status = _ocr(Image.open(io.BytesIO(data)))
         metadata["pages"].append({"page": 1, "start": 0, "end": len(text), "method": "ocr"})
     else:
-        doc = open_pdf(data)
+        doc = open_pdf(data, engine=pdf_engine)
         if doc.needs_pass:
             doc.close()
             raise ValueError("password_protected_pdf")
@@ -78,9 +84,14 @@ def extract_document(data: bytes, mime: str, max_pages: int) -> tuple[str, str, 
             method = "pdf_text"
             ocr_status = None
             if len(extracted) < 20:
-                extracted, ocr_status = _ocr(Image.open(io.BytesIO(page_image_bytes(page))))
-                method = "ocr"
-                partial = partial or ocr_status != "ocr_complete"
+                img_bytes = page_image_bytes(page)
+                if img_bytes is not None:
+                    extracted, ocr_status = _ocr(Image.open(io.BytesIO(img_bytes)))
+                    method = "ocr"
+                    partial = partial or ocr_status != "ocr_complete"
+                else:
+                    ocr_status = "ocr_skipped_permissive_pdf_engine"
+                    partial = True
             start = sum(len(x) + 1 for x in chunks)
             chunks.append(extracted)
             metadata["pages"].append(
@@ -95,33 +106,48 @@ def extract_document(data: bytes, mime: str, max_pages: int) -> tuple[str, str, 
         doc.close()
         text = "\n".join(chunks).strip()
         status = "partial" if partial and text else "unreadable" if not text else "complete"
-    if PROMPT_INJECTION.search(text):
+    text_scan = inspect_extracted_text(text)
+    if PROMPT_INJECTION.search(text) or text_scan["prompt_injection_detected"]:
         metadata["embedded_instructions_untrusted"] = True
+    metadata["security_scan"] = text_scan
+    metadata["pdf_engine"] = pdf_engine if mime == "application/pdf" else None
     return text, status, metadata
 
 
 async def process_upload(
-    file: UploadFile, upload_dir: Path, max_bytes: int, max_pages: int
+    file: UploadFile,
+    upload_dir: Path,
+    max_bytes: int,
+    max_pages: int,
+    *,
+    pdf_engine: Literal["pymupdf", "pypdf"] = "pymupdf",
+    encrypt_fn=None,
 ) -> dict[str, Any]:
     data = await file.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise ValueError("file_too_large")
+    byte_scan = inspect_upload_bytes(data, file.filename)
     mime = detect_type(data, file.content_type)
     if mime not in ALLOWED:
         raise ValueError("unsupported_file_type")
     attachment_id = str(uuid.uuid4())
     stored = upload_dir / f"{attachment_id}{ALLOWED[mime]}"
-    stored.write_bytes(data)
+    stored_bytes = encrypt_fn(data) if encrypt_fn is not None else data
+    stored.write_bytes(stored_bytes)
     try:
         import asyncio
 
-        text, status, metadata = await asyncio.to_thread(extract_document, data, mime, max_pages)
+        text, status, metadata = await asyncio.to_thread(
+            extract_document, data, mime, max_pages, pdf_engine
+        )
     except ValueError:
         stored.unlink(missing_ok=True)
         raise
     except Exception as exc:
         stored.unlink(missing_ok=True)
         raise ValueError("document_could_not_be_read") from exc
+    metadata["byte_scan"] = byte_scan
+    metadata["encrypted_at_rest"] = encrypt_fn is not None
     safe_name = Path(file.filename or f"upload{ALLOWED[mime]}").name[:150]
     return {
         "id": attachment_id,

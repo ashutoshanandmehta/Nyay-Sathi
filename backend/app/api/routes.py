@@ -5,9 +5,9 @@ import logging
 import re
 import wave
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from langgraph.types import Overwrite
 from openai import AsyncOpenAI, OpenAI
@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from app.config import Settings, get_settings
 from app.db import Database, MemoryConflict, now
+from app.escalation.bundle import build_escalation_bundle
 from app.resolution.documents import CorrespondenceExporter
 from app.routing.contracts import CaseUpdateProposal, RequestInterpretation
 from app.routing.policy import CapabilityRegistry
@@ -26,7 +27,18 @@ from app.schemas.models import (
     MessageCreate,
     TurnResponse,
 )
-from app.security.ownership import OwnerContext, csrf_guard, owner_context, set_owner_cookies
+from app.security.ownership import (
+    OwnerContext,
+    csrf_guard,
+    owner_context,
+    rotate_owner_credential,
+    set_owner_cookies,
+)
+from app.security.privacy import (
+    export_encrypted_transfer_bundle,
+    import_encrypted_transfer_bundle,
+    retention_status,
+)
 from app.services.context_builder import ContextBuilder
 from app.services.documents import process_upload
 from app.services.exports import export_payload, write_docx, write_json, write_pdf
@@ -42,14 +54,55 @@ class AttachmentCorrection(BaseModel):
     extracted_text: str = Field(max_length=100_000)
 
 
+class AttachmentConsentBody(BaseModel):
+    consented: bool
+
+
+class QualityConsentBody(BaseModel):
+    opted_in: bool
+
+
 class DraftBody(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     content: str = Field(min_length=1, max_length=50_000)
     expected_version: int | None = None
 
 
+class UserActionCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=300)
+    status: Literal["pending", "completed", "skipped"] = "completed"
+    notes: str = Field(default="", max_length=2000)
+    occurred_at: str | None = None
+
+
+class UserActionUpdate(BaseModel):
+    status: Literal["pending", "completed", "skipped"]
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class SubmissionStepCreate(BaseModel):
+    target_channel: str = Field(min_length=2, max_length=160)
+    step: Literal["previewed", "consented", "submitted_by_user", "receipt_captured"]
+    draft_id: str | None = None
+    receipt_reference: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=2000)
+
+
+class TransferExportRequest(BaseModel):
+    passphrase: str = Field(min_length=8, max_length=200)
+
+
+class TransferImportRequest(BaseModel):
+    passphrase: str = Field(min_length=8, max_length=200)
+    bundle: dict[str, Any]
+
+
 def db(request: Request) -> Database:
     return request.app.state.db
+
+
+def live_settings(request: Request) -> Settings:
+    return getattr(request.app.state, "settings", None) or get_settings()
 
 
 def clean_conversation(row: dict[str, Any]) -> dict[str, Any]:
@@ -65,19 +118,36 @@ def http_not_found(exc: KeyError) -> HTTPException:
 
 @router.get("/bootstrap")
 def bootstrap(
+    request: Request,
     response: Response,
     owner: Annotated[OwnerContext, Depends(owner_context)],
-    settings: Annotated[Settings, Depends(get_settings)],
 ):
-    set_owner_cookies(response, owner, settings)
+    cfg = live_settings(request)
+    set_owner_cookies(response, owner, cfg)
     return {
         "product": "Nyay Saathi",
-        "ai_configured": settings.ai_configured,
+        "ai_configured": cfg.ai_configured,
         "supported_languages": ["en", "hi", "hinglish"],
-        "capabilities": CapabilityRegistry(settings).snapshot(),
-        "privacy_notice": "Chats are available in this browser. Clearing browser cookies may remove your access. Export anything you want to keep.",
-        "disclaimer": "AI legal-information and preparation assistant; not a licensed advocate, representation, guarantee, or privileged lawyer-client communication.",
+        "capabilities": CapabilityRegistry(cfg).snapshot(),
+        "privacy_notice": (
+            "Guest-only pseudonymous access: no phone or email is collected. Sensitive case records are "
+            "envelope-encrypted per case and retained for up to 1 year of inactivity unless deleted earlier. "
+            "Losing both your browser credential and encrypted transfer package permanently removes access."
+        ),
+        "disclaimer": "AI legal-resolution copilot with licensed-human escalation; prepares analysis and documents without filing, signing, paying, or representing you.",
     }
+
+
+@router.post("/privacy/rotate-credential", dependencies=[Depends(csrf_guard)])
+def rotate_credential(
+    request: Request,
+    response: Response,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    cfg = live_settings(request)
+    rotated = rotate_owner_credential(db(request), owner.owner_id, cfg)
+    set_owner_cookies(response, rotated, cfg)
+    return {"rotated": True, "csrf_token": rotated.new_csrf_token}
 
 
 @router.get("/conversations")
@@ -99,21 +169,30 @@ def conversation_detail(
     conversation_id: str, request: Request, owner: Annotated[OwnerContext, Depends(owner_context)]
 ):
     try:
-        conv = db(request).get_conversation(owner.owner_id, conversation_id)
-        memory, summary = db(request).load_memory(owner.owner_id, conversation_id)
+        database = db(request)
+        cfg = live_settings(request)
+        conv = database.get_conversation(owner.owner_id, conversation_id)
+        memory, summary = database.load_memory(owner.owner_id, conversation_id)
         return {
             "conversation": clean_conversation(conv),
-            "messages": db(request).messages(owner.owner_id, conversation_id),
-            "safety_messages": db(request).safety_messages(owner.owner_id, conversation_id),
+            "messages": database.messages(owner.owner_id, conversation_id),
+            "safety_messages": database.safety_messages(owner.owner_id, conversation_id),
             "case_memory": memory.model_dump(mode="json"),
-            "case_proposals": db(request).case_proposals(owner.owner_id, conversation_id),
-            "staged_patches": db(request).staged_patches(owner.owner_id, conversation_id),
+            "case_proposals": database.case_proposals(owner.owner_id, conversation_id),
+            "staged_patches": database.staged_patches(owner.owner_id, conversation_id),
             "summary": summary,
             "attachments": [
                 {**a, "stored_path": None}
-                for a in db(request).attachments(owner.owner_id, conversation_id)
+                for a in database.attachments(owner.owner_id, conversation_id)
             ],
-            "drafts": db(request).drafts(owner.owner_id, conversation_id),
+            "drafts": database.drafts(owner.owner_id, conversation_id),
+            "user_actions": database.list_user_actions(owner.owner_id, conversation_id),
+            "submission_steps": database.list_submission_steps(owner.owner_id, conversation_id),
+            "retention": retention_status(conv["updated_at"], cfg.retention_inactivity_days),
+            "encryption": database.case_key_metadata(owner.owner_id, conversation_id),
+            "quality_review_consent": database.get_quality_review_consent(
+                owner.owner_id, conversation_id
+            ),
         }
     except KeyError as exc:
         raise http_not_found(exc) from exc
@@ -143,10 +222,181 @@ def delete_conversation(
         raise http_not_found(exc) from exc
     for item in files:
         Path(item).unlink(missing_ok=True)
-    for item in request.app.state.settings.export_path.glob(f"{conversation_id}-*"):
+    for item in live_settings(request).export_path.glob(f"{conversation_id}-*"):
         item.unlink(missing_ok=True)
     request.app.state.assistant_graph.delete_thread(f"{owner.owner_id}:{conversation_id}")
-    return {"deleted": True}
+    return {"deleted": True, "cryptographic_key_destroyed": True, "physical_purge_scheduled": True}
+
+
+@router.get("/conversations/{conversation_id}/escalation-bundle")
+def get_escalation_bundle(
+    conversation_id: str, request: Request, owner: Annotated[OwnerContext, Depends(owner_context)]
+):
+    try:
+        database = db(request)
+        conv = database.get_conversation(owner.owner_id, conversation_id)
+        memory, summary = database.load_memory(owner.owner_id, conversation_id)
+        return build_escalation_bundle(
+            conversation=conv,
+            memory=memory,
+            summary=summary,
+            messages=database.messages(owner.owner_id, conversation_id),
+            attachments=database.attachments(owner.owner_id, conversation_id),
+            drafts=database.drafts(owner.owner_id, conversation_id),
+            safety_messages=database.safety_messages(owner.owner_id, conversation_id),
+            user_actions=database.list_user_actions(owner.owner_id, conversation_id),
+            submission_steps=database.list_submission_steps(owner.owner_id, conversation_id),
+        )
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post("/conversations/{conversation_id}/actions", dependencies=[Depends(csrf_guard)])
+def create_user_action(
+    conversation_id: str,
+    body: UserActionCreate,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        return db(request).add_user_action(
+            owner.owner_id,
+            conversation_id,
+            body.title.strip(),
+            body.status,
+            body.notes.strip(),
+            body.occurred_at,
+        )
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.patch(
+    "/conversations/{conversation_id}/actions/{action_id}", dependencies=[Depends(csrf_guard)]
+)
+def update_user_action(
+    conversation_id: str,
+    action_id: str,
+    body: UserActionUpdate,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        return db(request).update_user_action(
+            owner.owner_id, conversation_id, action_id, body.status, body.notes
+        )
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post("/conversations/{conversation_id}/submissions", dependencies=[Depends(csrf_guard)])
+def create_submission_step(
+    conversation_id: str,
+    body: SubmissionStepCreate,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        return db(request).record_submission_step(
+            owner.owner_id,
+            conversation_id,
+            target_channel=body.target_channel.strip(),
+            step=body.step,
+            draft_id=body.draft_id,
+            receipt_reference=body.receipt_reference.strip(),
+            notes=body.notes.strip(),
+        )
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/attachments/{attachment_id}/consent",
+    dependencies=[Depends(csrf_guard)],
+)
+def set_attachment_consent(
+    conversation_id: str,
+    attachment_id: str,
+    body: AttachmentConsentBody,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        status_str = "consented" if body.consented else "withheld"
+        return db(request).set_attachment_consent(
+            owner.owner_id, conversation_id, attachment_id, status_str
+        )
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/quality-consent", dependencies=[Depends(csrf_guard)]
+)
+def set_quality_consent(
+    conversation_id: str,
+    body: QualityConsentBody,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        return db(request).set_quality_review_consent(
+            owner.owner_id, conversation_id, body.opted_in
+        )
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/transfer/export", dependencies=[Depends(csrf_guard)]
+)
+def export_transfer_package(
+    conversation_id: str,
+    body: TransferExportRequest,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        conv = database.get_conversation(owner.owner_id, conversation_id)
+        memory, summary = database.load_memory(owner.owner_id, conversation_id)
+        snapshot = {
+            "conversation": clean_conversation(conv),
+            "case_memory": memory.model_dump(mode="json"),
+            "summary": summary,
+            "messages": database.messages(owner.owner_id, conversation_id),
+            "drafts": database.drafts(owner.owner_id, conversation_id),
+            "user_actions": database.list_user_actions(owner.owner_id, conversation_id),
+        }
+        database.record_security_audit(
+            "encrypted_case_transfer_exported",
+            owner_id=owner.owner_id,
+            conversation_id=conversation_id,
+        )
+        return export_encrypted_transfer_bundle(snapshot, body.passphrase)
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/conversations/transfer/import", dependencies=[Depends(csrf_guard)])
+def import_transfer_package(
+    body: TransferImportRequest,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        snapshot = import_encrypted_transfer_bundle(body.bundle, body.passphrase)
+        restored = db(request).restore_transferred_case(owner.owner_id, snapshot)
+        return {"imported": True, "conversation": clean_conversation(restored)}
+    except ValueError as exc:
+        db(request).record_security_audit(
+            "encrypted_case_transfer_import_failed", owner_id=owner.owner_id
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def _title_from(text: str) -> str:
@@ -154,14 +404,62 @@ def _title_from(text: str) -> str:
     return " ".join(words).strip().capitalize()[:60] or "New case"
 
 
+SOURCE_FIELDS = (
+    "source_id",
+    "passage_id",
+    "title",
+    "locator",
+    "text",
+    "canonical_url",
+    "retrieved_at",
+    "limitations",
+    "origin",
+    "content_hash",
+    "verification_status",
+    "publication_date",
+    "effective_date",
+    "source_type",
+    "jurisdiction",
+)
+
+
+def _message_sources(passages, keep, citations=()):
+    """Message source records, numbered and ordered to match in-text "[n](#cite-n)" markers."""
+    numbers = {c["passage_id"]: c["number"] for c in citations}
+    records = []
+    for passage in passages:
+        if not keep(passage):
+            continue
+        record = {k: passage.get(k) for k in SOURCE_FIELDS}
+        if passage["passage_id"] in numbers:
+            record["citation_number"] = numbers[passage["passage_id"]]
+        records.append(record)
+    # Stable sort: uncited published passages keep their order after the numbered ones.
+    return sorted(records, key=lambda r: r.get("citation_number", len(numbers) + 1))
+
+
 async def _run_turn(
     conversation_id: str, body: MessageCreate, request: Request, owner: OwnerContext, progress=None
 ) -> dict[str, Any]:
     database = db(request)
+    cfg = live_settings(request)
     try:
         conv = database.get_conversation(owner.owner_id, conversation_id)
     except KeyError as exc:
         raise http_not_found(exc) from exc
+
+    abuse = getattr(request.app.state, "abuse", None)
+    if abuse is not None:
+        cb_ok, cb_reason = abuse.check_circuit_breaker(owner.owner_id, cfg)
+        if not cb_ok:
+            database.record_security_audit(
+                "model_circuit_breaker_tripped",
+                owner_id=owner.owner_id,
+                conversation_id=conversation_id,
+                metadata={"reason": cb_reason},
+            )
+            raise HTTPException(status_code=503, detail=cb_reason)
+
     durable = TurnPersistence(database)
     digest = payload_hash(body.model_dump(mode="json"))
     try:
@@ -188,7 +486,7 @@ async def _run_turn(
             "sources": assistant["metadata"].get("sources", []),
             "verification": assistant["metadata"].get("verification", {}),
             "token_usage": assistant["metadata"].get("token_usage", {}),
-            "ai_configured": request.app.state.settings.ai_configured,
+            "ai_configured": cfg.ai_configured,
         }
     lock = turns.lock_for(owner.owner_id, conversation_id)
     if lock.locked():
@@ -212,7 +510,7 @@ async def _run_turn(
                 "sources": assistant["metadata"].get("sources", []),
                 "verification": assistant["metadata"].get("verification", {}),
                 "token_usage": assistant["metadata"].get("token_usage", {}),
-                "ai_configured": request.app.state.settings.ai_configured,
+                "ai_configured": cfg.ai_configured,
             }
         if existing:
             user, _ = existing
@@ -236,7 +534,13 @@ async def _run_turn(
         evidence = [
             a
             for a in database.attachments(owner.owner_id, conversation_id)
-            if not body.attachment_ids or a["id"] in body.attachment_ids
+            if a.get("consent_status") != "withheld"
+            and (
+                not cfg.require_explicit_attachment_consent
+                or a.get("consent_status") == "consented"
+                or a["id"] in body.attachment_ids
+            )
+            and (not body.attachment_ids or a["id"] in body.attachment_ids)
         ]
         context = ContextBuilder().build(
             current_message=body.content,
@@ -255,6 +559,12 @@ async def _run_turn(
             }
             for draft in database.drafts(owner.owner_id, conversation_id)[:2]
         ]
+        user_logged_actions = database.list_user_actions(owner.owner_id, conversation_id)[:8]
+        if user_logged_actions:
+            context["user_tracked_actions"] = [
+                {"title": act["title"], "status": act["status"], "notes": act["notes"]}
+                for act in user_logged_actions
+            ]
         initial = {
             "request_id": body.request_id,
             "pipeline_version": "legacy",
@@ -333,32 +643,21 @@ async def _run_turn(
                     "assistant_message_id": assistant["id"],
                 },
             ) from None
+
+        if abuse is not None:
+            est_cost = float((result.get("metrics") or {}).get("known_estimated_cost_usd") or 0.0)
+            abuse.record_turn_usage(
+                owner.owner_id, int(result.get("model_calls", 0) or 0), est_cost
+            )
+
         updated_memory = CaseMemory.model_validate(result["memory"])
         if result.get("pipeline_version") == "v2":
-            sources = [
-                {
-                    k: p.get(k)
-                    for k in (
-                        "source_id",
-                        "passage_id",
-                        "title",
-                        "locator",
-                        "text",
-                        "canonical_url",
-                        "retrieved_at",
-                        "limitations",
-                        "origin",
-                        "content_hash",
-                        "verification_status",
-                        "publication_date",
-                        "effective_date",
-                        "source_type",
-                        "jurisdiction",
-                    )
-                }
-                for p in result.get("passages", [])
-                if p["passage_id"] in result.get("published_passage_ids", [])
-            ]
+            published_ids = set(result.get("published_passage_ids", []))
+            sources = _message_sources(
+                result.get("passages", []),
+                lambda p: p["passage_id"] in published_ids,
+                result.get("citations", []),
+            )
             durable.reviewed(
                 owner.owner_id,
                 conversation_id,
@@ -369,7 +668,7 @@ async def _run_turn(
                     "base_summary": summary,
                     "user": user,
                     "sources": sources,
-                    "ai_configured": request.app.state.settings.ai_configured,
+                    "ai_configured": cfg.ai_configured,
                 },
             )
             try:
@@ -426,7 +725,6 @@ async def _run_turn(
                     graph_state=graph_state,
                 )
             else:
-                # A missing interpretation contract cannot authorize any mutation.
                 if updated_memory.model_dump() != memory.model_dump():
                     raise UnauthorizedCaseUpdate("Missing request interpretation")
                 database.save_memory(
@@ -447,32 +745,14 @@ async def _run_turn(
             ) from None
         result["resolution_plan"] = graph_state.get("resolution_plan") or {}
         result["draft_spec"] = graph_state.get("draft_spec") or {}
-        sources = [
-            {
-                k: p.get(k)
-                for k in (
-                    "source_id",
-                    "passage_id",
-                    "title",
-                    "locator",
-                    "text",
-                    "canonical_url",
-                    "retrieved_at",
-                    "limitations",
-                    "origin",
-                    "content_hash",
-                    "verification_status",
-                    "publication_date",
-                    "effective_date",
-                    "source_type",
-                    "jurisdiction",
-                )
-            }
-            for p in result.get("passages", [])
-            if not result.get("unit_protocol")
-            or not request.app.state.settings.ai_configured
-            or p["passage_id"] in result.get("published_passage_ids", [])
-        ]
+        sources = _message_sources(
+            result.get("passages", []),
+            lambda p: (
+                not result.get("unit_protocol")
+                or not cfg.ai_configured
+                or p["passage_id"] in result.get("published_passage_ids", [])
+            ),
+        )
         metadata = {
             "sources": sources,
             "verification": result.get("verification", {}),
@@ -504,7 +784,7 @@ async def _run_turn(
         )
         if (
             result.get("draft_generated")
-            and request.app.state.settings.ai_configured
+            and cfg.ai_configured
             and result.get("case_update_allowed", True)
         ):
             artifacts = result.get("approved_documents") or [
@@ -531,7 +811,7 @@ async def _run_turn(
             "sources": sources,
             "verification": result.get("verification", {}),
             "token_usage": result.get("token_usage", {}),
-            "ai_configured": request.app.state.settings.ai_configured,
+            "ai_configured": cfg.ai_configured,
         }
 
 
@@ -587,7 +867,6 @@ async def stream_turn(
                 + "\n\n"
             )
         finally:
-            # The turn continues to persistence if the browser disconnects.
             if not task.done():
                 task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
 
@@ -603,17 +882,38 @@ async def upload_attachment(
     conversation_id: str,
     request: Request,
     owner: Annotated[OwnerContext, Depends(owner_context)],
-    settings: Annotated[Settings, Depends(get_settings)],
+    consent: Annotated[Literal["consented", "withheld"], Query()] = "consented",
     file: UploadFile = File(...),
 ):
+    database = db(request)
+    cfg = live_settings(request)
     try:
-        db(request).get_conversation(owner.owner_id, conversation_id)
+        database.get_conversation(owner.owner_id, conversation_id)
         item = await process_upload(
-            file, settings.upload_path, settings.max_upload_bytes, settings.max_pdf_pages
+            file,
+            cfg.upload_path,
+            cfg.max_upload_bytes,
+            cfg.max_pdf_pages,
+            pdf_engine=cfg.pdf_engine,
+            encrypt_fn=lambda raw: database.encrypt_case_bytes(conversation_id, raw),
         )
         item.update({"conversation_id": conversation_id, "created_at": now()})
-        db(request).add_attachment(item)
-        memory, summary = db(request).load_memory(owner.owner_id, conversation_id)
+        saved = database.add_attachment(item, consent_status=consent)
+        meta_parsed = json.loads(item["metadata_json"])
+        database.record_security_audit(
+            "upload_scanned_and_isolated",
+            owner_id=owner.owner_id,
+            conversation_id=conversation_id,
+            metadata={
+                "attachment_id": item["id"],
+                "mime_type": item["mime_type"],
+                "consent_status": consent,
+                "prompt_injection_detected": bool(
+                    (meta_parsed.get("security_scan") or {}).get("prompt_injection_detected")
+                ),
+            },
+        )
+        memory, summary = database.load_memory(owner.owner_id, conversation_id)
         memory.evidence.append(
             {
                 "document_id": item["id"],
@@ -629,21 +929,31 @@ async def upload_attachment(
                 "does_not_automatically_prove": [
                     "The truth of every statement contained in the document"
                 ],
-                "preservation": "Original retained in private case storage",
+                "preservation": "Original retained in private envelope-encrypted case storage",
             }
         )
         memory.version += 1
         memory.stale_draft_ids = list(
             dict.fromkeys(
                 memory.stale_draft_ids
-                + db(request).mark_drafts_stale(conversation_id, memory.version)
+                + database.mark_drafts_stale(conversation_id, memory.version)
             )
         )
-        db(request).save_memory(conversation_id, memory, summary)
-        return {**item, "stored_path": None, "metadata": json.loads(item.pop("metadata_json"))}
+        database.save_memory(conversation_id, memory, summary)
+        return {
+            **saved,
+            "stored_path": None,
+            "metadata": meta_parsed,
+        }
     except KeyError as exc:
         raise http_not_found(exc) from exc
     except ValueError as exc:
+        database.record_security_audit(
+            "upload_rejected_by_security_gate",
+            owner_id=owner.owner_id,
+            conversation_id=conversation_id,
+            metadata={"reason_code": str(exc)},
+        )
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
@@ -731,11 +1041,11 @@ def update_draft(
 async def transcribe(
     request: Request,
     owner: Annotated[OwnerContext, Depends(owner_context)],
-    settings: Annotated[Settings, Depends(get_settings)],
     file: UploadFile = File(...),
 ):
     del owner
-    if not settings.ai_configured:
+    cfg = live_settings(request)
+    if not cfg.ai_configured:
         raise HTTPException(
             status_code=503, detail="OpenAI configuration required for transcription"
         )
@@ -744,11 +1054,11 @@ async def transcribe(
         raise HTTPException(status_code=413, detail="Audio exceeds 25 MB")
     try:
         client = OpenAI(
-            api_key=settings.openai_api_key, timeout=settings.model_timeout_seconds, max_retries=2
+            api_key=cfg.openai_api_key, timeout=cfg.model_timeout_seconds, max_retries=2
         )
         result = await asyncio.to_thread(
             client.audio.transcriptions.create,
-            model=settings.openai_transcription_model,
+            model=cfg.openai_transcription_model,
             file=(
                 Path(file.filename or "recording.webm").name,
                 data,
@@ -759,7 +1069,7 @@ async def transcribe(
         return {
             "transcript": result.text,
             "editable": True,
-            "model": settings.openai_transcription_model,
+            "model": cfg.openai_transcription_model,
         }
     except Exception:
         raise HTTPException(
@@ -776,9 +1086,9 @@ async def speech(
     message_id: str,
     request: Request,
     owner: Annotated[OwnerContext, Depends(owner_context)],
-    settings: Annotated[Settings, Depends(get_settings)],
 ):
-    if not settings.ai_configured:
+    cfg = live_settings(request)
+    if not cfg.ai_configured:
         raise HTTPException(status_code=503, detail="OpenAI configuration required for speech")
     try:
         message = db(request).get_message(owner.owner_id, conversation_id, message_id)
@@ -797,13 +1107,13 @@ async def speech(
             detail="Speech is available only for completed verified assistant answers",
         )
     short = message["content"][:1800]
-    target = settings.export_path / f"speech-{message_id}.wav"
+    target = cfg.export_path / f"speech-{message_id}.wav"
     try:
         chunks: list[bytes] = []
-        async with asyncio.timeout(settings.model_timeout_seconds):
-            async with AsyncOpenAI(api_key=settings.openai_api_key) as client:
+        async with asyncio.timeout(cfg.model_timeout_seconds):
+            async with AsyncOpenAI(api_key=cfg.openai_api_key) as client:
                 async with client.realtime.connect(
-                    model=settings.openai_tts_model, max_retries=2
+                    model=cfg.openai_tts_model, max_retries=2
                 ) as connection:
                     await connection.response.create(
                         response={
@@ -881,7 +1191,7 @@ def export_case(
         )
     except KeyError as exc:
         raise http_not_found(exc) from exc
-    target = request.app.state.settings.export_path / f"{conversation_id}-case-pack.{format}"
+    target = live_settings(request).export_path / f"{conversation_id}-case-pack.{format}"
     {"json": write_json, "docx": write_docx, "pdf": write_pdf}[format](target, payload)
     media = {
         "json": "application/json",
@@ -916,7 +1226,7 @@ def export_correspondence(
     except KeyError as exc:
         raise http_not_found(exc) from exc
     target = (
-        request.app.state.settings.export_path
+        live_settings(request).export_path
         / f"{conversation_id}-{draft_id}-v{draft['version']}.{format}"
     )
     getattr(CorrespondenceExporter(), format)(target, draft["title"], draft["content"])

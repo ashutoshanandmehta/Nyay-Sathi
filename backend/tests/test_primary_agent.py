@@ -642,3 +642,650 @@ def test_public_pdf_extraction_is_page_bounded_and_explicitly_partial(tmp_path, 
     assert source["passages"]
     assert all(p["locator"] == "Page 1" for p in source["passages"])
     assert all("first 1 of 3" in p["limitations"] for p in source["passages"])
+
+
+def test_extended_timeout_and_multi_turn_police_station_talking_points_continuity(
+    client, isolated_app
+):
+    from app.agent.safety import classify_urgent_context
+
+    defaults = Settings(_env_file=None, openai_api_key=None)
+    assert defaults.agent_deadline_seconds == 180
+    assert defaults.model_timeout_seconds == 120.0
+    assert defaults.agent_repair_min_remaining_seconds == 25.0
+
+    cid = create_case(client)
+    msg1 = "Police entered our OYO room in India and demanded a cash bribe immediately."
+    segs1 = segment_message(msg1)
+    ans1 = answer(msg1, domain="criminal", intent="legal_options")
+    ans1.risk = "urgent"
+
+    class MultiTurnProvider:
+        def __init__(self):
+            self.call = 0
+
+        def complete(self, items, instructions, budget, **kwargs):
+            self.call += 1
+            budget.reserve("fixture")
+            budget.report({"input_tokens": 10, "output_tokens": 10, "total_tokens": 20})
+            if self.call == 1:
+                return [], [], ans1
+            if kwargs.get("review"):
+                payload = json.loads(items[0]["content"])
+                return (
+                    [],
+                    [],
+                    AgentReview(
+                        claims=[
+                            ClaimVerdict(
+                                claim_id=cid_key,
+                                support="supported",
+                                reason="Safe non-confrontational talking points grounded in user history",
+                                requires_public_evidence=False,
+                            )
+                            for cid_key in payload["pending_claim_ids"]
+                        ],
+                        primary_question_answered=True,
+                        next_action_useful=True,
+                    ),
+                )
+            ctx = json.loads(items[0]["content"])
+            prior_user_ids = [
+                e["evidence_id"]
+                for e in ctx["evidence"]
+                if e["kind"] == "prior_user_message"
+            ]
+            assert prior_user_ids, "Prior user messages must be registered in context.evidence"
+            cur_seg = "segment:" + ctx["segments"][0]["id"]
+            return (
+                [],
+                [],
+                AgentAnswer(
+                    central_question="Calm police station talking points",
+                    tasks=[
+                        AgentTask(
+                            task_id="task-1",
+                            title="Police station talking points",
+                            intent="conversation",
+                            domain="general",
+                            case_link="uncertain",
+                            source_segment_ids=[ctx["segments"][0]["id"]],
+                        )
+                    ],
+                    claims=[
+                        AnswerClaim(
+                            claim_id="tp-1",
+                            task_id="task-1",
+                            kind="factual",
+                            block_type="direct_answer",
+                            grounding="reported_by_user",
+                            text="State your hotel check-in details and the cash demand you reported earlier without speculating about identity.",
+                            evidence_ids=[prior_user_ids[0], cur_seg],
+                        ),
+                        AnswerClaim(
+                            claim_id="tp-2",
+                            task_id="task-1",
+                            kind="practical",
+                            block_type="immediate_actions",
+                            grounding="practical_precaution",
+                            text="Ask calmly for the Duty Officer or Station House Officer (SHO) and request a written acknowledgement or diary number.",
+                            evidence_ids=[],
+                        ),
+                    ],
+                    risk="ordinary",
+                ),
+            )
+
+    install(isolated_app, MultiTurnProvider())
+    r1 = post(client, cid, msg1)
+    assert r1.status_code == 200
+
+    r2 = post(client, cid, "After going to the police station, what should I say to them?")
+    assert r2.status_code == 200
+    body2 = r2.json()["assistant_message"]
+    assert "could not verify" not in body2["content"].lower()
+    assert "Duty Officer" in body2["content"]
+    assert body2["metadata"]["publication_status"] == "supported"
+    assert body2["metadata"]["interpretation"]["tasks"][0]["case_link"] == "existing"
+
+    short_ctx = classify_urgent_context(
+        "what?",
+        memory={"domain": "criminal", "facts": {}},
+        prior_safety_messages=[{"content_id": "safety-1", "category": "physical_safety"}],
+    )
+    assert short_ctx["urgent_continuation"] is True
+
+
+def test_re_review_timeout_preserves_unchanged_patches_and_explicit_practical_precautions(
+    client, isolated_app
+):
+    cid = create_case(client)
+    msg = "Police entered our room in Patna and took 2000 cash."
+    segs = segment_message(msg)
+    seg_ref = f"segment:{segs[0]['id']}"
+    original = AgentAnswer(
+        central_question="Urgent follow-up steps",
+        tasks=[
+            AgentTask(
+                task_id="task-1",
+                title="Urgent steps",
+                intent="legal_options",
+                domain="criminal",
+                case_link="new",
+                source_segment_ids=[segs[0]["id"]],
+            )
+        ],
+        claims=[
+            AnswerClaim(
+                claim_id="bad-1",
+                task_id="task-1",
+                kind="legal",
+                block_type="direct_answer",
+                grounding="verified_legal_source",
+                text="Unsupported statutory assertion.",
+                evidence_ids=[seg_ref],
+            )
+        ],
+        case_patches=[
+            CasePatch(
+                patch_id="p1",
+                task_id="task-1",
+                operation="fact",
+                payload=PatchValue(key="city", value="Patna"),
+                source_refs=[seg_ref],
+            )
+        ],
+        risk="urgent",
+    )
+    # Put bad-1 into pending by making it practical without public requirement first
+    original.claims[0] = AnswerClaim(
+        claim_id="bad-1",
+        task_id="task-1",
+        kind="practical",
+        block_type="recommended_route",
+        grounding="practical_precaution",
+        text="Go confront them outside.",
+        evidence_ids=[seg_ref],
+    )
+    first_review = AgentReview(
+        claims=[
+            ClaimVerdict(
+                claim_id="bad-1",
+                support="unsupported",
+                reason="Unsafe confrontation",
+                requires_public_evidence=False,
+            )
+        ],
+        patch_verdicts=[PatchVerdict(patch_id="p1", support="supported", reason="Exact city")],
+        primary_question_answered=False,
+        next_action_useful=False,
+    )
+    repaired = original.model_copy(deep=True)
+    repaired.claims = [
+        AnswerClaim(
+            claim_id="safe-precaution",
+            task_id="task-1",
+            kind="practical",
+            block_type="immediate_actions",
+            grounding="practical_precaution",
+            text="Ask hotel reception to preserve lobby CCTV and visitor logs.",
+            evidence_ids=[seg_ref],
+        ),
+        AnswerClaim(
+            claim_id="disguised-law",
+            task_id="task-1",
+            kind="practical",
+            block_type="direct_answer",
+            grounding="practical_precaution",
+            text="Under Section 7 of the Act, 1988 they must refund within 24 hours by law.",
+            evidence_ids=[seg_ref],
+        ),
+    ]
+    provider = ScriptedProvider(original, first_review, repaired, TimeoutError("APITimeoutError"))
+    install(isolated_app, provider)
+    res = post(client, cid, msg)
+    assert res.status_code == 200
+    content = res.json()["assistant_message"]["content"]
+    assert "preserve lobby CCTV" in content
+    assert "Section 7" not in content
+    assert res.json()["case_version"] == 1
+
+
+def test_cross_block_contradiction_triggers_repair_unlocks_conflicting_claim_and_orders_non_urgent_blocks(
+    client, isolated_app
+):
+    cid = create_case(client)
+    msg = (
+        "I ordered two ceiling fans from Amazon for ₹6,400. One arrived damaged and was picked up "
+        "20 days ago, but my ₹3,200 refund hasn't arrived. Can I take legal action?"
+    )
+    segs = segment_message(msg)
+    seg_ref = f"segment:{segs[0]['id']}"
+
+    initial = AgentAnswer(
+        central_question="Can I take legal action for my delayed ₹3,200 Amazon refund?",
+        tasks=[
+            AgentTask(
+                task_id="task-1",
+                title="Consumer refund strategy",
+                intent="legal_options",
+                domain="consumer",
+                case_link="new",
+                source_segment_ids=[segs[0]["id"]],
+            )
+        ],
+        claims=[
+            AnswerClaim(
+                claim_id="c-direct",
+                task_id="task-1",
+                kind="factual",
+                block_type="direct_answer",
+                grounding="reported_by_user",
+                text="File immediately in the District Consumer Commission today.",
+                evidence_ids=[seg_ref],
+            ),
+            AnswerClaim(
+                claim_id="c-imm",
+                task_id="task-1",
+                kind="practical",
+                block_type="immediate_actions",
+                grounding="practical_precaution",
+                text="1. Send your Order ID and pickup proof.\n2. Keep your submission timestamp.",
+                evidence_ids=[seg_ref],
+            ),
+            AnswerClaim(
+                claim_id="c-route",
+                task_id="task-1",
+                kind="legal",
+                block_type="recommended_route",
+                grounding="verified_legal_source",
+                text="Escalate first in writing to Amazon's statutory Grievance Officer; under Rule 4, complaints must be acknowledged in 48 hours and redressed within one month.",
+                evidence_ids=["prop-consumer-ecommerce-grievance-r4"],
+            ),
+            AnswerClaim(
+                claim_id="c-ev",
+                task_id="task-1",
+                kind="practical",
+                block_type="evidence_checklist",
+                grounding="practical_precaution",
+                text="Save the invoice, pickup confirmation, and chat transcripts.",
+                evidence_ids=[seg_ref],
+            ),
+        ],
+        case_stage="internal_support_attempted",
+        next_action="Send written grievance to Amazon's Grievance Officer.",
+    )
+
+    # Initial review spots contradiction between c-direct (auto-approved mechanically) and c-route
+    first_review = AgentReview(
+        claims=[
+            ClaimVerdict(
+                claim_id="c-direct",
+                support="uncertain",
+                reason="Contradicts recommended_route by telling user to file in court immediately without framing Grievance Officer first.",
+                requires_public_evidence=False,
+            ),
+            ClaimVerdict(
+                claim_id="c-route",
+                support="supported",
+                reason="Entailed by certified E-Commerce Rules proposition.",
+                requires_public_evidence=True,
+            ),
+        ],
+        primary_question_answered=True,
+        next_action_useful=True,
+        cross_block_coherent=False,
+        repair_instructions=[
+            "Harmonize c-direct with c-route so Direct answer frames Grievance Officer first before formal consumer forum litigation."
+        ],
+    )
+
+    repaired = initial.model_copy(deep=True)
+    repaired.claims[0] = AnswerClaim(
+        claim_id="c-direct",
+        task_id="task-1",
+        kind="legal",
+        block_type="direct_answer",
+        grounding="verified_legal_source",
+        text="Yes — you have statutory consumer remedies up to the District Consumer Commission, starting right now with a formal written complaint to Amazon's Grievance Officer since ordinary support stalled.",
+        evidence_ids=["prop-consumer-ecommerce-grievance-r4"],
+    )
+
+    second_review = AgentReview(
+        claims=[
+            ClaimVerdict(
+                claim_id="c-direct",
+                support="supported",
+                reason="Coherent with recommended_route and entailed by certified source.",
+                requires_public_evidence=True,
+            ),
+            ClaimVerdict(
+                claim_id="c-route",
+                support="supported",
+                reason="Entailed by certified source.",
+                requires_public_evidence=True,
+            ),
+        ],
+        primary_question_answered=True,
+        next_action_useful=True,
+        cross_block_coherent=True,
+    )
+
+    install(isolated_app, ScriptedProvider(initial, first_review, repaired, second_review))
+    res = post(client, cid, msg)
+    assert res.status_code == 200, res.text
+    msg_data = res.json()["assistant_message"]
+    blocks = msg_data["metadata"]["resolution_blocks"]
+    # Non-urgent consumer order: direct_answer -> recommended_route -> immediate_actions -> evidence_checklist
+    assert [b["block_type"] for b in blocks] == [
+        "direct_answer",
+        "recommended_route",
+        "immediate_actions",
+        "evidence_checklist",
+    ]
+    assert "starting right now with a formal written complaint" in blocks[0]["content"]
+    # Copy text (message.content) follows the exact same top-to-bottom block order
+    content = msg_data["content"]
+    assert content.index("starting right now") < content.index("Escalate first in writing")
+    assert content.index("Escalate first in writing") < content.index("Send your Order ID")
+    assert content.index("Send your Order ID") < content.index("Save the invoice")
+
+
+def test_multiturn_coverage_marks_prior_sources_and_omits_human_handoff_card(
+    client, isolated_app
+):
+    cid = create_case(client)
+    msg1 = "Police entered our OYO hotel room in India and demanded a cash bribe immediately."
+    segs1 = segment_message(msg1)
+
+    ans1 = AgentAnswer(
+        central_question="Urgent hotel police harassment",
+        tasks=[
+            AgentTask(
+                task_id="task-1",
+                title="Urgent protection",
+                intent="legal_options",
+                domain="criminal",
+                case_link="new",
+                source_segment_ids=[segs1[0]["id"]],
+            )
+        ],
+        claims=[
+            AnswerClaim(
+                claim_id="t1-law",
+                task_id="task-1",
+                kind="legal",
+                block_type="direct_answer",
+                grounding="verified_legal_source",
+                text="Demanding an undue advantage in connection with public duty falls under Section 7 of the Prevention of Corruption Act.",
+                evidence_ids=["prop-urgent-pca-1988-bribe-demand-s7"],
+            ),
+            AnswerClaim(
+                claim_id="t1-ev",
+                task_id="task-1",
+                kind="practical",
+                block_type="evidence_checklist",
+                grounding="practical_precaution",
+                text="Preserve booking records and ask hotel reception to retain CCTV.",
+                evidence_ids=[f"segment:{segs1[0]['id']}"],
+            ),
+            AnswerClaim(
+                claim_id="t1-handoff",
+                task_id="task-1",
+                kind="practical",
+                block_type="human_handoff",
+                grounding="practical_precaution",
+                text="Consult a lawyer.",
+                evidence_ids=[],
+                optional=True,
+            ),
+        ],
+        next_action="Prioritize safety and verify dispatch via 112 when safe.",
+        risk="urgent",
+    )
+
+    rev1 = AgentReview(
+        claims=[
+            ClaimVerdict(
+                claim_id="t1-law",
+                support="supported",
+                reason="Matches certified PCA s.7 proposition",
+                requires_public_evidence=True,
+            ),
+            ClaimVerdict(
+                claim_id="t1-ev",
+                support="supported",
+                reason="Safe evidence checklist",
+                requires_public_evidence=False,
+            ),
+        ],
+        primary_question_answered=True,
+        next_action_useful=True,
+    )
+
+    seen_turn2_ctx = {}
+
+    class TwoTurnInspector:
+        def __init__(self):
+            self.step = 0
+
+        def complete(self, items, instructions, budget, **kwargs):
+            self.step += 1
+            budget.reserve("fixture")
+            budget.report({"input_tokens": 10, "output_tokens": 10, "total_tokens": 20})
+            if self.step == 1:
+                return [], [], ans1
+            if self.step == 2:
+                return [], [], rev1
+            if self.step == 3:
+                seen_turn2_ctx.update(json.loads(items[0]["content"]))
+                cur_seg = "segment:" + seen_turn2_ctx["segments"][0]["id"]
+                return (
+                    [],
+                    [],
+                    AgentAnswer(
+                        central_question="Patna location update",
+                        tasks=[
+                            AgentTask(
+                                task_id="task-1",
+                                title="Patna follow-up",
+                                intent="legal_options",
+                                domain="criminal",
+                                case_link="existing",
+                                source_segment_ids=[seen_turn2_ctx["segments"][0]["id"]],
+                            )
+                        ],
+                        claims=[
+                            AnswerClaim(
+                                claim_id="t2-new",
+                                task_id="task-1",
+                                kind="factual",
+                                block_type="direct_answer",
+                                grounding="reported_by_user",
+                                text="You report that you are in Patna, Bihar.",
+                                evidence_ids=[cur_seg],
+                            )
+                        ],
+                        risk="urgent",
+                    ),
+                )
+            return (
+                [],
+                [],
+                AgentReview(
+                    claims=[
+                        ClaimVerdict(
+                            claim_id="t2-new",
+                            support="supported",
+                            reason="Exact user report",
+                            requires_public_evidence=False,
+                        )
+                    ],
+                    primary_question_answered=True,
+                    next_action_useful=True,
+                ),
+            )
+
+    install(isolated_app, TwoTurnInspector())
+    r1 = post(client, cid, msg1)
+    assert r1.status_code == 200
+    blocks1 = r1.json()["assistant_message"]["metadata"]["resolution_blocks"]
+    assert all(b["block_type"] != "human_handoff" for b in blocks1)
+
+    r2 = post(client, cid, "I think those officers were fake.")
+    assert r2.status_code == 200
+    cov = seen_turn2_ctx["conversation_context"]["prior_assistant_coverage"]
+    assert cov["assistant_turn_count"] == 1
+    assert cov["evidence_checklist_already_shown"] is True
+    assert "direct_answer" in cov["delivered_block_types"]
+    assert cov["covered_source_ids"]
+    public_marked = [
+        e for e in seen_turn2_ctx["evidence"] if e.get("already_cited_in_prior_turn") is True
+    ]
+    assert public_marked, "Previously cited certified source should be flagged on Turn 2"
+    blocks2 = r2.json()["assistant_message"]["metadata"]["resolution_blocks"]
+    assert all(b["block_type"] != "human_handoff" for b in blocks2)
+
+
+def _certified_fixture(passage_id, locator, text):
+    return {
+        "passage_id": passage_id,
+        "source_id": passage_id + "-src",
+        "title": "Synthetic certified fixture " + passage_id,
+        "locator": locator,
+        "text": text,
+        "canonical_url": f"https://www.indiacode.nic.in/{passage_id}.pdf",
+        "retrieved_at": "2026-11-07T00:00:00Z",
+        "limitations": "",
+        "origin": "certified_proposition",
+        "source_type": "indian_official",
+        "certified_proposition": True,
+        "origin_verified": True,
+    }
+
+
+def test_numbered_citations_follow_display_order_and_match_sources(client, isolated_app):
+    cid = create_case(client)
+    message = "What is an FIR and how is it registered?"
+    seg = "segment:" + segment_message(message)[0]["id"]
+    fir = _certified_fixture(
+        "fix-fir",
+        "BNSS 2023, Section 173",
+        "Section 173 BNSS: information of a cognizable offence.",
+    )
+    remedy = _certified_fixture(
+        "fix-remedy",
+        "BNSS 2023, Section 175",
+        "Section 175 BNSS: magistrate may order investigation.",
+    )
+    research = SimpleNamespace(
+        retrieve_certified=lambda query, jurisdiction="India", limit=4: (
+            [fir, remedy],
+            {"query_hash": "fixture"},
+        )
+    )
+    claims = [
+        # Listed first, displayed after the direct answer: numbering must follow display order.
+        AnswerClaim(
+            claim_id="alt",
+            task_id="task-1",
+            kind="legal",
+            block_type="alternatives",
+            grounding="verified_legal_source",
+            text="If police refuse, a magistrate can be approached.",
+            evidence_ids=["fix-remedy", "fix-fir"],
+        ),
+        AnswerClaim(
+            claim_id="def",
+            task_id="task-1",
+            kind="legal",
+            block_type="direct_answer",
+            grounding="verified_legal_source",
+            text="An FIR records information about a cognizable offence [7].",
+            evidence_ids=["fix-fir"],
+        ),
+        AnswerClaim(
+            claim_id="route",
+            task_id="task-1",
+            kind="procedure",
+            block_type="recommended_route",
+            grounding="verified_legal_source",
+            text="Give the information orally or in writing.",
+            evidence_ids=["fix-fir"],
+        ),
+        AnswerClaim(
+            claim_id="keep",
+            task_id="task-1",
+            kind="practical",
+            block_type="evidence_checklist",
+            grounding="practical_precaution",
+            text="Keep a copy of what you submit.",
+            evidence_ids=[seg, "fix-fir"],
+        ),
+    ]
+    first = AgentAnswer(
+        central_question="What is an FIR?",
+        tasks=[
+            AgentTask(
+                task_id="task-1",
+                title="FIR",
+                intent="information",
+                domain="criminal",
+                case_link="unrelated",
+            )
+        ],
+        claims=claims,
+    )
+    review = AgentReview(
+        claims=[
+            ClaimVerdict(claim_id=c.claim_id, support="supported", reason="fixture") for c in claims
+        ],
+        primary_question_answered=True,
+        next_action_useful=True,
+    )
+    provider = ScriptedProvider(first, review, answer("Thanks, that helps."))
+    install(isolated_app, provider, research)
+
+    data = post(client, cid, message).json()
+    content = data["assistant_message"]["content"]
+    assert "[Source:" not in content and "[7]" not in content
+    assert content.count("[1](#cite-1)") == 3  # direct answer, route, and the alternatives claim
+    assert "[1](#cite-1)[2](#cite-2)" in content  # one claim, two sources, ascending
+    assert content.index("[1](#cite-1)") < content.index("[2](#cite-2)")
+    assert (
+        "copy of what you submit." in content and "submit. [" not in content
+    )  # checklists unnumbered
+    sources = data["assistant_message"]["metadata"]["sources"]
+    assert [(s["passage_id"], s["citation_number"]) for s in sources] == [
+        ("fix-fir", 1),
+        ("fix-remedy", 2),
+    ]
+    persisted = client.get(f"/api/conversations/{cid}").json()["messages"][-1]["metadata"][
+        "sources"
+    ]
+    assert [s["citation_number"] for s in persisted] == [1, 2]
+
+    assert post(client, cid, "Thanks, that helps.").status_code == 200
+    context = json.loads(provider.requests[2][0][0]["content"])
+    prior = [
+        t["content"]
+        for t in context["conversation_context"]["recent_turns"]
+        if t["role"] == "assistant"
+    ]
+    assert prior and all("#cite-" not in text for text in prior)
+
+
+def test_citation_markers_keep_tables_intact_and_strip_cleanly():
+    from app.agent.blocks import append_citation_markers
+    from app.answers.evidence import strip_citation_markers
+
+    assert (
+        append_citation_markers("Plain claim.", [1, 2]) == "Plain claim. [1](#cite-1)[2](#cite-2)"
+    )
+    assert append_citation_markers("| Forum | Limit |\n| --- | --- |", [1]).endswith(
+        "|\n\n[1](#cite-1)"
+    )
+    assert append_citation_markers("No sources.", []) == "No sources."
+    assert (
+        strip_citation_markers("Claim. [1](#cite-1)[2](#cite-2)\n\n[Source: Act — s.1]") == "Claim."
+    )

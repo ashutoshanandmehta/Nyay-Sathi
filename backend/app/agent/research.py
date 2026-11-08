@@ -1,4 +1,4 @@
-"""Concurrent, bounded research reusing V1's safe downloader and source extraction."""
+"""Concurrent, bounded research with OpenSearch hybrid certified propositions first and web gap-filling."""
 
 import copy
 import hashlib
@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from app.agent.contracts import ResearchRequest
+from app.knowledge.search_index import OpenSearchLegalIndex, is_generic_index_or_snippet
 from app.routing.policy import PublicQueryPolicy
 from app.routing.research import public_https_url
 from app.services.model_calls import normalize_usage
@@ -70,11 +71,13 @@ def rank_passages(passages, query, limit):
     wanted = terms(query)
     scored = []
     for p in passages:
-        overlap = len(wanted & terms(p["text"]))
+        overlap = len(wanted & terms(p["text"] + " " + p.get("title", "")))
         if not overlap:
             continue
         _, _, weight = authority(p["canonical_url"])
         score = overlap / max(1, len(wanted)) * 10 + weight
+        if p.get("certified_proposition"):
+            score += 3.5
         if p.get("effective_date"):
             score += 0.2  # Known date is useful metadata, not proof of current law.
         scored.append((score, p))
@@ -136,13 +139,31 @@ class EvidenceCache:
 
 class ResearchService:
     def __init__(
-        self, settings, retriever, provider=None, fetcher=None, repository=None, cache=None
+        self,
+        settings,
+        retriever,
+        provider=None,
+        fetcher=None,
+        repository=None,
+        cache=None,
+        knowledge_index=None,
     ):
         self.settings, self.retriever = settings, retriever
         self.provider = provider or OfficialSearchProvider(settings)
         self.fetcher = fetcher or SafeSourceFetcher(settings, url_policy=public_https_url)
         self.repository = repository or ResearchRepository(settings)
         self.cache = cache or EvidenceCache(settings.database_path, settings.web_cache_ttl_seconds)
+        self.knowledge_index = knowledge_index or OpenSearchLegalIndex(settings, retriever)
+
+    def retrieve_certified(self, query_text, *, jurisdiction="India", domain=None, limit=4):
+        """Fast authority-first retrieval from OpenSearch/local certified propositions."""
+        hits, diag = self.knowledge_index.search(
+            query_text,
+            jurisdiction=jurisdiction,
+            domain=domain,
+            limit=limit,
+        )
+        return hits, diag
 
     def run(self, request, state, budget):
         request = ResearchRequest.model_validate(request)
@@ -177,14 +198,50 @@ class ResearchService:
                         continue
                     budget.query_hashes.add(key)
                     budget.queries += 1
+
+                # Step 4: Retrieve certified propositions & OpenSearch hybrid candidates first.
+                if not request.fresh_required:
+                    kb_hits, kb_diag = self.knowledge_index.search(
+                        query,
+                        jurisdiction=question.jurisdiction or "India",
+                        limit=4,
+                    )
+                    if kb_hits:
+                        passages.extend(kb_hits)
+                        records.append(
+                            {
+                                "tool": "opensearch_legal_index",
+                                "status": "hit",
+                                "query_hash": key,
+                                "result_count": len(kb_hits),
+                                "certified_hit_count": kb_diag["certified_hit_count"],
+                            }
+                        )
+
                 cached = None if request.fresh_required else self.cache.get(key)
                 if cached:
                     passages.extend(cached)
                     records.append({"tool": "evidence_cache", "status": "hit", "query_hash": key})
                 else:
-                    queries.append((query, key))
-                # Local passages are candidates only and must match the issue, not a domain keyword gate.
-                # No vector/embedding call is made here.
+                    # If OpenSearch already supplied certified propositions and we are using the
+                    # default live OfficialSearchProvider, skip redundant live web search unless
+                    # gap-filling is needed; injected test providers still execute as requested.
+                    has_strong_certified = any(p.get("certified_proposition") for p in passages)
+                    if (
+                        has_strong_certified
+                        and not request.fresh_required
+                        and isinstance(self.provider, OfficialSearchProvider)
+                    ):
+                        records.append(
+                            {
+                                "tool": "web_search",
+                                "status": "skipped_certified_sufficient",
+                                "query_hash": key,
+                            }
+                        )
+                    else:
+                        queries.append((query, key))
+
                 if not request.fresh_required:
                     for p in getattr(self.retriever, "passages", []):
                         try:
@@ -196,7 +253,7 @@ class ResearchService:
                             ).days
                         except (KeyError, ValueError):
                             continue
-                        if 0 <= age <= 30 and len(terms(query) & terms(p["text"])) >= 2:
+                        if 0 <= age <= 365 and len(terms(query) & terms(p["text"])) >= 2:
                             passages.append(
                                 {
                                     **p,
@@ -221,7 +278,6 @@ class ResearchService:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError()
-            # Reserve final agent continuation and independent review before paid discovery.
             reservation = budget.reserve(
                 self.settings.openai_web_search_model,
                 len(query.encode()) + 2000,
@@ -269,7 +325,6 @@ class ResearchService:
                         {"tool": "web_search", "status": "failed", "error_type": type(exc).__name__}
                     )
 
-        # Deduplicate before downloading; prefer Indian primary origins without excluding new hosts.
         unique = {}
         for candidate, query, key in candidates:
             url = candidate.get("url", "")
@@ -288,7 +343,12 @@ class ResearchService:
             source = self.fetcher.read(candidate, remaining)
             source = copy.deepcopy(source)
             origin, jurisdiction, _ = authority(source["url"])
+            q_terms = terms(query)
+            usable = []
             for p in source["passages"]:
+                if is_generic_index_or_snippet(p, q_terms):
+                    continue
+                p_hash = "sha256:" + hashlib.sha256(p["text"].encode("utf-8")).hexdigest()
                 p.update(
                     jurisdiction=jurisdiction,
                     source_type=origin,
@@ -297,12 +357,15 @@ class ResearchService:
                     passage_extracted=True,
                     applicability_checked=False,
                     treatment_checked=False,
+                    content_hash=p_hash,
+                    generic_snippet=False,
                     publication_date=p.get("publication_date"),
                     effective_date=p.get("effective_date"),
                     limitations=p.get("limitations", "")
                     + " Current legal applicability, completeness and subsequent judicial treatment require claim-specific assessment.",
                 )
-            selected = rank_passages(source["passages"], query, 3)
+                usable.append(p)
+            selected = rank_passages(usable, query, 3)
             if not selected:
                 raise ValueError("No relevant extracted passage")
             source["passages"] = selected
@@ -312,7 +375,6 @@ class ResearchService:
             return key, selected
 
         fetched = {}
-        # Per-host groups execute sequentially, while different hosts may overlap.
         groups = {}
         for candidate in ordered:
             groups.setdefault(urlparse(candidate[0]["url"]).hostname, []).append(candidate)

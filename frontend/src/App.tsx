@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, FileText, Menu, MessageSquareMore, MoreHorizontal, PanelRight, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { ChevronDown, FileText, Menu, MessageSquareMore, MoreHorizontal, PanelRight, Pencil, Plus, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react'
 import { api } from './api'
 import Composer from './components/Composer'
 import { AgentWorkflowPanel, CasePanel, Drawer, KnowledgeBasePanel, Sources } from './components/Drawer'
@@ -12,7 +12,7 @@ const welcome:Message={id:'welcome',role:'assistant',status:'complete',created_a
 
 export default function App(){
   const [items,setItems]=useState<Conversation[]>([]),[active,setActive]=useState(''),[detail,setDetail]=useState<Detail|null>(null)
-  const [sidebar,setSidebar]=useState(false),[panel,setPanel]=useState<'case'|'sources'|'drafts'|'knowledge'|'workflow'|null>(null),[sources,setSources]=useState<Source[]>([])
+  const [sidebar,setSidebar]=useState(false),[panel,setPanel]=useState<'case'|'sources'|'drafts'|'knowledge'|'workflow'|null>(null),[sources,setSources]=useState<Source[]>([]),[sourceFocus,setSourceFocus]=useState<number|undefined>()
   const [knowledge,setKnowledge]=useState<KnowledgeBase|null>(null),[workflow,setWorkflow]=useState<AgentWorkflow|null>(null)
   const [language,setLanguage]=useState<Language>('en'),[sending,setSending]=useState(false),[error,setError]=useState(''),[menu,setMenu]=useState(false)
   const [configured,setConfigured]=useState(true),pending=useRef<{text:string;id:string;caseId:string;language:Language;attachments:string[]}|null>(null),attachments=useRef<string[]>([]),bottom=useRef<HTMLDivElement>(null)
@@ -63,13 +63,23 @@ export default function App(){
       <header className="topbar"><button className="menu-button" onClick={()=>setSidebar(true)} aria-label="Open chat history"><Menu/></button><button className="mobile-new" onClick={makeNew} aria-label="New chat"><Plus/></button><div className="case-title"><b>{detail?.conversation.title||'Nyay Saathi'}</b><span>{configured?'AI legal information assistant':'AI setup required'}</span></div><div className="top-actions"><select aria-label="Response language" value={language} onChange={e=>setLanguage(e.target.value as Language)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="hinglish">Hinglish</option></select><button onClick={()=>send('Practise the likely response from the other side, clearly labelled as hypothetical, and help me prepare a truthful reply.')}><MessageSquareMore size={17}/> Practice</button><button onClick={()=>setPanel('case')}><PanelRight size={17}/> Your case</button><div className="menu-wrap"><button aria-label="Case menu" onClick={()=>setMenu(!menu)}><MoreHorizontal/></button>{menu&&<div className="dropdown"><button onClick={rename}><Pencil/> Rename chat</button><a href={`/api/conversations/${active}/export/docx`}><FileText/> Export DOCX</a><a href={`/api/conversations/${active}/export/pdf`}><FileText/> Export PDF</a><a href={`/api/conversations/${active}/export/json`}><FileText/> Export JSON</a><button className="danger" onClick={remove}><Trash2/> Delete chat</button></div>}</div></div></header>
       {!configured&&<div className="config-banner"><ShieldCheck size={17}/><span>OpenAI is not configured. Your chats and case organisation work, but live AI answers and voice need the backend API key.</span></div>}
       <section className="messages" aria-live="polite"><div className="message-column">
-        {messages.map(m=><MessageView key={m.id} message={m} onSources={s=>{setSources(s);setPanel('sources')}} onRetry={m.status==='failed'?retry:undefined} onSpeech={m.role==='assistant'?()=>speech(m):undefined}/>)}
-        {safety.filter(item=>!messages.some(m=>m.metadata?.safety_messages?.some(s=>s.request_id===item.request_id&&s.content_id===item.content_id))).map(item=><MessageView key={`${item.request_id}:${item.content_id}`} message={{id:item.content_id,role:'assistant',status:'complete',created_at:'',metadata:{},content:item.text}} onSources={s=>{setSources(s);setPanel('sources')}}/>)}
+        {messages.map(m=><MessageView key={m.id} message={m} onSources={(s,focus)=>{setSources(s);setSourceFocus(focus);setPanel('sources')}} onRetry={m.status==='failed'?retry:undefined} onSpeech={m.role==='assistant'?()=>speech(m):undefined} onOpenCase={()=>setPanel('case')}/>)}
+        {safety.filter(item=>!messages.some(m=>m.metadata?.safety_messages?.some(s=>s.request_id===item.request_id&&s.content_id===item.content_id))).map(item=>(
+          <div className="safety-alert-card" role="alert" key={`${item.request_id}:${item.content_id}`}>
+            <div className="safety-banner">
+              <ShieldAlert size={16} aria-hidden />
+              <div>
+                <strong>Immediate Protective Advisory</strong>
+                <p>{item.text}</p>
+              </div>
+            </div>
+          </div>
+        ))}
         {messages.length===1&&messages[0].id==='welcome'&&<div className="starters">{starters.map(s=><button key={s} onClick={()=>send(s)}><span>{s}</span><ChevronDown size={15}/></button>)}</div>}
         {sending&&<div className="thinking" role="status"><i/><i/><i/><span>{progress}</span></div>}{error&&<div className="inline-error" role="alert">{error}</div>}<div ref={bottom}/>
       </div></section>
       <Composer key={active} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}/>
     </main>
-    {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='knowledge'?'Knowledge Base':panel==='workflow'?'Agent Workflow':'Drafts'} onClose={()=>setPanel(null)}>{panel==='case'&&detail?<CasePanel detail={detail}/>:panel==='sources'?<Sources sources={sources}/>:panel==='knowledge'?(knowledge?<KnowledgeBasePanel data={knowledge}/>:<div className="panel-content"><p>Loading indexed legal sources…</p></div>):panel==='workflow'?(workflow?<AgentWorkflowPanel data={workflow}/>:<div className="panel-content"><p>Loading workflow definition…</p></div>):<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
+    {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='knowledge'?'Knowledge Base':panel==='workflow'?'Agent Workflow':'Drafts'} onClose={()=>setPanel(null)}>{panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:panel==='knowledge'?(knowledge?<KnowledgeBasePanel data={knowledge}/>:<div className="panel-content"><p>Loading indexed legal sources…</p></div>):panel==='workflow'?(workflow?<AgentWorkflowPanel data={workflow}/>:<div className="panel-content"><p>Loading workflow definition…</p></div>):<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
   </div>
 }

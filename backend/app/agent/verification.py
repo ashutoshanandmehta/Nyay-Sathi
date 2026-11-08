@@ -1,6 +1,7 @@
-"""Mechanical checks never masquerade as semantic legal verification."""
+"""Risk-calibrated verification: mechanical consistency, pinpoint statutory checks, and stage gates."""
 
 import re
+from urllib.parse import urlparse
 
 TEMPLATES = {
     "greeting": {
@@ -12,6 +13,11 @@ TEMPLATES = {
         "en": "Keep the original documents, messages and payment records relevant to this issue. Make dated copies and a short chronology; avoid editing the originals.",
         "hi": "इस मामले के मूल दस्तावेज़, संदेश और भुगतान रिकॉर्ड संभालें। तारीख वाली प्रतियां और घटनाक्रम बनाएं; मूल रिकॉर्ड न बदलें।",
         "hinglish": "Is issue ke original documents, messages aur payment records sambhal kar rakhein. Dated copies aur short timeline banayein; originals edit na karein.",
+    },
+    "cyber_fraud_emergency_steps": {
+        "en": "1. Call your bank or wallet's official fraud helpline immediately to block compromised access and record a complaint reference number.\n2. From a clean, trusted device, change compromised passwords/PINs and sign out of active sessions.\n3. Preserve all transaction IDs/UTRs, SMS alerts, WhatsApp screenshots, suspect phone numbers, and phishing links without editing originals.",
+        "hi": "1. अपने बैंक या वॉलेट की आधिकारिक फ्रॉड हेल्पलाइन पर तुरंत कॉल करके एक्सेस ब्लॉक कराएं और शिकायत संख्या लें।\n2. किसी सुरक्षित डिवाइस से पासवर्ड/PIN बदलें और सक्रिय सेशन लॉग-आउट करें।\n3. सभी ट्रांज़ैक्शन ID/UTR, बैंक SMS, WhatsApp स्क्रीनशॉट, संदिग्ध नंबर और लिंक सुरक्षित रखें।",
+        "hinglish": "1. Apne bank ya wallet ki official fraud helpline par turant call karke compromised access block karayein aur complaint reference number lein.\n2. Clean trusted device se passwords/PINs badlein aur active sessions sign out karein.\n3. Sabhi transaction IDs/UTRs, SMS alerts, WhatsApp screenshots, scammer phone numbers aur phishing links bina edit kiye preserve karein.",
     },
     "limited_research": {
         "en": "I could not verify the legal details needed for a reliable conclusion in this turn. The supported facts and preparation below are still available; a specific legal route needs further source checking.",
@@ -25,17 +31,158 @@ TEMPLATES = {
     },
 }
 
+# Detects disguised legal assertions, statutory provisions, mandatory legal deadlines,
+# helpline numbers, or physical confrontation instructions inside practical/factual claims.
+DISGUISED_CONSEQUENTIAL_RE = re.compile(
+    r"(?:\b(?:section|sec\.|article|rule\s+\d+|order\s+(?!id\b)[ivxlcdm\d]+\b|act,\s*\d{4}|bns|bnss|bsa|ipc|crpc|cpa\s*2019)\b|"
+    r"\b(?:must\s+(?:refund|pay|register|accept|release)|legally\s+(?:entitled|required|bound|mandatory)|"
+    r"statutory\s+(?:right|deadline|limit)|limitation\s+period|"
+    r"within\s+\d+\s*(?:days?|hours?|months?|years?)\s+(?:under|by\s+law|from\s+cause))\b|"
+    r"\b(?:confront\s+them|physically\s+resist|refuse\s+custody|block\s+the\s+police)\b|"
+    r"\b(?:call\s+\d{3,5}|helpline\s+\d{3,5}|\+?91[-\s]?\d{10})\b)",
+    re.I,
+)
+
+SECTION_REF_RE = re.compile(
+    r"\b(?:sections?|secs?\.)\s*(\d+[A-Za-z]?)(?:\(\d+\))?(?:\s*(?:,|and|&|to|-|–)\s*(\d+[A-Za-z]?)(?:\(\d+\))?)?",
+    re.I,
+)
+
+PCA_SEVEN_DAY_PROVISO_RE = re.compile(
+    r"\b(?:seven[- ]day|7[- ]day|within\s+(?:seven|7)\s+days)\b",
+    re.I,
+)
+
+PCA_BRIBE_CONTEXT_RE = re.compile(
+    r"\b(?:prevention\s+of\s+corruption|undue\s+advantage|compelled\s+to\s+(?:give|pay)|bribe|anti[- ]corruption)\b",
+    re.I,
+)
+
+EXHAUSTED_GRIEVANCE_MSG_RE = re.compile(
+    r"\bgrievance\s+(?:team|officer|cell|desk)\b.{0,120}\b(?:redirect\w*|closed|ignored|no\s+response|unresolved|refused|rejected)\b",
+    re.I | re.S,
+)
+
+EXTERNAL_CONSUMER_ESCALATION_RE = re.compile(
+    r"\b(?:national\s+consumer\s+helpline|nch\b|1915\b|consumerhelpline|consumer\s+commission|"
+    r"district\s+commission|e-?jagriti|e-?daakhil|ombudsman|1930\b|cybercrime)\b",
+    re.I,
+)
+
 
 def template_text(identifier, language):
     return TEMPLATES[identifier].get(language, TEMPLATES[identifier]["en"])
 
 
+def _is_certified_or_official_public_entry(entry: dict) -> bool:
+    if entry.get("generic_snippet"):
+        return False
+    if entry.get("certified_proposition") or entry.get("origin_verified"):
+        return True
+    if entry.get("source_type") == "indian_official":
+        return True
+    host = (urlparse(entry.get("canonical_url", "")).hostname or "").lower()
+    return host.endswith((".gov.in", ".nic.in")) or host in {
+        "rbi.org.in",
+        "www.rbi.org.in",
+        "sebi.gov.in",
+    }
+
+
+def has_disguised_consequential_assertion(text: str) -> bool:
+    return bool(DISGUISED_CONSEQUENTIAL_RE.search(text or ""))
+
+
+def _extract_sections(text: str) -> set[str]:
+    out: set[str] = set()
+    for m in SECTION_REF_RE.finditer(text or ""):
+        if m.group(1):
+            out.add(m.group(1).upper())
+        if m.group(2):
+            out.add(m.group(2).upper())
+    return out
+
+
+def check_pinpoint_statutory_alignment(claim, registry) -> str | None:
+    """Block statutory claims that attribute a section or proviso to the wrong statutory passage."""
+    public_ids = registry.public_ids()
+    cited_public = [registry.entries[k] for k in claim.evidence_ids if k in public_ids]
+    if not cited_public:
+        return None
+
+    text = claim.text or ""
+    # Specific high-risk statutory confusion: PCA Section 8(1) 7-day compulsion proviso cited as Section 7
+    if PCA_SEVEN_DAY_PROVISO_RE.search(text) and PCA_BRIBE_CONTEXT_RE.search(text):
+        has_section_8_source = any(
+            "8" in _extract_sections((e.get("locator") or "") + " " + (e.get("text") or ""))
+            for e in cited_public
+        )
+        if not has_section_8_source:
+            return "pinpoint_locator_mismatch"
+
+    claimed_sections = _extract_sections(text)
+    if not claimed_sections:
+        return None
+
+    source_sections: set[str] = set()
+    for entry in cited_public:
+        source_sections |= _extract_sections(
+            (entry.get("locator") or "") + " " + (entry.get("text") or "")
+        )
+
+    if source_sections and not (claimed_sections <= source_sections):
+        return "pinpoint_locator_mismatch"
+    return None
+
+
+def check_exhausted_channel_progression(answer, message: str = "") -> str | None:
+    """Detect when internal support + Grievance Officer are exhausted but no external route is given."""
+    plan = getattr(answer, "action_plan", None)
+    exhausted = {x.casefold() for x in (plan.exhausted_channels if plan else [])}
+    grievance_exhausted = (
+        (plan is not None and plan.dispute_stage == "internal_grievance_exhausted")
+        or any("grievance" in x for x in exhausted)
+        or bool(EXHAUSTED_GRIEVANCE_MSG_RE.search(message or ""))
+    )
+    if not grievance_exhausted:
+        return None
+
+    combined = " ".join(
+        [c.text for c in answer.claims if c.text] + [answer.next_action or ""]
+    )
+    if not EXTERNAL_CONSUMER_ESCALATION_RE.search(combined):
+        return (
+            "Internal support and Grievance Officer have already been attempted without resolution; "
+            "provide the next external escalation route (such as National Consumer Helpline 1915 / "
+            "consumerhelpline.gov.in and District Consumer Commission via e-Jagriti) instead of "
+            "merely restating internal Grievance Officer rules."
+        )
+    return None
+
+
 def mechanical_checks(answer, registry):
-    """Return blocked reasons, deterministic approvals, and prose requiring review."""
+    """Return blocked reasons, risk-calibrated deterministic approvals, and claims needing review."""
     blocked, approved, pending = {}, {}, []
     ids = {c.claim_id for c in answer.claims}
+    public_ids = registry.public_ids()
+
+    risk_types = set(getattr(answer, "risk_types", None) or [])
+    if getattr(answer, "action_plan", None) and answer.action_plan.risk_types:
+        risk_types |= set(answer.action_plan.risk_types)
+    non_physical_urgency = bool(risk_types) and risk_types <= {
+        "financial_fraud",
+        "digital_compromise",
+        "deadline_risk",
+        "legal_uncertainty",
+    }
+    physical_liberty_urgent = (answer.risk == "urgent") and not non_physical_urgency
+
     for claim in answer.claims:
         reason = None
+        needs_legal_authority = (
+            claim.kind in {"legal", "procedure", "safety"}
+            or claim.grounding == "verified_legal_source"
+        )
         if any(k not in registry.entries for k in claim.evidence_ids):
             reason = "unknown_evidence"
         elif any(k not in ids or k == claim.claim_id for k in claim.depends_on):
@@ -46,12 +193,30 @@ def mechanical_checks(answer, registry):
             re.I,
         ):
             reason = "untrusted_link_or_execution_claim"
-        elif claim.kind in {"legal", "procedure", "safety"} and not any(
-            k in registry.public_ids() for k in claim.evidence_ids
-        ):
+        elif needs_legal_authority and not any(k in public_ids for k in claim.evidence_ids):
             reason = "missing_public_evidence"
-        elif claim.kind not in {"template", "question", "limitation"} and not claim.evidence_ids:
+        elif (
+            claim.kind in {"legal", "procedure"} or claim.grounding == "verified_legal_source"
+        ) and not any(
+            _is_certified_or_official_public_entry(registry.entries[k])
+            for k in claim.evidence_ids
+            if k in public_ids
+        ):
+            reason = "uncertified_or_generic_legal_source"
+        elif (pinpoint_err := check_pinpoint_statutory_alignment(claim, registry)) is not None:
+            reason = pinpoint_err
+        elif (
+            claim.kind not in {"template", "question", "limitation"}
+            and not claim.evidence_ids
+            and not (
+                claim.kind == "practical"
+                and claim.grounding == "practical_precaution"
+                and not claim.in_document
+                and not has_disguised_consequential_assertion(claim.text)
+            )
+        ):
             reason = "missing_claim_evidence"
+
         if reason:
             blocked[claim.claim_id] = reason
         elif claim.kind == "template":
@@ -60,9 +225,7 @@ def mechanical_checks(answer, registry):
             else:
                 blocked[claim.claim_id] = "invalid_template"
         elif claim.kind == "quote":
-            private = [
-                registry.entries[k] for k in claim.evidence_ids if k not in registry.public_ids()
-            ]
+            private = [registry.entries[k] for k in claim.evidence_ids if k not in public_ids]
             if (
                 claim.text.strip()
                 and any(claim.text in e["text"] for e in private)
@@ -71,8 +234,30 @@ def mechanical_checks(answer, registry):
                 approved[claim.claim_id] = "attributed_exact_extract"
             else:
                 blocked[claim.claim_id] = "quote_not_in_private_evidence"
+        elif (
+            not physical_liberty_urgent
+            and claim.grounding in {"reported_by_user", "practical_precaution"}
+            and claim.kind in {"factual", "practical", "document"}
+            and claim.block_type not in {"recommended_route", "human_handoff"}
+            and claim.text.strip()
+            and not has_disguised_consequential_assertion(claim.text)
+            and all(k in registry.entries and k not in public_ids for k in claim.evidence_ids)
+        ):
+            # Risk-calibrated publication: user-attributed facts, practical preparation, and
+            # placeholder-safe factual drafts publish after deterministic consistency checks.
+            approved[claim.claim_id] = "risk_calibrated_consistency"
+        elif (
+            not physical_liberty_urgent
+            and claim.kind == "question"
+            and claim.grounding == "requires_confirmation"
+            and "?" in claim.text
+            and len(claim.text) <= 400
+            and not has_disguised_consequential_assertion(claim.text)
+        ):
+            approved[claim.claim_id] = "non_assertive_clarification"
         else:
-            # Includes recommendations, deadlines hidden in drafts, and questions.
+            # High-impact route recommendations, legal propositions, physical-liberty claims,
+            # and untagged free prose require independent semantic review.
             pending.append(claim.claim_id)
     return blocked, approved, pending
 

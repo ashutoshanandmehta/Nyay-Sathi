@@ -7,6 +7,7 @@ from fastapi import Cookie, Depends, Header, HTTPException, Request, Response, s
 
 from app.config import Settings, get_settings
 from app.db import Database
+from app.security.privacy import sign_device_token, verify_device_token
 
 OWNER_COOKIE = "nyay_owner"
 CSRF_COOKIE = "nyay_csrf"
@@ -27,12 +28,30 @@ def owner_context(
     request: Request, owner_cookie: str | None = Cookie(default=None, alias=OWNER_COOKIE)
 ) -> OwnerContext:
     db: Database = request.app.state.db
+    settings: Settings = getattr(request.app.state, "settings", None) or get_settings()
     if owner_cookie:
-        owner_id = db.owner_for_hash(token_hash(owner_cookie))
-        if owner_id:
-            return OwnerContext(owner_id)
+        raw_verified = verify_device_token(
+            owner_cookie,
+            settings.credential_signing_secret,
+            allow_unsigned=settings.allow_legacy_unsigned_cookie,
+        )
+        if raw_verified:
+            owner_id = db.owner_for_hash(token_hash(owner_cookie)) or db.owner_for_hash(
+                token_hash(raw_verified)
+            )
+            if owner_id:
+                return OwnerContext(owner_id)
     raw = secrets.token_urlsafe(32)
-    return OwnerContext(db.create_owner(token_hash(raw)), raw, secrets.token_urlsafe(24))
+    signed = sign_device_token(raw, settings.credential_signing_secret)
+    return OwnerContext(db.create_owner(token_hash(signed)), signed, secrets.token_urlsafe(24))
+
+
+def rotate_owner_credential(db: Database, owner_id: str, settings: Settings) -> OwnerContext:
+    """Rotate the pseudonymous device credential atomically without changing guest owner_id."""
+    raw = secrets.token_urlsafe(32)
+    signed = sign_device_token(raw, settings.credential_signing_secret)
+    db.rotate_owner_token(owner_id, token_hash(signed))
+    return OwnerContext(owner_id=owner_id, new_owner_token=signed, new_csrf_token=secrets.token_urlsafe(24))
 
 
 def set_owner_cookies(

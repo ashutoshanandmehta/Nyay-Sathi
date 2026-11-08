@@ -5,9 +5,22 @@ import re
 
 from app.routing.segments import segment_message
 
+# In-text numbered citations: "[1](#cite-1)" links to entry 1 of the message's sources list.
+CITATION_MARKER_RE = re.compile(r"[ \t]*\[\d{1,3}\]\(#cite-\d{1,3}\)")
+LEGACY_CITATION_RE = re.compile(r"\[Source:[^\]]*\]")
+
+
+def citation_marker(number: int) -> str:
+    return f"[{number}](#cite-{number})"
+
+
+def strip_citation_markers(text: str) -> str:
+    """Remove numbered and legacy citation markers, e.g. before reusing an answer as model context."""
+    return LEGACY_CITATION_RE.sub("", CITATION_MARKER_RE.sub("", text or "")).strip()
+
 
 class EvidenceRegistry:
-    def __init__(self, state):
+    def __init__(self, state, *, include_recent_user_turns: bool = False):
         self.entries = {}
         for passage in state.get("passages", []):
             identifier = passage["passage_id"]
@@ -23,6 +36,20 @@ class EvidenceRegistry:
             "source_id": message_id,
             "case_version": state.get("memory", {}).get("version", 0),
         }
+        if include_recent_user_turns:
+            for turn in state.get("context", {}).get("recent_turns", []):
+                tid = turn.get("id")
+                if turn.get("role") == "user" and tid and tid != message_id:
+                    self.entries.setdefault(
+                        f"message:{tid}",
+                        {
+                            "evidence_id": f"message:{tid}",
+                            "kind": "prior_user_message",
+                            "text": turn.get("content", ""),
+                            "source_id": tid,
+                            "case_version": state.get("memory", {}).get("version", 0),
+                        },
+                    )
         for segment in segment_message(state["current_message"]):
             key = f"segment:{segment['id']}"
             self.entries[key] = {

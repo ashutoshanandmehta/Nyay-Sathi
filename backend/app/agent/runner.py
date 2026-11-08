@@ -1,17 +1,28 @@
-"""One primary reasoning session, bounded research, adaptive review, existing commit boundary."""
+"""Bounded 10-step resolution copilot runner with certified pre-retrieval and risk-calibrated review."""
 
 import copy
 import json
+import re
 import time
 from pathlib import Path
 
+from app.agent.blocks import (
+    BLOCK_TITLES,
+    append_citation_markers,
+    assemble_resolution_blocks,
+    claim_uses_legal_source,
+    effective_block_order,
+    format_claim_text,
+    infer_block_type,
+)
 from app.agent.budget import TurnBudget
 from app.agent.contracts import AgentAnswer, AgentTask, AnswerClaim, ResearchRequest
 from app.agent.provider import ResponsesProvider
 from app.agent.research import ResearchService
-from app.agent.safety import safety_event, urgent_trigger
+from app.agent.safety import classify_urgent_context, safety_event
 from app.agent.verification import (
     TEMPLATES,
+    has_disguised_consequential_assertion,
     mechanical_checks,
     propagate_dependencies,
     template_text,
@@ -25,6 +36,18 @@ from app.routing.segments import segment_message
 from app.schemas.models import CaseMemory
 from app.services.model_calls import model_calls
 from app.services.progress import publisher
+
+
+def _public_prequery_terms(message: str, domain: str, urgent_continuation: bool) -> str:
+    # Strip identifiers, numbers, emails and quoted personal strings before local index lookup.
+    cleaned = re.sub(r"\S+@\S+|https?://\S+|\b\d[\d\-/.,]*\b|[\"“”'‘’][^\"“”'‘’]*[\"“”'‘’]", " ", message)
+    words = [w for w in re.findall(r"[A-Za-z\u0900-\u097f]{3,}", cleaned.casefold())][:24]
+    extras = []
+    if domain and domain not in {"unknown", "general"}:
+        extras.append(domain)
+    if urgent_continuation:
+        extras.extend(["police", "bribe", "corruption", "emergency", "liberty"])
+    return " ".join(words + extras).strip()
 
 
 class PrimaryAgent:
@@ -42,6 +65,32 @@ class PrimaryAgent:
         # No provider-managed conversation or graph checkpoint is created by this runner.
         return None
 
+    def _pre_retrieve_certified(self, state):
+        if not hasattr(self.research, "retrieve_certified"):
+            return
+        query_text = _public_prequery_terms(
+            state["current_message"],
+            state.get("memory", {}).get("domain", "unknown"),
+            bool(state.get("urgent_continuation")),
+        )
+        if len(query_text.split()) < 2:
+            return
+        hits, diag = self.research.retrieve_certified(query_text, jurisdiction="India", limit=4)
+        certified_hits = [h for h in hits if h.get("certified_proposition")]
+        if certified_hits:
+            merged = {p["passage_id"]: p for p in state["passages"]}
+            for hit in certified_hits:
+                merged.setdefault(hit["passage_id"], hit)
+            state["passages"] = list(merged.values())[: self.settings.agent_max_passages * 2]
+            state["tool_records"].append(
+                {
+                    "tool": "certified_knowledge_pack",
+                    "status": "hit",
+                    "query_hash": diag["query_hash"],
+                    "certified_hit_count": len(certified_hits),
+                }
+            )
+
     def invoke(self, state, thread_id, progress=None):
         state = copy.deepcopy(state)
         state.update(
@@ -58,21 +107,35 @@ class PrimaryAgent:
         started = time.monotonic()
         budget = TurnBudget(self.settings)
 
+        try:
+            prior_safety = database.safety_messages(state["owner_id"], state["conversation_id"])
+        except KeyError:
+            prior_safety = []
+        urgent_ctx = classify_urgent_context(
+            state["current_message"], state.get("memory"), prior_safety
+        )
+        state["urgent_continuation"] = urgent_ctx["urgent_continuation"]
+        state["urgent_verification_guidance"] = urgent_ctx["verification_guidance"]
+        state["prior_safety_delivered"] = bool(prior_safety)
+
         def event(stage, status="running", **extra):
             item = {"stage": stage, "status": status, **extra}
             state["events"].append(item)
             if progress:
                 progress(item)
 
-        def emit_safety():
-            if state["safety_messages"]:
+        def emit_safety(category=None, *, force=False):
+            if state["safety_messages"] or (state.get("prior_safety_delivered") and not force):
                 return
             india = "india" in state["current_message"].casefold() or any(
                 f.get("value", "").casefold() == "india"
                 for k, f in state["memory"].get("facts", {}).items()
                 if k in {"transaction_country", "country"}
             )
-            item = safety_event(state.get("language", "en"), india=india)
+            cat = category or urgent_ctx["category"] or "emergency"
+            if cat == "emergency_followup":
+                cat = "emergency"
+            item = safety_event(state.get("language", "en"), india=india, category=cat)
             item["request_id"] = state["request_id"]
             state["safety_messages"].append(item)
             state["first_useful_guidance_ms"] = round((time.monotonic() - started) * 1000)
@@ -83,8 +146,11 @@ class PrimaryAgent:
             if progress:
                 progress(item)
 
-        if urgent_trigger(state["current_message"]):
-            emit_safety()
+        if urgent_ctx["emit_immediate_safety"]:
+            emit_safety(urgent_ctx["category"])
+
+        self._pre_retrieve_certified(state)
+
         scope_token = publisher.set(progress)
         with model_calls.scope(
             self.settings.agent_max_requests,
@@ -94,55 +160,93 @@ class PrimaryAgent:
         ) as telemetry:
             try:
                 answer, rounds = self._reason(state, budget, event, emit_safety)
-                registry = EvidenceRegistry(state)
+                if state.get("urgent_continuation"):
+                    answer = self._enforce_urgent_followup_continuity(answer)
+                registry = self._registry(state)
                 blocked, accepted, pending = mechanical_checks(answer, registry)
                 review, patch_verdicts = None, []
                 if pending or answer.case_patches:
                     if budget.available():
                         event("review")
                         try:
-                            review = self._review(answer, state, registry, budget)
+                            review = self._review(answer, state, registry, budget, pending)
                             patch_verdicts = review.patch_verdicts
                             accepted.update(self._reviewed(review, pending, answer, registry))
-                            defects = [
-                                c.claim_id for c in answer.claims if c.claim_id not in accepted
+                            if not review.cross_block_coherent:
+                                for verdict in review.claims:
+                                    if verdict.support != "supported":
+                                        accepted.pop(verdict.claim_id, None)
+                            core_defects = [
+                                c.claim_id
+                                for c in answer.claims
+                                if c.claim_id not in accepted
+                                and not c.optional
+                                and infer_block_type(c) != "human_handoff"
                             ]
+                            min_repair_seconds = getattr(
+                                self.settings, "agent_repair_min_remaining_seconds", 25.0
+                            )
                             if (
                                 (
-                                    defects
+                                    core_defects
                                     or not review.primary_question_answered
                                     or not review.next_action_useful
+                                    or not review.cross_block_coherent
                                 )
                                 and rounds < self.settings.agent_max_rounds
                                 and budget.available(2)
+                                and budget.remaining_time() >= min_repair_seconds
                             ):
                                 event("revision")
-                                repaired = self._repair(answer, review, state, registry, budget)
-                                if repaired.tasks != answer.tasks:
-                                    raise ValueError("Repair changed task scope")
-                                # Preserve supported claims byte-for-byte.
+                                original_patches = list(answer.case_patches)
                                 prior_accepted = dict(accepted)
-                                stable = [c for c in answer.claims if c.claim_id in accepted]
-                                repaired.claims = stable + [
-                                    c for c in repaired.claims if c.claim_id not in accepted
-                                ]
-                                answer = AgentAnswer.model_validate(repaired.model_dump())
-                                blocked, mechanical, pending = mechanical_checks(answer, registry)
-                                accepted = {**prior_accepted, **mechanical}
-                                event("review", phase="repair")
-                                review = self._review(answer, state, registry, budget)
-                                # A fresh semantic rejection supersedes an earlier approval;
-                                # an unavailable re-review does not erase unchanged support.
-                                for key in pending:
-                                    accepted.pop(key, None)
-                                accepted.update(self._reviewed(review, pending, answer, registry))
-                                patch_verdicts = review.patch_verdicts
+                                try:
+                                    repaired = self._repair(answer, review, state, registry, budget)
+                                    if repaired.tasks != answer.tasks:
+                                        raise ValueError("Repair changed task scope")
+                                    # Preserve supported claims byte-for-byte without scrambling claim order.
+                                    stable_by_id = {
+                                        c.claim_id: c
+                                        for c in answer.claims
+                                        if c.claim_id in accepted
+                                    }
+                                    merged_claims = [
+                                        stable_by_id.pop(c.claim_id)
+                                        if c.claim_id in stable_by_id
+                                        else c
+                                        for c in repaired.claims
+                                    ]
+                                    repaired.claims = list(stable_by_id.values()) + merged_claims
+                                    answer = AgentAnswer.model_validate(repaired.model_dump())
+                                    blocked, mechanical, pending = mechanical_checks(
+                                        answer, registry
+                                    )
+                                    accepted = {**prior_accepted, **mechanical}
+                                    event("review", phase="repair")
+                                    re_review = self._review(
+                                        answer, state, registry, budget, pending
+                                    )
+                                    review = re_review
+                                    for key in pending:
+                                        accepted.pop(key, None)
+                                    accepted.update(
+                                        self._reviewed(re_review, pending, answer, registry)
+                                    )
+                                    patch_verdicts = re_review.patch_verdicts
+                                except Exception as exc:
+                                    event("review", "limited", error_type=type(exc).__name__)
+                                    if answer.case_patches != original_patches:
+                                        patch_verdicts = []
+                                    self._preserve_safe_practical(
+                                        answer, accepted, blocked, registry
+                                    )
                         except Exception as exc:
                             event("review", "limited", error_type=type(exc).__name__)
-                            # Keep only approvals bound to unchanged claims; patches remain staged.
                             patch_verdicts = []
+                            self._preserve_safe_practical(answer, accepted, blocked, registry)
                     else:
                         event("review", "budget_exhausted")
+                        self._preserve_safe_practical(answer, accepted, blocked, registry)
                 accepted = propagate_dependencies(
                     answer, {k: v for k, v in accepted.items() if k not in blocked}
                 )
@@ -157,7 +261,7 @@ class PrimaryAgent:
                 result = self._compose(
                     answer,
                     state,
-                    EvidenceRegistry(state),
+                    self._registry(state),
                     {c.claim_id: "approved_template" for c in answer.claims},
                     [],
                     False,
@@ -205,9 +309,43 @@ class PrimaryAgent:
         )
         return result
 
+    @staticmethod
+    def _registry(state):
+        return EvidenceRegistry(state, include_recent_user_turns=True)
+
+    @staticmethod
+    def _preserve_safe_practical(answer: AgentAnswer, accepted: dict, blocked: dict, registry):
+        """When semantic review times out, preserve explicitly tagged non-confrontational practical/user claims."""
+        public_ids = registry.public_ids()
+        for claim in answer.claims:
+            if (
+                claim.claim_id not in accepted
+                and claim.claim_id not in blocked
+                and claim.grounding in {"practical_precaution", "reported_by_user"}
+                and claim.kind in {"factual", "practical", "document"}
+                and claim.block_type not in {"recommended_route", "human_handoff"}
+                and claim.text.strip()
+                and not has_disguised_consequential_assertion(claim.text)
+                and all(k in registry.entries and k not in public_ids for k in claim.evidence_ids)
+            ):
+                accepted[claim.claim_id] = "timeout_safe_practical_precaution"
+
+    @staticmethod
+    def _enforce_urgent_followup_continuity(answer: AgentAnswer) -> AgentAnswer:
+        """Keep urgent follow-ups bound to the active urgent case rather than demoting to 'practice'."""
+        updated_tasks = []
+        for t in answer.tasks:
+            intent = "legal_options" if t.intent in {"practice", "conversation"} else t.intent
+            case_link = "existing" if t.case_link in {"new", "unrelated", "uncertain"} else t.case_link
+            domain = "criminal" if t.domain in {"general", "unknown"} else t.domain
+            updated_tasks.append(
+                t.model_copy(update={"intent": intent, "case_link": case_link, "domain": domain})
+            )
+        risk = "urgent" if answer.risk == "ordinary" else answer.risk
+        return answer.model_copy(update={"tasks": updated_tasks, "risk": risk})
+
     def _context(self, state):
-        registry = EvidenceRegistry(state)
-        # Expose stable whole records. The current message is always verbatim and never dropped.
+        registry = self._registry(state)
         context = copy.deepcopy(state.get("context", {}))
         for key in ("recent_turns", "rolling_summary", "current_drafts", "staged_case_proposals"):
             if len(json.dumps(context, ensure_ascii=False)) > self.settings.agent_context_chars:
@@ -221,8 +359,11 @@ class PrimaryAgent:
                     "actions_completed",
                     "responses_received",
                     "complaint_journey",
+                    "prior_assistant_coverage",
                 )
             }
+        prior_cov = context.get("prior_assistant_coverage") or {}
+        covered_sources = set(prior_cov.get("covered_source_ids") or [])
         private = [e for e in registry.payload() if e["kind"] != "public_passage"]
         bounded, used = [], 0
         for entry in private:
@@ -230,19 +371,44 @@ class PrimaryAgent:
             if used + size <= self.settings.agent_context_chars:
                 bounded.append(entry)
                 used += size
-        return {
+        public_entries = []
+        for entry in registry.payload():
+            if entry["kind"] != "public_passage":
+                continue
+            item = dict(entry)
+            if covered_sources and (
+                item.get("source_id") in covered_sources
+                or item.get("passage_id") in covered_sources
+                or item.get("evidence_id") in covered_sources
+            ):
+                item["already_cited_in_prior_turn"] = True
+            public_entries.append(item)
+        payload = {
             "current_message": state["current_message"],
             "language": state.get("language", "en"),
             "segments": segment_message(state["current_message"]),
             "conversation_context": context,
             "case_version": state["memory"].get("version", 0),
             "case_domain": state["memory"].get("domain", "unknown"),
-            "evidence": bounded + [e for e in registry.payload() if e["kind"] == "public_passage"],
+            "evidence": bounded + public_entries,
             "templates": {
                 key: template_text(key, state.get("language", "en")) for key in TEMPLATES
             },
             "safety_already_delivered": state.get("safety_messages", []),
         }
+        if state.get("urgent_continuation"):
+            payload["urgent_case_continuity"] = {
+                "active_urgent_followup": True,
+                "prior_safety_already_shown": bool(state.get("prior_safety_delivered")),
+                "do_not_repeat_generic_safety_banner": True,
+                "prior_assistant_turn_count": int(prior_cov.get("assistant_turn_count") or 0),
+                "already_delivered_block_types": list(prior_cov.get("delivered_block_types") or []),
+                "prioritize_new_turn_delta": bool(prior_cov.get("assistant_turn_count")),
+                "recommended_verification_precautions": state.get(
+                    "urgent_verification_guidance", []
+                ),
+            }
+        return payload
 
     def _reason(self, state, budget, event, emit_safety):
         if not self.settings.ai_configured:
@@ -262,11 +428,10 @@ class PrimaryAgent:
                 if answer.risk == "urgent":
                     emit_safety()
                 return answer, round_index + 1
-            # Preserve encrypted reasoning and all original tool-call items, not just output text.
             items.extend(output)
             for call in calls:
                 if call.get("name") == "emit_safety" and allow_tools:
-                    emit_safety()
+                    emit_safety(force=not state.get("prior_safety_delivered"))
                     tool_result = {
                         "status": "delivered",
                         "approved_guidance": state["safety_messages"],
@@ -302,10 +467,11 @@ class PrimaryAgent:
                 )
         raise ValueError("No final answer within primary-round allowance")
 
-    def _review(self, answer, state, registry, budget):
+    def _review(self, answer, state, registry, budget, pending=None):
         payload = {
             "context": self._context(state),
             "draft": answer.model_dump(mode="json"),
+            "pending_claim_ids": list(pending) if pending is not None else [c.claim_id for c in answer.claims],
             "evidence": registry.payload(),
         }
         _, calls, review = self.provider.complete(
@@ -343,7 +509,7 @@ class PrimaryAgent:
             "context": self._context(state),
             "previous_answer": answer.model_dump(mode="json"),
             "review": review.model_dump(mode="json"),
-            "instruction": "Repair only specific rejected claims and material omissions. Preserve tasks, evidence IDs and all supported claims. Do not add tools.",
+            "instruction": "Repair only specific rejected claims and material omissions. Preserve tasks, evidence IDs and all supported claims byte-for-byte. Do not add tools.",
         }
         _, calls, repaired = self.provider.complete(
             [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
@@ -442,27 +608,72 @@ class PrimaryAgent:
             staged_patches=staged,
             staged_case_memory={},
         )
+        language = state.get("language", "en")
+        block_order = effective_block_order(answer, state)
+        order_rank = {bt: idx for idx, bt in enumerate(block_order)}
         pieces, documents, published, outcomes = [], [], set(), []
+        # Passage ID -> in-text citation number, assigned in on-screen order across all tasks.
+        citation_numbers: dict[str, int] = {}
         for task in answer.tasks:
             claims = [c for c in answer.claims if c.task_id == task.task_id]
-            visible, document = [], []
-            for claim in claims:
+            core_claims = [
+                c for c in claims if not c.optional and infer_block_type(c) != "human_handoff"
+            ]
+            visible_ranked, document = [], []
+            for idx, claim in enumerate(claims):
                 if claim.claim_id not in accepted:
                     continue
-                text = (
-                    template_text(claim.template_id, state.get("language", "en"))
-                    if claim.kind == "template"
-                    else ("You report: “" + claim.text + "”")
-                    if claim.kind == "quote"
-                    else claim.text
+                btype = infer_block_type(claim)
+                if btype == "human_handoff":
+                    continue
+                text = format_claim_text(claim, language)
+                cited_ids = (
+                    [k for k in dict.fromkeys(claim.evidence_ids) if k in registry.public_ids()]
+                    if claim_uses_legal_source(claim, btype)
+                    else []
                 )
-                citation = registry.citations(claim.evidence_ids)
-                visible.append(text + ("\n\n" + citation if citation else ""))
+                visible_ranked.append(
+                    (
+                        order_rank.get(btype, len(block_order)),
+                        idx,
+                        btype,
+                        text,
+                        cited_ids,
+                    )
+                )
                 published.update(set(claim.evidence_ids) & registry.public_ids())
                 if claim.in_document:
                     document.append(text)
-            if visible:
-                pieces.append("\n\n".join(visible))
+            visible_ranked.sort(key=lambda item: (item[0], item[1]))
+
+            section_groups: list[tuple[str, list[str]]] = []
+            for item in visible_ranked:
+                _, _, btype, text, cited_ids = item
+                for passage_id in cited_ids:
+                    citation_numbers.setdefault(passage_id, len(citation_numbers) + 1)
+                claim_rendered = append_citation_markers(
+                    text, sorted(citation_numbers[p] for p in cited_ids)
+                )
+                if not section_groups or section_groups[-1][0] != btype:
+                    section_groups.append((btype, [claim_rendered]))
+                else:
+                    section_groups[-1][1].append(claim_rendered)
+
+            lang_key = language if language in {"en", "hi", "hinglish"} else "en"
+            formatted_sections: list[str] = []
+            for btype, items in section_groups:
+                joined = "\n\n".join(items)
+                already_has_header = any(
+                    ln.lstrip().startswith("#") for it in items for ln in it.splitlines()
+                )
+                if btype != "direct_answer" and not already_has_header and btype in BLOCK_TITLES:
+                    header_title = BLOCK_TITLES[btype].get(lang_key, BLOCK_TITLES[btype]["en"])
+                    formatted_sections.append(f"### {header_title}\n\n{joined}")
+                else:
+                    formatted_sections.append(joined)
+
+            if formatted_sections:
+                pieces.append("\n\n---\n\n".join(formatted_sections))
             if document and all(c.claim_id in accepted for c in claims if c.in_document):
                 documents.append(
                     {
@@ -472,34 +683,73 @@ class PrimaryAgent:
                         "content": "\n\n".join(document),
                     }
                 )
+            task_supported = (
+                all(c.claim_id in accepted for c in core_claims) and bool(core_claims or visible_ranked)
+            )
             outcomes.append(
                 {
                     "task_id": task.task_id,
-                    "status": "supported"
-                    if all(c.claim_id in accepted for c in claims) and claims
-                    else "partial"
-                    if visible
-                    else "deferred",
+                    "status": "supported" if task_supported else "partial" if visible_ranked else "deferred",
                 }
             )
-        rejected = (
-            len(accepted) < len(answer.claims) or bool(answer.unresolved) or not answer.claims
+
+        core_all = [
+            c for c in answer.claims if not c.optional and infer_block_type(c) != "human_handoff"
+        ]
+        task_all_supported = bool(outcomes) and all(o["status"] == "supported" for o in outcomes)
+        core_rejected = (
+            not task_all_supported
+            or not answer.claims
+            or not pieces
         )
-        if rejected or not pieces:
-            pieces.append(template_text("limited_research", state.get("language", "en")))
+        # Generic "I could not verify..." text appears ONLY when no useful supported answer exists.
+        if not pieces:
+            pieces.append(template_text("limited_research", language))
+
+        resolution_blocks = assemble_resolution_blocks(
+            answer, accepted, registry, state, documents
+        )
+        if not resolution_blocks and pieces:
+            resolution_blocks = [
+                {
+                    "block_id": "block-limitation",
+                    "block_type": "limitation",
+                    "title": "Unresolved point",
+                    "content": pieces[-1],
+                    "items": [],
+                    "claim_ids": [],
+                    "source_ids": [],
+                    "grounding": "requires_confirmation",
+                    "document_title": None,
+                }
+            ]
+
         safety = [item["text"] for item in state.get("safety_messages", [])]
+        certified_used = any(
+            registry.entries.get(pid, {}).get("certified_proposition")
+            for pid in published
+        )
         state.update(
             response="\n\n".join(safety + pieces),
+            resolution_blocks=resolution_blocks,
+            factual_issues=answer.factual_issues,
+            legal_issues=answer.legal_issues,
+            case_stage=answer.case_stage or (memory.journey.outcome if memory.journey.outcome != "unknown" else "intake"),
+            next_action=answer.next_action,
             approved_documents=documents,
             published_passage_ids=sorted(published),
-            publication_status="partial" if rejected else "supported",
+            citations=[
+                {"number": number, "passage_id": passage_id}
+                for passage_id, number in citation_numbers.items()
+            ],
+            publication_status="partial" if core_rejected else "supported",
             verification={
-                "passed": not rejected,
+                "passed": not core_rejected,
                 "publication_safe": True,
                 "scope": "published_claims_only",
                 "claim_checks": accepted,
                 "independent_review_performed": review_fresh,
-                "legal_certification": False,
+                "legal_certification": certified_used,
             },
             request_coverage=[
                 {

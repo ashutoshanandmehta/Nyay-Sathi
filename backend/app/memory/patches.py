@@ -99,7 +99,8 @@ class PatchEngine:
                         "Fact provenance must be authorized case evidence, not public law",
                     )
                 elif task.source_segment_ids and any(
-                    registry.entries[ref]["kind"] == "user_report" for ref in patch.source_refs
+                    registry.entries[ref]["kind"] in {"user_report", "prior_user_message"}
+                    for ref in patch.source_refs
                 ):
                     decision, reason = (
                         "staged",
