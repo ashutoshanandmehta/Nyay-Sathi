@@ -23,6 +23,7 @@ from app.db import Database, now
 from app.rag.discover import _walk_sources, parse_source_candidates
 from app.rag.ingest import chunk_text, fetch
 from app.rag.source_policy import OFFICIAL_DOMAINS, POLICY_VERSION, allowed_url
+from app.rag.statutes import statute_passages
 from app.services.model_calls import model_calls
 from app.services.pdf_backend import open_pdf
 from app.services.progress import publisher
@@ -221,6 +222,7 @@ class SafeSourceFetcher:
         is_pdf = raw.startswith(b"%PDF-")
         document_title = None
         extraction_limit = ""
+        page_texts: list[str] = []
         if is_pdf:
             with open_pdf(raw) as pdf:
                 if pdf.needs_pass:
@@ -228,6 +230,10 @@ class SafeSourceFetcher:
                 if pdf.page_count > self.settings.web_max_pdf_pages:
                     extraction_limit = f" Only the first {self.settings.web_max_pdf_pages} of {pdf.page_count} PDF pages were extracted; omitted provisions and exceptions may be material."
                 document_title = (pdf.metadata or {}).get("title")
+                page_texts = [
+                    page.get_text("text")
+                    for _, page in zip(range(self.settings.web_max_pdf_pages), pdf, strict=False)
+                ]
         elif not any(marker in raw[:4096].lower() for marker in (b"<html", b"<!doctype", b"<body")):
             raise ValueError("Unsupported source content")
         else:
@@ -253,7 +259,8 @@ class SafeSourceFetcher:
             "source_type": "official_web_research",
             "jurisdiction": "India",
         }
-        passages = chunk_text(
+        # Statutes are split by section so ranking and pinpoint citation see one provision at a time.
+        passages = statute_passages(source, page_texts) or chunk_text(
             source, raw, "pdf" if is_pdf else "html", max_pdf_pages=self.settings.web_max_pdf_pages
         )
         for passage in passages:

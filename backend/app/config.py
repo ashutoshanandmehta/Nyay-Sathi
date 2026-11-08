@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     agent_repair_reserve: int = Field(default=2, ge=0, le=6)
     agent_max_repairs: int = Field(default=2, ge=0, le=3)
     agent_research_seconds: float = Field(default=45, ge=1, le=120)
+    # Share of the research window searches may use; fetching keeps the rest.
+    agent_search_share: float = Field(default=0.5, ge=0.1, le=0.9)
     agent_max_batches: int = Field(default=3, ge=0, le=4)
     agent_max_queries: int = Field(default=6, ge=0, le=8)
     agent_max_documents: int = Field(default=10, ge=0, le=16)

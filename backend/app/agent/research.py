@@ -11,6 +11,8 @@ from contextvars import copy_context
 from datetime import UTC, datetime
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
+from rank_bm25 import BM25Okapi
+
 from app.agent.contracts import ResearchRequest
 from app.knowledge.search_index import OpenSearchLegalIndex, is_generic_index_or_snippet
 from app.routing.policy import PublicQueryPolicy
@@ -42,44 +44,78 @@ def authority(url):
     return "secondary", None, 0
 
 
-def terms(text):
-    stop = {
-        "what",
-        "which",
-        "that",
-        "have",
-        "with",
-        "from",
-        "this",
-        "they",
-        "their",
-        "india",
-        "indian",
-        "official",
-        "sources",
-        "legal",
-        "current",
-    }
-    return {
+STOP_TERMS = {
+    "what",
+    "which",
+    "that",
+    "have",
+    "with",
+    "from",
+    "this",
+    "they",
+    "their",
+    "india",
+    "indian",
+    "official",
+    "sources",
+    "legal",
+    "current",
+}
+
+
+def tokens(text):
+    return [
         w
         for w in re.findall(r"[\w\u0900-\u097f]+", text.casefold())
-        if len(w) > 2 and w not in stop
-    }
+        if len(w) > 2 and w not in STOP_TERMS
+    ]
+
+
+def terms(text):
+    return set(tokens(text))
+
+
+DEFINITIONS_RE = re.compile(
+    r"\bdefinitions?\b|unless the context otherwise requires|unless otherwise required in the context",
+    re.I,
+)
+DEFINITION_QUERY_RE = re.compile(
+    r"\b(?:what\s+(?:is|are|does)|meaning|means|definition|defined|define|kya\s+hai|matlab)\b"
+    r"|मतलब|परिभाषा|क्या है",
+    re.I,
+)
+QUERY_SECTION_RE = re.compile(r"\bsections?\s*(\d{1,3}[A-Z]{0,2})\b", re.I)
+LOCATOR_SECTION_RE = re.compile(r"\bSection\s+(\d{1,3}[A-Z]{0,2})\b", re.I)
 
 
 def rank_passages(passages, query, limit, per_source=2):
+    """BM25 relevance plus authority; definitions rank high only for "what does X mean" queries."""
     wanted = terms(query)
+    docs = [tokens(f"{p['text']} {p.get('title', '')} {p.get('locator', '')}") for p in passages]
+    if not wanted or not any(docs):
+        return []
+    relevance = BM25Okapi(docs).get_scores(list(wanted))
+    top = max(max(relevance), 1e-9)
+    asks_meaning = bool(DEFINITION_QUERY_RE.search(query))
+    named_sections = {n.upper() for n in QUERY_SECTION_RE.findall(query)}
     scored = []
-    for p in passages:
-        overlap = len(wanted & terms(p["text"] + " " + p.get("title", "")))
+    for p, doc, bm25 in zip(passages, docs, relevance, strict=True):
+        overlap = len(wanted & set(doc))
         if not overlap:
             continue
         _, _, weight = authority(p["canonical_url"])
-        score = overlap / max(1, len(wanted)) * 10 + weight
+        score = max(bm25, 0) / top * 6 + overlap / len(wanted) * 4 + weight
         if p.get("certified_proposition"):
             score += 3.5
         if p.get("effective_date"):
             score += 0.2  # Known date is useful metadata, not proof of current law.
+        locator = p.get("locator", "")
+        if named_sections & {n.upper() for n in LOCATOR_SECTION_RE.findall(locator)}:
+            score += 3
+        if not asks_meaning and DEFINITIONS_RE.search(f"{locator} {p['text'][:200]}"):
+            score *= (
+                0.4  # A definitions clause shares every keyword but rarely answers the question.
+            )
         scored.append((score, p))
     scored.sort(key=lambda x: x[0], reverse=True)
     selected, hashes, source_counts = [], set(), {}
@@ -190,6 +226,10 @@ class ResearchService:
             budget.batches += 1
         started = time.monotonic()
         deadline = min(budget.deadline, started + self.settings.agent_research_seconds)
+        search_deadline = min(
+            deadline,
+            started + self.settings.agent_research_seconds * self.settings.agent_search_share,
+        )
         queries, limitations, passages, records = [], [], [], []
         context = {**state.get("context", {}), "current_message": state["current_message"]}
         for question in request.questions:
@@ -288,7 +328,7 @@ class ResearchService:
             queries = []
 
         def search(query, key):
-            remaining = deadline - time.monotonic()
+            remaining = search_deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError()
             reservation = budget.reserve(
