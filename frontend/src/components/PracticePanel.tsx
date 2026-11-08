@@ -148,6 +148,14 @@ export default function PracticePanel({
   if (loading && !setupData) {
     return (
       <div className="roleplay-drawer-container">
+        <div className="roleplay-setup-top">
+          <button type="button" className="roleplay-back-link" onClick={onClose}>
+            <ArrowLeft size={16} /> Roleplay
+          </button>
+          <button type="button" className="roleplay-close-btn" onClick={onClose} aria-label="Close roleplay">
+            <X size={18} />
+          </button>
+        </div>
         <div className="roleplay-loading-wrap">
           <div className="roleplay-spinner" />
           <p>Analyzing case background...</p>
@@ -160,6 +168,14 @@ export default function PracticePanel({
   if (isSettingUp) {
     return (
       <div className="roleplay-drawer-container">
+        <div className="roleplay-setup-top">
+          <span className="roleplay-back-link">
+            <ArrowLeft size={16} /> Roleplay
+          </span>
+          <button type="button" className="roleplay-close-btn" onClick={onClose} aria-label="Close roleplay">
+            <X size={18} />
+          </button>
+        </div>
         <div className="roleplay-setup-transition">
           <div className="roleplay-spinner-large" />
           <h4>Preparing Roleplay</h4>
@@ -173,15 +189,20 @@ export default function PracticePanel({
   if (sessionId) {
     return (
       <div className="roleplay-drawer-container active-chat-mode">
-        {/* Header */}
+        {/* Header matching Reference 2 */}
         <div className="roleplay-chat-header">
           <div className="roleplay-header-titles">
             <h3 className="roleplay-stakeholder-name">{activeStakeholder}</h3>
             <span className="roleplay-subtitle">Practice simulation</span>
           </div>
-          <button type="button" className="roleplay-end-btn" onClick={endPractice}>
-            End practice
-          </button>
+          <div className="roleplay-header-actions">
+            <button type="button" className="roleplay-end-btn" onClick={endPractice}>
+              End practice
+            </button>
+            <button type="button" className="roleplay-close-btn" onClick={onClose} aria-label="Close roleplay">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {error && <div className="roleplay-inline-error">{error}</div>}
@@ -244,7 +265,10 @@ export default function PracticePanel({
       {/* Top Title Bar */}
       <div className="roleplay-setup-top">
         <button type="button" className="roleplay-back-link" onClick={onClose}>
-          <ArrowLeft size={16} /> Practice Arena
+          <ArrowLeft size={16} /> Roleplay
+        </button>
+        <button type="button" className="roleplay-close-btn" onClick={onClose} aria-label="Close roleplay">
+          <X size={18} />
         </button>
       </div>
 

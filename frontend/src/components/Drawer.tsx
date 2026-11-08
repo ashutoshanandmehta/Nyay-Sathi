@@ -5,7 +5,7 @@ import { api } from '../api'
 import JourneyPanel from './JourneyPanel'
 import DraftEditor from './DraftEditor'
 
-export function Drawer({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return <div className="panel-backdrop" onMouseDown={e=>{if(e.currentTarget===e.target)onClose()}}><aside className="panel"><header><h2>{title}</h2><button onClick={onClose} aria-label="Close panel"><X/></button></header>{children}</aside></div>}
+export function Drawer({title,onClose,children,hideHeader=false}:{title:string;onClose:()=>void;children:React.ReactNode;hideHeader?:boolean}){return <div className="panel-backdrop" onMouseDown={e=>{if(e.currentTarget===e.target)onClose()}}><aside className="panel">{!hideHeader&&<header><h2>{title}</h2><button onClick={onClose} aria-label="Close panel"><X/></button></header>}{children}</aside></div>}
 // A bare site root means the exact document is not linked; say so instead of implying it opens.
 const isSiteRoot=(url:string)=>{try{return new URL(url).pathname.replace(/\/+$/,'')===''}catch{return false}}
 export function Sources({sources,focus}:{sources:Source[];focus?:number}){
