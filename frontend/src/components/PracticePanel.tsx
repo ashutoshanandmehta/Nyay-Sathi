@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowUp, ArrowRight, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
+import { getRoleplayMeta } from '../icons'
 import type { Language, RoleplayChatMessage, RoleplaySetup } from '../types'
 
 export default function PracticePanel({
@@ -209,12 +210,17 @@ export default function PracticePanel({
 
   // 3. ACTIVE CONVERSATIONAL CHAT SCREEN (Matches Reference 2)
   if (sessionId) {
+    const oppMeta = getRoleplayMeta(activeStakeholder)
+    const OppIcon = oppMeta.icon
     return (
       <div className="roleplay-drawer-container active-chat-mode">
         {/* Header matching Reference 2 */}
         <div className="roleplay-chat-header">
           <div className="roleplay-header-titles">
-            <h3 className="roleplay-stakeholder-name">{activeStakeholder}</h3>
+            <h3 className="roleplay-stakeholder-name">
+              <OppIcon size={17} aria-hidden="true" style={{ color: oppMeta.colorVar }} />
+              <span>{activeStakeholder}</span>
+            </h3>
             <span className="roleplay-subtitle">Practice simulation · in character, not legal advice</span>
           </div>
           <div className="roleplay-header-actions">
@@ -320,6 +326,8 @@ export default function PracticePanel({
           <div className="roleplay-radios-list" role="radiogroup">
             {stakeholdersList.map(st => {
               const isSelected = selectedStakeholder === st
+              const stMeta = getRoleplayMeta(st)
+              const StIcon = stMeta.icon
               return (
                 <div
                   key={st}
@@ -329,6 +337,7 @@ export default function PracticePanel({
                   <div className={`roleplay-radio-circle ${isSelected ? 'selected' : ''}`}>
                     {isSelected && <div className="roleplay-radio-inner" />}
                   </div>
+                  <StIcon size={16} aria-hidden="true" style={{ color: isSelected ? 'var(--evergreen)' : 'var(--muted)', flexShrink: 0 }} />
                   <span className="roleplay-radio-text">{st}</span>
                 </div>
               )

@@ -1,7 +1,27 @@
-import { ArrowDown, CheckCircle2, Database, ExternalLink, GitBranch, Lock, Scale, ShieldCheck, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowDown,
+  CalendarClock,
+  CheckCircle2,
+  CheckSquare,
+  Database,
+  ExternalLink,
+  FileDown,
+  FileText,
+  GitBranch,
+  ListTree,
+  Lock,
+  Paperclip,
+  Scale,
+  Send,
+  ShieldCheck,
+  Users,
+  X,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { AgentWorkflow, Detail, EscalationBundle, KnowledgeBase, Source } from '../types'
 import { api } from '../api'
+import { SECTION_ICONS } from '../icons'
 import JourneyPanel from './JourneyPanel'
 import DraftEditor from './DraftEditor'
 
@@ -11,11 +31,32 @@ const isSiteRoot=(url:string)=>{try{return new URL(url).pathname.replace(/\/+$/,
 export function Sources({sources,focus}:{sources:Source[];focus?:number}){
   const list=useRef<HTMLDivElement>(null)
   useEffect(()=>{if(focus)list.current?.querySelector(`[data-citation="${focus}"]`)?.scrollIntoView?.({block:'start',behavior:'smooth'})},[focus,sources])
-  return <div ref={list} className="panel-content source-list">{sources.map(s=><section key={s.passage_id} data-citation={s.citation_number} className={focus&&s.citation_number===focus?'source-focused':undefined}><div className="source-type">{s.origin==='official_pack'?'Official text, quoted exactly · not reviewed by a lawyer':s.source_type==='indian_official'?'Indian official origin · applicability assessed per claim':s.source_type==='foreign_official'?'Foreign official origin · Indian applicability not established':s.origin==='web'?(s.verification_status==='official_origin_pending_answer_review'?'Official origin · applicability needs review':'Public source · authority not verified'):'Saved official source'}</div><h3>{s.citation_number?<span className="citation-badge" aria-label={`Source ${s.citation_number}`}>{s.citation_number}</span>:null}{s.title}</h3><b>{s.locator}</b><blockquote>{s.text}</blockquote><p className="limitation">{s.limitations}</p><small>Retrieved {s.retrieved_at}{s.effective_date?` · Effective ${s.effective_date}`:''}{s.origin==='web'&&!s.effective_date?' · Effective date unknown':''}</small><a href={s.canonical_url} target="_blank" rel="noreferrer">{isSiteRoot(s.canonical_url)?'Website home page (exact document not linked)':'Open source page'} <ExternalLink size={14}/></a></section>)}</div>
+  return <div ref={list} className="panel-content source-list">{sources.map(s=>{
+    const isOfficial = s.origin === 'official_pack' || s.source_type === 'indian_official'
+    const isCertified = s.verification_status === 'official_origin_pending_answer_review'
+    const OriginIcon = isOfficial ? SECTION_ICONS.official_source : isCertified ? SECTION_ICONS.certified_source : SECTION_ICONS.web_source
+    return <section key={s.passage_id} data-citation={s.citation_number} className={focus&&s.citation_number===focus?'source-focused':undefined}>
+      <div className="source-type">
+        <OriginIcon size={13} aria-hidden="true" style={{ color: isOfficial ? 'var(--jade-ink)' : 'var(--muted)', flexShrink: 0 }} />
+        <span>{s.origin==='official_pack'?'Official text, quoted exactly · not reviewed by a lawyer':s.source_type==='indian_official'?'Indian official origin · applicability assessed per claim':s.source_type==='foreign_official'?'Foreign official origin · Indian applicability not established':s.origin==='web'?(s.verification_status==='official_origin_pending_answer_review'?'Official origin · applicability needs review':'Public source · authority not verified'):'Saved official source'}</span>
+      </div>
+      <h3>{s.citation_number?<span className="citation-badge" aria-label={`Source ${s.citation_number}`}>{s.citation_number}</span>:null}{s.title}</h3>
+      <b>{s.locator}</b>
+      <blockquote>{s.text}</blockquote>
+      <p className="limitation">{s.limitations}</p>
+      <small>Retrieved {s.retrieved_at}{s.effective_date?` · Effective ${s.effective_date}`:''}{s.origin==='web'&&!s.effective_date?' · Effective date unknown':''}</small>
+      <a href={s.canonical_url} target="_blank" rel="noreferrer">{isSiteRoot(s.canonical_url)?'Website home page (exact document not linked)':'Open source page'} <ExternalLink size={14}/></a>
+    </section>
+  })}</div>
 }
 const readable=(value:unknown)=>typeof value==='string'?value:JSON.stringify(value)
 const humanLabel=(value:string)=>value.replaceAll('_',' ').replace(/^./,v=>v.toUpperCase())
 const factStatus=(status:string)=>({user_allegation:'You said',user_confirmed:'Confirmed',document_statement:'From a document',assistant_inference:'Needs review'}[status]||humanLabel(status))
+const factStatusClass=(status:string)=>{
+  if(status==='user_confirmed'||status==='document_statement')return 'confirmed'
+  if(status==='user_allegation')return 'reported'
+  return 'warning'
+}
 
 function EvidencePreview({attachment,caseId,onRefresh}:{attachment:Detail['attachments'][number];caseId:string;onRefresh?:()=>void}){
   const [text,setText]=useState(attachment.extracted_text),[status,setStatus]=useState(''),[saving,setSaving]=useState(false)
@@ -77,8 +118,12 @@ function BundleCard({bundle,caseId}:{bundle:EscalationBundle;caseId:string}){
     <BundleList title="Evidence files" items={bundle.evidence_index.map(e=>e.filename)}/>
     <BundleList title="Drafts" items={bundle.generated_drafts.map(d=>`${d.title} (version ${d.version})`)}/>
     <div className="bundle-downloads">Download for your lawyer:
-      <button type="button" disabled={!!download.busy} onClick={()=>void save('pdf')}>{download.busy==='pdf'?'Preparing…':'PDF'}</button>
-      <button type="button" disabled={!!download.busy} onClick={()=>void save('docx')}>{download.busy==='docx'?'Preparing…':'Word'}</button>
+      <button type="button" disabled={!!download.busy} onClick={()=>void save('pdf')}>
+        <FileDown size={14} aria-hidden="true"/> {download.busy==='pdf'?'Preparing…':'PDF'}
+      </button>
+      <button type="button" disabled={!!download.busy} onClick={()=>void save('docx')}>
+        <FileDown size={14} aria-hidden="true"/> {download.busy==='docx'?'Preparing…':'Word'}
+      </button>
     </div>
     {download.text&&<small role="status" className={download.error?'bundle-error':'muted'}>{download.text}</small>}
     <small className="muted">{bundle.autonomy_notice}</small>
@@ -192,7 +237,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     </section>
 
     {!!m.events?.length&&<details className="case-section" open>
-      <summary>Timeline <small>{m.events.length}</small></summary>
+      <summary><span className="section-title-wrap"><CalendarClock size={16} aria-hidden="true"/> Timeline</span> <small>{m.events.length}</small></summary>
       <div className="workspace-numbered-timeline">
         {m.events.map((item,i)=>(
           <div className="timeline-event" key={i}>
@@ -207,13 +252,13 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     </details>}
 
     <details className="case-section" open>
-      <summary>Evidence <small>{detail.attachments.length}</small></summary>
+      <summary><span className="section-title-wrap"><Paperclip size={16} aria-hidden="true"/> Evidence</span> <small>{detail.attachments.length}</small></summary>
       {detail.attachments.map(a=><EvidencePreview key={a.id} attachment={a} caseId={cid} onRefresh={onRefresh}/>)}
       {!detail.attachments.length&&<p className="muted">Add an invoice, FIR copy, seizure memo, or screenshot using the attachment button.</p>}
     </details>
 
     {!!facts.length&&<details className="case-section">
-      <summary>Important facts <small>{facts.length}</small></summary>
+      <summary><span className="section-title-wrap"><ListTree size={16} aria-hidden="true"/> Important facts</span> <small>{facts.length}</small></summary>
       {!!verifiedFacts.length&&<p className="muted"><b>Confirmed / documentary ({verifiedFacts.length})</b> · Reported / pending check ({reportedFacts.length})</p>}
       <div className="workspace-numbered-facts">
         {facts.map(([key,fact], idx)=>(
@@ -222,7 +267,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
             <div className="fact-details-wrap">
               <div className="fact-head-row">
                 <span className="fact-title-text">{humanLabel(key)}</span>
-                <small className="fact-badge">{factStatus(fact.status)}</small>
+                <small className={`fact-badge fact-status-${factStatusClass(fact.status)}`}>{factStatus(fact.status)}</small>
               </div>
               <p className="fact-value-text">{fact.value}</p>
               {!!fact.provenance?.length&&<details><summary>Source details</summary>{fact.provenance.map((p,i)=><p className="muted" key={i}>{p.source_type==='document'?(detail.attachments.find(a=>a.id===p.source_id)?.filename||'Document'):'Your message'}{p.page?` · page ${p.page}`:''}{p.span?` · ${p.span}`:''}</p>)}</details>}
@@ -233,7 +278,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     </details>}
 
     {!!(m.parties?.length||m.locations?.length)&&<details className="case-section">
-      <summary>People and places <small>{(m.parties?.length||0)+(m.locations?.length||0)}</small></summary>
+      <summary><span className="section-title-wrap"><Users size={16} aria-hidden="true"/> People and places</span> <small>{(m.parties?.length||0)+(m.locations?.length||0)}</small></summary>
       <ul className="workspace-bullet-list">
         {[...(m.parties||[]),...(m.locations||[])].map((item,i)=>(
           <li key={i}>
@@ -245,7 +290,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
 
     {/* TIER 3: DOMAIN-AWARE ACTION & PREPARATION */}
     <details className="case-section" open>
-      <summary>Action tracker <small>{(detail.user_actions?.length||0)+m.actions_completed.length}</small></summary>
+      <summary><span className="section-title-wrap"><CheckSquare size={16} aria-hidden="true"/> Action tracker</span> <small>{(detail.user_actions?.length||0)+m.actions_completed.length}</small></summary>
       <p className="muted">Record steps you took outside chat so your strategy adjusts automatically.</p>
       <div className="workspace-form-row">
         <input
@@ -270,7 +315,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     </details>
 
     {!!detail.drafts.length&&<details className="case-section">
-      <summary>Drafts <small>{detail.drafts.length}</small></summary>
+      <summary><span className="section-title-wrap"><FileText size={16} aria-hidden="true"/> Drafts</span> <small>{detail.drafts.length}</small></summary>
       {detail.drafts.map(d=><details key={d.id}><summary>{d.title} · {humanLabel(d.status)}</summary><DraftEditor draft={d} caseId={cid}/></details>)}
     </details>}
 
@@ -280,7 +325,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
 
     {!isUrgentOrCriminal && (
       <details className="case-section">
-        <summary>Lawyer escalation bundle</summary>
+        <summary><span className="section-title-wrap"><Scale size={16} aria-hidden="true"/> Lawyer escalation bundle</span></summary>
         <p className="muted">A summary to share with a lawyer or legal-aid clinic: what happened, your facts, open questions and the sources used. It contains only what you told us and the sources shown.</p>
         <button type="button" className="workspace-btn" disabled={bundleLoading} onClick={loadBundle}><Scale size={14}/> {bundleLoading?'Preparing bundle…':'Prepare Lawyer Escalation Bundle'}</button>
         {bundle&&<BundleCard bundle={bundle} caseId={cid}/>}
@@ -293,7 +338,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     {!!detail.staged_patches?.length&&<details className="case-section"><summary>Details needing clarification <small>{detail.staged_patches.length}</small></summary><p className="muted">These proposals have not changed your saved case. Correct or clarify them in chat.</p>{detail.staged_patches.map(({patch,reason})=><div className="case-fact" key={patch.patch_id}><b>{humanLabel(patch.payload.key||patch.payload.role||'Proposed detail')}</b><p>{patch.payload.value||patch.payload.description||patch.payload.name}</p><small className="muted">{reason}</small></div>)}</details>}
 
     <details className="case-section">
-      <summary>User-confirmed submission tracker <small>{detail.submission_steps?.length||0}</small></summary>
+      <summary><span className="section-title-wrap"><Send size={16} aria-hidden="true"/> User-confirmed submission tracker</span> <small>{detail.submission_steps?.length||0}</small></summary>
       <p className="muted">Nyay Saathi never files, signs, or pays on your behalf. Confirm each stage yourself and store your acknowledgment reference.</p>
       <div className="workspace-stack">
         <input aria-label="Target forum or channel" value={subChannel} onChange={e=>setSubChannel(e.target.value)} placeholder="Forum / Grievance Officer"/>
@@ -310,7 +355,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     </details>
 
     <details className="case-section">
-      <summary>Privacy, retention & device transfer</summary>
+      <summary><span className="section-title-wrap"><Lock size={16} aria-hidden="true"/> Privacy, retention & device transfer</span></summary>
       <div className="workspace-stack">
         <p className="muted"><Lock size={12}/> Per-case envelope encryption: <b>{detail.encryption?.envelope_encrypted?'Active':'Local'}</b> · Auto-purge after <b>{detail.retention?.days_remaining??365} days</b> of inactivity (delete anytime from Case menu).</p>
         <label className="consent-check">

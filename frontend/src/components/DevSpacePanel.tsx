@@ -1,7 +1,15 @@
-import { Check, Copy, Eye, EyeOff, KeyRound } from 'lucide-react'
+import { Check, Copy, Cpu, Eye, EyeOff, FlaskConical, Gauge, Globe, KeyRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import type { DevspaceData, DevspaceField, DevspaceSaveResult, DevspaceValue } from '../types'
+
+function getGroupIcon(title: string) {
+  const t = title.toLowerCase()
+  if (t.includes('model') || t.includes('engine') || t.includes('reasoning')) return Cpu
+  if (t.includes('limit') || t.includes('cap') || t.includes('rate') || t.includes('budget') || t.includes('reserve')) return Gauge
+  if (t.includes('search') || t.includes('web') || t.includes('retriev') || t.includes('network')) return Globe
+  return FlaskConical
+}
 
 const PROMPT_LABELS: Record<keyof DevspaceData['prompts'], string> = {
   primary: 'Primary agent (primary.md)',
@@ -86,15 +94,23 @@ export default function DevSpacePanel({onSaved}:{onSaved?:(result:DevspaceSaveRe
         {data.api_key.configured&&<button type="button" className="ds-link danger" disabled={saving} onClick={()=>void save(true)}>Remove saved key</button>}
       </section>
 
-      {data.groups.map(group=><section className="ds-card" key={group.title}>
-        <h3>{group.title}</h3>
-        <div className="ds-grid">{group.fields.map(f=><div className={`ds-field ${errors[f.name]?'invalid':''}`} key={f.name}>
-          <label htmlFor={`ds-${f.name}`}>{f.name}{f.restart_required&&<em>restart needed</em>}{f.name in edits&&<i>edited</i>}</label>
-          {input(f)}
-          {(f.min!==undefined||f.max!==undefined)&&<small>{f.min??'–'} to {f.max??'–'}</small>}
-          {errors[f.name]&&<small className="ds-error">{errors[f.name]}</small>}
-        </div>)}</div>
-      </section>)}
+      {data.groups.map(group => {
+        const GroupIcon = getGroupIcon(group.title)
+        return (
+          <section className="ds-card" key={group.title}>
+            <h3>
+              <GroupIcon size={15} aria-hidden="true" style={{ color: 'var(--jade-ink)', flexShrink: 0 }} />
+              <span>{group.title}</span>
+            </h3>
+            <div className="ds-grid">{group.fields.map(f=><div className={`ds-field ${errors[f.name]?'invalid':''}`} key={f.name}>
+              <label htmlFor={`ds-${f.name}`}>{f.name}{f.restart_required&&<em>restart needed</em>}{f.name in edits&&<i>edited</i>}</label>
+              {input(f)}
+              {(f.min!==undefined||f.max!==undefined)&&<small>{f.min??'–'} to {f.max??'–'}</small>}
+              {errors[f.name]&&<small className="ds-error">{errors[f.name]}</small>}
+            </div>)}</div>
+          </section>
+        )
+      })}
 
       <footer className="ds-footer">
         {status&&<span role="status" className={status.kind==='error'?'ds-error':'ds-ok'}>{status.text}</span>}

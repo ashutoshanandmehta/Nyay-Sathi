@@ -1646,3 +1646,160 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--warning);
   color: var(--surface);
 }
+
+/* ==========================================================================
+   Step 6: Drawers, Case Workspace, Roleplay & DevSpace Refresh
+   ========================================================================== */
+.section-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--evergreen);
+}
+.section-title-wrap svg {
+  color: var(--jade-ink);
+  flex-shrink: 0;
+}
+
+/* Fact Status Chips */
+.fact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-s);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.fact-badge.fact-status-confirmed {
+  background: var(--jade-tint);
+  color: var(--jade-ink);
+  border-color: var(--jade);
+}
+.fact-badge.fact-status-reported {
+  background: var(--bg);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.fact-badge.fact-status-warning {
+  background: var(--warning-tint);
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+/* Sources Citation Badges & Origin Labels */
+.citation-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  margin-right: 8px;
+  border-radius: var(--radius-s);
+  background: var(--jade-tint);
+  color: var(--jade-ink);
+  border: 1px solid var(--jade);
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.source-type {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--jade-ink);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+/* Bundle Downloads */
+.bundle-downloads {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.bundle-downloads button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--evergreen);
+  border: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bundle-downloads button:hover {
+  background: var(--jade-tint);
+  border-color: var(--jade);
+  color: var(--jade-ink);
+}
+
+/* Roleplay Panel Refresh */
+.roleplay-opponent-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.roleplay-opponent-bubble {
+  border-left: 3px solid var(--coral);
+}
+.roleplay-user-bubble {
+  background: var(--jade-tint);
+  color: var(--evergreen);
+  border: 1px solid var(--jade);
+}
+.roleplay-stakeholder-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.roleplay-radio-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.roleplay-radio-row:hover {
+  border-color: var(--jade);
+  background: var(--jade-tint);
+}
+
+/* DevSpace Panel Refresh */
+.ds-pill.on {
+  background: var(--jade-tint);
+  color: var(--jade-ink);
+  border: 1px solid var(--jade);
+}
+.ds-pill.off {
+  background: var(--warning-tint);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+.ds-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--evergreen);
+  margin: 0 0 12px;
+}
