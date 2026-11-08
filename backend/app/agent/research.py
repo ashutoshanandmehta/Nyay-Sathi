@@ -121,7 +121,7 @@ def rank_passages(passages, query, limit, per_source=2):
     selected, hashes, source_counts = [], set(), {}
     for _, passage in scored:
         digest = hashlib.sha256(passage["text"].encode()).hexdigest()
-        key = passage["source_id"]
+        key = passage.get("source_id", passage.get("canonical_url", "default"))
         if digest in hashes or source_counts.get(key, 0) >= per_source:
             continue
         selected.append(passage)

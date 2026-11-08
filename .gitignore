@@ -17,3 +17,4 @@ output/
 *.log
 evals/raw_outputs/live-*.jsonl
 data/sources/originals/
+.DS_Store
