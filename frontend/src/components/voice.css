@@ -1,0 +1,10 @@
+/* Hold-to-talk mic and the live transcript strip */
+.mic-button{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;position:relative;transition:background .12s,color .12s,box-shadow .12s}
+.mic-button.connecting{color:var(--green);animation:mic-pulse 1s ease-in-out infinite}
+.mic-button.listening{background:#e3efe9;color:var(--green);box-shadow:0 0 0 calc(2px + var(--level,0) * 8px) #55b6a255}
+.mic-button.finishing{opacity:.6}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 #55b6a240}50%{box-shadow:0 0 0 6px #55b6a240}}
+.voice-live{margin:0 4px 8px;padding:9px 12px;border:1px solid #c5d7ce;background:#f7fbf8;border-radius:12px;font-size:14px;line-height:1.5;color:#1c2e28;max-height:120px;overflow:auto}
+.voice-live em{color:#6b7f78}
+.voice-placeholder{color:#8b9a94}
+@media (prefers-reduced-motion:reduce){.mic-button.connecting{animation:none}.mic-button.listening{box-shadow:0 0 0 3px #55b6a255}}

@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from app.agent.runner import PrimaryAgent
 from app.api.devspace import router as devspace_router
 from app.api.routes import router
+from app.api.voice import router as voice_router
 from app.config import get_settings
 from app.db import Database
 from app.knowledge.editorial import (
@@ -375,3 +376,4 @@ def agent_workflow():
 
 app.include_router(router)
 app.include_router(devspace_router)
+app.include_router(voice_router)

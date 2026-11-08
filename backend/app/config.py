@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     openai_transcription_model: str = "gpt-transcribe"
     openai_tts_model: str = "gpt-realtime-2.1-mini"
     openai_web_search_model: str = "gpt-6-astra"
+    # Live voice input over WebRTC; gpt-realtime-whisper with "minimal" delay is the fastest.
+    openai_live_transcription_model: str = "gpt-realtime-whisper"
+    live_transcription_delay: Literal["minimal", "low", "medium", "high", "xhigh"] = "minimal"
+    voice_max_seconds: int = Field(default=180, ge=10, le=600)
     assistant_engine: Literal["primary_agent", "legacy"] = "primary_agent"
     agent_planning_mode: Literal["none", "embedded", "separate_planner"] = "embedded"
     vector_index_enabled: bool = False

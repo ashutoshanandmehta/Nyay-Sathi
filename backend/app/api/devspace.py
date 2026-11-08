@@ -42,6 +42,8 @@ GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "OPENAI_TTS_MODEL",
             "OPENAI_WEB_SEARCH_MODEL",
             "OPENAI_ROLEPLAY_MODEL",
+            "OPENAI_LIVE_TRANSCRIPTION_MODEL",
+            "LIVE_TRANSCRIPTION_DELAY",
             "AGENT_REASONING_EFFORT",
             "PRACTICE_REASONING_EFFORT",
         ),
@@ -74,6 +76,7 @@ GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "AGENT_REPAIR_RESERVE",
             "AGENT_PASSAGES_PER_SOURCE",
             "AGENT_SEARCH_SHARE",
+            "VOICE_MAX_SECONDS",
         ),
     ),
     (
@@ -107,6 +110,7 @@ MODEL_OPTIONS = {
         "text-embedding-ada-002",
     ],
     "OPENAI_TRANSCRIPTION_MODEL": ["gpt-transcribe", "whisper-1"],
+    "OPENAI_LIVE_TRANSCRIPTION_MODEL": ["gpt-realtime-whisper", "gpt-live-transcribe"],
     "OPENAI_TTS_MODEL": ["gpt-realtime-2.1-mini", "tts-1", "tts-1-hd"],
     "OPENAI_WEB_SEARCH_MODEL": ["gpt-6.1-sol", "gpt-6-astra", "gpt-4o"],
     # Empty means "same as the chat model".
