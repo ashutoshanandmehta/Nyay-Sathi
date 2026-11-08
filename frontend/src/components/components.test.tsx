@@ -5,6 +5,7 @@ import { api } from '../api'
 import Composer from './Composer'
 import { AgentWorkflowPanel, CasePanel, KnowledgeBasePanel, Sources } from './Drawer'
 import MessageView from './MessageView'
+import PracticePanel from './PracticePanel'
 import Sidebar from './Sidebar'
 
 describe('chat interface',()=>{
@@ -119,3 +120,75 @@ describe('answer quality',()=>{
     expect(screen.getByText('Official text, quoted exactly · not reviewed by a lawyer')).toBeInTheDocument()
   })
 })
+
+describe('practice arena',()=>{
+  it('renders scenarios, starts a drill, and displays coach feedback',async()=>{
+    cleanup()
+    const mockScenarios=[{
+      scenario_id:'sc-1',
+      title:'Police Questioning: Vehicle Search',
+      domain:'criminal',
+      opponent_role:'Investigating Officer',
+      setting:'Thana Room',
+      objective:'Assert BNSS 38',
+      opening_statement:'Why was liquor found in your car?',
+      key_rights:['BNSS 38'],
+      suggested_first_response:'I exercise my right to an advocate.',
+    }]
+    const mockSession={
+      id:'sess-1',
+      conversation_id:'c-test',
+      scenario_id:'sc-1',
+      title:'Police Questioning: Vehicle Search',
+      domain:'criminal',
+      opponent_role:'Investigating Officer',
+      setting:'Thana Room',
+      objective:'Assert BNSS 38',
+      opening_statement:'Why was liquor found in your car?',
+      status:'active',
+      created_at:'2026-11-08',
+      updated_at:'2026-11-08',
+      turns:[],
+    }
+    const mockTurn={
+      id:'t-1',
+      session_id:'sess-1',
+      turn_index:1,
+      user_argument:'I was only a passenger and demand to consult my advocate under BNSS 38.',
+      opponent_reply:'We are recording your statement now.',
+      coach_feedback:{
+        assessment:'strong' as const,
+        strengths:['Invoked Section 38 BNSS'],
+        vulnerabilities:[],
+        statutory_safeguards:[{section:'Section 38',act:'BNSS 2023',title:'Right to advocate',relevance:'Consult advocate'}],
+        suggested_phrasing:'I request my advocate be present.',
+      },
+      created_at:'2026-11-08',
+    }
+
+    vi.spyOn(api,'practiceScenarios').mockResolvedValue(mockScenarios)
+    vi.spyOn(api,'listPracticeSessions').mockResolvedValue([])
+    vi.spyOn(api,'startPracticeSession').mockResolvedValue(mockSession)
+    vi.spyOn(api,'practiceTurn').mockResolvedValue(mockTurn)
+
+    render(<PracticePanel caseId="c-test"/>)
+
+    // Verify scenario list
+    await waitFor(()=>expect(screen.getByText('Police Questioning: Vehicle Search')).toBeInTheDocument())
+    expect(screen.getByText('Opponent: Investigating Officer')).toBeInTheDocument()
+
+    // Start drill
+    fireEvent.click(screen.getByRole('button',{name:/Start This Practice Drill/}))
+    await waitFor(()=>expect(screen.getByText('Why was liquor found in your car?')).toBeInTheDocument())
+
+    // Submit turn
+    const input=screen.getByLabelText('Your counter-argument')
+    fireEvent.change(input,{target:{value:'I was only a passenger and demand to consult my advocate under BNSS 38.'}})
+    fireEvent.click(screen.getByRole('button',{name:/Argue/}))
+
+    await waitFor(()=>expect(screen.getByText('Invoked Section 38 BNSS')).toBeInTheDocument())
+    expect(screen.getByText('We are recording your statement now.')).toBeInTheDocument()
+    expect(screen.getByText('🟢 Solid Position')).toBeInTheDocument()
+  })
+})
+

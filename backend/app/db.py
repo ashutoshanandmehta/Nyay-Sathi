@@ -168,6 +168,31 @@ CREATE TABLE IF NOT EXISTS turn_artifacts (
   draft_id TEXT NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
   PRIMARY KEY(conversation_id, request_id, artifact_id)
 );
+CREATE TABLE IF NOT EXISTS practice_sessions (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  scenario_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  opponent_role TEXT NOT NULL,
+  setting TEXT NOT NULL,
+  objective TEXT NOT NULL,
+  opening_statement TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_practice_sessions_conv ON practice_sessions(conversation_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS practice_turns (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES practice_sessions(id) ON DELETE CASCADE,
+  turn_index INTEGER NOT NULL,
+  user_argument TEXT NOT NULL,
+  opponent_reply TEXT NOT NULL,
+  coach_feedback_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_practice_turns_session ON practice_turns(session_id, turn_index ASC);
 """
 
 
@@ -1057,3 +1082,151 @@ class Database:
             "encrypted_case_transfer_imported", owner_id=owner_id, conversation_id=cid
         )
         return self.get_conversation(owner_id, cid)
+
+    def create_practice_session(
+        self,
+        owner_id: str,
+        cid: str,
+        scenario_id: str,
+        title: str,
+        domain: str,
+        opponent_role: str,
+        setting: str,
+        objective: str,
+        opening_statement: str,
+    ) -> dict[str, Any]:
+        self.get_conversation(owner_id, cid)
+        sid, ts = str(uuid.uuid4()), now()
+        with self.connect() as c:
+            c.execute(
+                "INSERT INTO practice_sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)",
+                (
+                    sid,
+                    cid,
+                    scenario_id,
+                    title,
+                    domain,
+                    opponent_role,
+                    setting,
+                    objective,
+                    opening_statement,
+                    ts,
+                    ts,
+                ),
+            )
+        return {
+            "id": sid,
+            "conversation_id": cid,
+            "scenario_id": scenario_id,
+            "title": title,
+            "domain": domain,
+            "opponent_role": opponent_role,
+            "setting": setting,
+            "objective": objective,
+            "opening_statement": opening_statement,
+            "status": "active",
+            "created_at": ts,
+            "updated_at": ts,
+            "turns": [],
+        }
+
+    def get_practice_session(
+        self, owner_id: str, cid: str, session_id: str
+    ) -> dict[str, Any]:
+        self.get_conversation(owner_id, cid)
+        with self.connect() as c:
+            row = c.execute(
+                "SELECT * FROM practice_sessions WHERE id=? AND conversation_id=?",
+                (session_id, cid),
+            ).fetchone()
+            if not row:
+                raise KeyError("practice_session_not_found")
+            res = dict(row)
+            turns_rows = c.execute(
+                "SELECT * FROM practice_turns WHERE session_id=? ORDER BY turn_index ASC",
+                (session_id,),
+            ).fetchall()
+            turns = []
+            for tr in turns_rows:
+                td = dict(tr)
+                td["user_argument"] = self.decrypt_case_field(cid, td["user_argument"], _connection=c)
+                td["opponent_reply"] = self.decrypt_case_field(cid, td["opponent_reply"], _connection=c)
+                td["coach_feedback"] = json.loads(td.get("coach_feedback_json") or "{}")
+                turns.append(td)
+            res["turns"] = turns
+            return res
+
+    def list_practice_sessions(
+        self, owner_id: str, cid: str
+    ) -> list[dict[str, Any]]:
+        self.get_conversation(owner_id, cid)
+        with self.connect() as c:
+            rows = c.execute(
+                "SELECT * FROM practice_sessions WHERE conversation_id=? ORDER BY created_at DESC",
+                (cid,),
+            ).fetchall()
+            out = []
+            for r in rows:
+                sd = dict(r)
+                count = c.execute(
+                    "SELECT COUNT(*) as cnt FROM practice_turns WHERE session_id=?",
+                    (sd["id"],),
+                ).fetchone()["cnt"]
+                sd["turn_count"] = count
+                out.append(sd)
+            return out
+
+    def add_practice_turn(
+        self,
+        owner_id: str,
+        cid: str,
+        session_id: str,
+        user_argument: str,
+        opponent_reply: str,
+        coach_feedback: dict[str, Any],
+    ) -> dict[str, Any]:
+        self.get_conversation(owner_id, cid)
+        tid, ts = str(uuid.uuid4()), now()
+        with self.connect() as c:
+            session = c.execute(
+                "SELECT id FROM practice_sessions WHERE id=? AND conversation_id=?",
+                (session_id, cid),
+            ).fetchone()
+            if not session:
+                raise KeyError("practice_session_not_found")
+            idx = c.execute(
+                "SELECT COALESCE(MAX(turn_index), 0) + 1 as next_idx FROM practice_turns WHERE session_id=?",
+                (session_id,),
+            ).fetchone()["next_idx"]
+            enc_user = self.encrypt_case_field(cid, user_argument, _connection=c)
+            enc_opponent = self.encrypt_case_field(cid, opponent_reply, _connection=c)
+            c.execute(
+                "INSERT INTO practice_turns VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (tid, session_id, idx, enc_user, enc_opponent, json.dumps(coach_feedback), ts),
+            )
+            c.execute(
+                "UPDATE practice_sessions SET updated_at=? WHERE id=?",
+                (ts, session_id),
+            )
+        return {
+            "id": tid,
+            "session_id": session_id,
+            "turn_index": idx,
+            "user_argument": user_argument,
+            "opponent_reply": opponent_reply,
+            "coach_feedback": coach_feedback,
+            "created_at": ts,
+        }
+
+    def update_practice_session_status(
+        self, owner_id: str, cid: str, session_id: str, status: str
+    ) -> dict[str, Any]:
+        self.get_conversation(owner_id, cid)
+        ts = now()
+        with self.connect() as c:
+            c.execute(
+                "UPDATE practice_sessions SET status=?, updated_at=? WHERE id=? AND conversation_id=?",
+                (status, ts, session_id, cid),
+            )
+        return self.get_practice_session(owner_id, cid, session_id)
+

@@ -57,3 +57,117 @@
 @keyframes source-flash{0%,35%{background:#eef5f1;box-shadow:0 0 0 8px #eef5f1}100%{background:transparent;box-shadow:0 0 0 8px transparent}}
 @media (max-width:700px){.cite-chip{min-width:24px;height:22px;font-size:11px}}
 @media(prefers-reduced-motion:reduce){.source-list section.source-focused{background:#eef5f1}}
+
+
+/* Practice Arena Styles */
+.practice-arena, .practice-arena-active { display: flex; flex-direction: column; height: 100%; gap: 14px; font-size: 13.5px; }
+.practice-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; gap: 12px; color: var(--muted); }
+.spin-icon { animation: spin 2s linear infinite; color: var(--green); }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+.practice-header-hero { background: #f4f8f5; border: 1px solid #c7ded2; border-radius: 12px; padding: 14px; display: grid; gap: 6px; }
+.practice-hero-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--green); letter-spacing: 0.05em; }
+.practice-header-hero h3 { margin: 0; font-size: 15px; color: #1a332a; font-weight: 700; }
+.practice-header-hero p { margin: 0; font-size: 12.5px; line-height: 1.5; color: #44504b; }
+
+.practice-scenarios-section h4, .past-sessions-section h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 8px 0; }
+.scenario-cards-list { display: grid; gap: 10px; }
+.scenario-card { border: 1px solid var(--line); border-radius: 11px; background: #fff; padding: 12px 14px; cursor: pointer; transition: all 0.15s ease; display: grid; gap: 6px; }
+.scenario-card:hover { border-color: #9cbdaf; box-shadow: 0 2px 6px #0000000a; }
+.scenario-card.selected { border-color: var(--green); background: #f9fbf9; box-shadow: 0 0 0 1px var(--green); }
+.scenario-card-top { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; }
+.scenario-domain-pill { font-weight: 700; background: #eaf0ed; color: var(--green); padding: 2px 7px; border-radius: 4px; }
+.scenario-role-badge { font-weight: 600; color: #4d5752; }
+.scenario-card h5 { margin: 2px 0 0; font-size: 14px; font-weight: 700; color: #1a2722; }
+.scenario-desc, .scenario-objective { margin: 0; font-size: 12px; line-height: 1.45; }
+.scenario-objective strong, .scenario-desc strong { color: var(--green); }
+.scenario-opening-preview { background: #f7f7f4; border-radius: 7px; padding: 8px 10px; margin-top: 2px; }
+.scenario-opening-preview blockquote { margin: 4px 0 0; padding-left: 8px; border-left: 2px solid #bec4be; font-style: italic; font-size: 12px; color: #3a423d; }
+.start-drill-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--green); color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 600; margin-top: 6px; }
+.start-drill-btn:hover { background: var(--green-2); }
+.custom-input-wrap { display: grid; gap: 8px; margin-top: 6px; }
+.custom-input-wrap textarea { width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 8px; font-size: 12.5px; font-family: inherit; resize: vertical; }
+
+.past-sessions-list { display: grid; gap: 6px; }
+.past-session-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; background: #fff; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; }
+.past-session-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.past-session-item button { border: 1px solid var(--line); background: #fbfaf7; border-radius: 6px; padding: 5px 10px; font-size: 11.5px; }
+
+/* Active Practice Arena */
+.practice-arena-active { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.practice-active-header { border-bottom: 1px solid var(--line); padding-bottom: 10px; display: grid; gap: 6px; flex-shrink: 0; }
+.practice-header-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.practice-back-btn { border: 0; background: transparent; font-size: 11.5px; color: var(--muted); padding: 0; font-weight: 600; }
+.practice-back-btn:hover { color: var(--green); }
+.hypothetical-watermark-pill { font-size: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; background: #fff0ea; color: #a3381a; border: 1px solid #f2cfc4; padding: 2px 7px; border-radius: 4px; }
+.practice-active-header h4 { margin: 0; font-size: 15px; font-weight: 700; color: #16241f; }
+.active-details-row { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11.5px; color: #434e48; align-items: center; }
+.practice-round-pill { margin-left: auto; background: #eef3f0; color: var(--green); padding: 2px 8px; border-radius: 99px; font-weight: 700; font-size: 10.5px; }
+.active-goal-box { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.4; background: #f6fbf8; border: 1px solid #c9ded3; border-radius: 7px; padding: 6px 9px; color: #213d31; }
+
+.practice-error-banner { background: #fdeeee; border: 1px solid #f5c4c4; color: #882222; border-radius: 7px; padding: 8px 12px; font-size: 12px; }
+.practice-success-banner { background: #eaf6ee; border: 1px solid #bce1c7; color: #1e5932; border-radius: 7px; padding: 8px 12px; font-size: 12px; font-weight: 600; }
+
+.practice-thread-scroll { flex: 1; overflow-y: auto; padding: 12px 2px; display: grid; gap: 14px; overscroll-behavior: contain; }
+.practice-turn-block { display: grid; gap: 10px; }
+
+.practice-bubble { border-radius: 11px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; display: grid; gap: 6px; }
+.opponent-bubble { background: #fbf7f4; border: 1px solid #e7ded5; }
+.opening-turn { border-left: 3px solid #b37350; }
+.user-bubble { background: #eef4f1; border: 1px solid #c4ded0; margin-left: 14px; }
+.bubble-header { display: flex; justify-content: space-between; align-items: center; }
+.opponent-title-chip, .user-title-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.opponent-title-chip { color: #824724; }
+.user-title-chip { color: var(--green); }
+.turn-label { font-size: 10.5px; color: var(--muted); }
+.bubble-content { margin: 0; white-space: pre-wrap; }
+
+/* Coach Feedback Card */
+.practice-coach-card { border-radius: 10px; border: 1px solid var(--line); background: #fff; overflow: hidden; margin-left: 14px; box-shadow: 0 1px 3px #00000008; }
+.practice-coach-card.assessment-strong { border-color: #b0d9c0; }
+.practice-coach-card.assessment-caution { border-color: #ecd5a3; }
+.practice-coach-card.assessment-risky_admission { border-color: #f1b7b7; background: #fffaf9; }
+.coach-card-header { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; cursor: pointer; background: #fafaf8; border-bottom: 1px solid #f0f0ea; }
+.coach-header-left { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.coach-header-left svg { color: var(--green); }
+.assessment-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; }
+.badge-strong { background: #e4f4ea; color: #1a5b2f; }
+.badge-caution { background: #fcf1d8; color: #7f5511; }
+.badge-risky_admission { background: #fce8e8; color: #8e1c1c; }
+.coach-toggle-btn { border: 0; background: transparent; padding: 2px; color: var(--muted); }
+
+.coach-card-body { padding: 12px 14px; display: grid; gap: 10px; font-size: 12.5px; line-height: 1.5; }
+.crisis-alert-box { display: flex; gap: 8px; background: #fee8e8; border: 1px solid #f7baba; color: #8b1818; padding: 9px 11px; border-radius: 7px; font-size: 12px; }
+.fabrication-warning-box { display: flex; gap: 7px; align-items: flex-start; background: #fff4db; border: 1px solid #eed699; color: #6f470a; padding: 8px 10px; border-radius: 7px; font-size: 11.5px; font-weight: 600; }
+.coach-points-section h6, .coach-safeguards-section h6 { margin: 0 0 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.coach-points-section ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.vulnerabilities-section ul { color: #842323; }
+.safeguard-item { background: #f3f7f5; border: 1px solid #d2e4db; border-radius: 6px; padding: 6px 9px; margin-top: 4px; }
+.safeguard-item b { display: block; color: var(--green); font-size: 11.5px; }
+.safeguard-item p { margin: 2px 0 0; font-size: 11.5px; color: #3b4742; }
+
+.coach-suggested-box { background: #f6f8fb; border: 1px dashed #b7cde2; border-radius: 7px; padding: 9px 11px; }
+.suggested-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.suggested-header h6 { margin: 0; font-size: 11.5px; color: #214364; text-transform: uppercase; letter-spacing: 0.04em; }
+.suggested-header button { border: 1px solid #bccfe1; background: #fff; color: #1e456c; border-radius: 5px; font-size: 10.5px; font-weight: 600; padding: 3px 7px; display: inline-flex; align-items: center; gap: 4px; }
+.coach-suggested-box p { margin: 0; font-style: italic; color: #1e3144; font-size: 12.5px; }
+
+/* Scorecard */
+.practice-scorecard-card { background: #f3f9f5; border: 1px solid #badcc9; border-radius: 10px; padding: 12px 14px; display: grid; gap: 10px; }
+.scorecard-head { display: flex; gap: 10px; align-items: center; color: var(--green); }
+.scorecard-head h5 { margin: 0; font-size: 14px; font-weight: 700; color: #183328; }
+.scorecard-head p { margin: 2px 0 0; font-size: 11.5px; }
+.save-actions-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--green); color: #fff; border: 0; border-radius: 7px; padding: 8px 12px; font-size: 12px; font-weight: 600; width: 100%; justify-content: center; }
+
+/* Composer */
+.practice-composer-wrapper { flex-shrink: 0; padding-top: 8px; border-top: 1px solid var(--line); }
+.practice-composer-form { display: grid; gap: 7px; }
+.practice-composer-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: 13px/1.45 inherit; resize: none; background: #fff; }
+.practice-composer-form textarea:focus { outline: 2px solid #b3d1c3; border-color: var(--green); }
+.practice-composer-actions { display: flex; align-items: center; gap: 8px; }
+.mic-btn { border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 7px 10px; display: inline-flex; align-items: center; color: #444; }
+.mic-btn.recording { background: #feebeb; border-color: #f7a8a8; color: #c42626; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.help-hint-btn { border: 0; background: transparent; color: var(--green); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; padding: 0; }
+.send-arg-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; background: var(--green); color: #fff; border: 0; border-radius: 7px; padding: 7px 14px; font-size: 12.5px; font-weight: 600; }
+.send-arg-btn:disabled { opacity: 0.5; cursor: not-allowed; }

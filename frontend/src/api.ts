@@ -1,4 +1,4 @@
-import type { AgentWorkflow, Conversation, Detail, EscalationBundle, KnowledgeBase, Language, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
+import type { AgentWorkflow, Conversation, Detail, EscalationBundle, KnowledgeBase, Language, PracticeScenario, PracticeSession, PracticeTurn, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
 
 const csrf = () => document.cookie.split('; ').find(x => x.startsWith('nyay_csrf='))?.split('=').slice(1).join('=') ?? ''
 
@@ -49,6 +49,12 @@ export const api = {
   exportTransfer:(cid:string,passphrase:string)=>call<Record<string,unknown>>(`/api/conversations/${cid}/transfer/export`,{method:'POST',body:JSON.stringify({passphrase})}),
   importTransfer:(bundle:Record<string,unknown>,passphrase:string)=>call<{imported:boolean;conversation:Conversation}>('/api/conversations/transfer/import',{method:'POST',body:JSON.stringify({bundle,passphrase})}),
   rotateCredential:()=>call<{rotated:boolean;csrf_token:string}>('/api/privacy/rotate-credential',{method:'POST',body:'{}'}),
+  practiceScenarios:(cid:string)=>call<PracticeScenario[]>(`/api/conversations/${cid}/practice/scenarios`),
+  startPracticeSession:(cid:string,payload:{scenario_id:string;custom_scenario?:string;language?:Language})=>call<PracticeSession>(`/api/conversations/${cid}/practice/sessions`,{method:'POST',body:JSON.stringify(payload)}),
+  listPracticeSessions:(cid:string)=>call<PracticeSession[]>(`/api/conversations/${cid}/practice/sessions`),
+  getPracticeSession:(cid:string,sid:string)=>call<PracticeSession>(`/api/conversations/${cid}/practice/sessions/${sid}`),
+  practiceTurn:(cid:string,sid:string,user_argument:string,language:Language)=>call<PracticeTurn>(`/api/conversations/${cid}/practice/sessions/${sid}/turns`,{method:'POST',body:JSON.stringify({user_argument,language})}),
+  exportPracticeActions:(cid:string,sid:string,action_titles:string[])=>call<{exported_count:number;status:string}>(`/api/conversations/${cid}/practice/sessions/${sid}/export-actions`,{method:'POST',body:JSON.stringify({action_titles})}),
 }
 
 interface AttachmentUpload { id:string; filename:string; extraction_status:string }

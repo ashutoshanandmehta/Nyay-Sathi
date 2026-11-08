@@ -16,6 +16,13 @@ from pydantic import BaseModel, Field
 from app.config import Settings, get_settings
 from app.db import Database, MemoryConflict, now
 from app.escalation.bundle import build_escalation_bundle
+from app.practice.contracts import (
+    PracticeExportRequest,
+    PracticeScenario,
+    PracticeSessionCreate,
+    PracticeTurnRequest,
+)
+from app.practice.engine import PracticeEngine
 from app.resolution.documents import CorrespondenceExporter
 from app.routing.contracts import CaseUpdateProposal, RequestInterpretation
 from app.routing.policy import CapabilityRegistry
@@ -397,6 +404,183 @@ def import_transfer_package(
             "encrypted_case_transfer_import_failed", owner_id=owner.owner_id
         )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/conversations/{conversation_id}/practice/scenarios")
+def get_practice_scenarios(
+    conversation_id: str,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        conv = database.get_conversation(owner.owner_id, conversation_id)
+        memory, _ = database.load_memory(owner.owner_id, conversation_id)
+        msgs = database.messages(owner.owner_id, conversation_id)
+        recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
+        engine = PracticeEngine(get_settings())
+        scenarios = engine.generate_scenarios(memory, conv.get("title", ""), recent_user)
+        return [s.model_dump() for s in scenarios]
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/practice/sessions", dependencies=[Depends(csrf_guard)]
+)
+def create_practice_session(
+    conversation_id: str,
+    body: PracticeSessionCreate,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        conv = database.get_conversation(owner.owner_id, conversation_id)
+        memory, _ = database.load_memory(owner.owner_id, conversation_id)
+        msgs = database.messages(owner.owner_id, conversation_id)
+        recent_user = [m["content"] for m in msgs if m.get("role") == "user"][-3:]
+        engine = PracticeEngine(get_settings())
+        scenarios = engine.generate_scenarios(memory, conv.get("title", ""), recent_user)
+
+        target_sc: PracticeScenario | None = None
+        if body.custom_scenario and body.custom_scenario.strip():
+            desc = body.custom_scenario.strip()
+            target_sc = PracticeScenario(
+                scenario_id="custom",
+                title=body.title or f"Custom Drill: {desc[:40]}",
+                domain=memory.domain or "general",
+                opponent_role=body.opponent_role or "Opposing Party / Authority",
+                setting=body.setting or "Dispute Meeting",
+                objective=body.objective or "Present truthful arguments and assert statutory rights",
+                opening_statement=body.opening_statement
+                or f"We dispute your position regarding: {desc}. What is your justification?",
+            )
+        else:
+            target_sc = next(
+                (s for s in scenarios if s.scenario_id == body.scenario_id),
+                scenarios[0] if scenarios else None,
+            )
+
+        if not target_sc:
+            raise HTTPException(status_code=400, detail="No valid scenario found")
+
+        session = database.create_practice_session(
+            owner.owner_id,
+            conversation_id,
+            target_sc.scenario_id,
+            target_sc.title,
+            target_sc.domain,
+            target_sc.opponent_role,
+            target_sc.setting,
+            target_sc.objective,
+            target_sc.opening_statement,
+        )
+        return session
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.get("/conversations/{conversation_id}/practice/sessions")
+def list_practice_sessions(
+    conversation_id: str,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        return database.list_practice_sessions(owner.owner_id, conversation_id)
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.get("/conversations/{conversation_id}/practice/sessions/{session_id}")
+def get_practice_session(
+    conversation_id: str,
+    session_id: str,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        return database.get_practice_session(owner.owner_id, conversation_id, session_id)
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/practice/sessions/{session_id}/turns",
+    dependencies=[Depends(csrf_guard)],
+)
+def add_practice_turn(
+    conversation_id: str,
+    session_id: str,
+    body: PracticeTurnRequest,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        session = database.get_practice_session(owner.owner_id, conversation_id, session_id)
+        scenario = PracticeScenario(
+            scenario_id=session["scenario_id"],
+            title=session["title"],
+            domain=session["domain"],
+            opponent_role=session["opponent_role"],
+            setting=session["setting"],
+            objective=session["objective"],
+            opening_statement=session["opening_statement"],
+        )
+        engine = PracticeEngine(get_settings())
+        opponent_reply, coach_feedback = engine.evaluate_and_respond(
+            scenario, session.get("turns", []), body.user_argument, body.language
+        )
+        turn = database.add_practice_turn(
+            owner.owner_id,
+            conversation_id,
+            session_id,
+            body.user_argument,
+            opponent_reply,
+            coach_feedback.model_dump(),
+        )
+        return turn
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
+
+@router.post(
+    "/conversations/{conversation_id}/practice/sessions/{session_id}/export-actions",
+    dependencies=[Depends(csrf_guard)],
+)
+def export_practice_actions(
+    conversation_id: str,
+    session_id: str,
+    body: PracticeExportRequest,
+    request: Request,
+    owner: Annotated[OwnerContext, Depends(owner_context)],
+):
+    try:
+        database = db(request)
+        session = database.get_practice_session(owner.owner_id, conversation_id, session_id)
+        count = 0
+        for title in body.action_titles:
+            clean = title.strip()
+            if clean:
+                database.add_user_action(
+                    owner.owner_id,
+                    conversation_id,
+                    title=clean,
+                    status="pending",
+                    notes=f"Key argument to prepare from Practice Drill: {session['title']}",
+                )
+                count += 1
+        database.update_practice_session_status(
+            owner.owner_id, conversation_id, session_id, "completed"
+        )
+        return {"exported_count": count, "status": "completed"}
+    except KeyError as exc:
+        raise http_not_found(exc) from exc
+
 
 
 def _title_from(text: str) -> str:

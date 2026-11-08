@@ -33,3 +33,10 @@ export interface KnowledgeBase { corpus_version:string; collection_name:string; 
 export interface WorkflowNode { id:string; label:string; detail:string }
 export interface WorkflowEdge { from:string; to:string; condition:string }
 export interface AgentWorkflow { name:string; version:string; nodes:WorkflowNode[]; edges:WorkflowEdge[]; decisions:{if:string;then:string}[]; limits:{model_calls_per_turn:number;retrieval_expansions:number;revision_attempts:number} }
+
+export interface StatutorySafeguard { section:string; act:string; title:string; relevance:string }
+export interface CoachFeedback { assessment:'strong'|'caution'|'risky_admission'; strengths:string[]; vulnerabilities:string[]; statutory_safeguards:StatutorySafeguard[]; suggested_phrasing:string; anti_fabrication_warning?:string|null; is_crisis?:boolean; crisis_text?:string|null }
+export interface PracticeScenario { scenario_id:string; title:string; domain:string; opponent_role:string; setting:string; objective:string; opening_statement:string; key_rights:string[]; suggested_first_response?:string|null }
+export interface PracticeTurn { id:string; session_id:string; turn_index:number; user_argument:string; opponent_reply:string; coach_feedback:CoachFeedback; created_at:string }
+export interface PracticeSession { id:string; conversation_id:string; scenario_id:string; title:string; domain:string; opponent_role:string; setting:string; objective:string; opening_statement:string; status:string; created_at:string; updated_at:string; turns:PracticeTurn[]; turn_count?:number }
+
