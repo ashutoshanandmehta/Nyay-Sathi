@@ -39,8 +39,22 @@ function EvidencePreview({attachment,caseId,onRefresh}:{attachment:Detail['attac
   </details>
 }
 
-function BundleList({title,items}:{title:string;items:React.ReactNode[]}){
-  return items.length?<section><b>{title}</b><ul>{items.map((item,i)=><li key={i}>{item}</li>)}</ul></section>:null
+function BundleList({title,items,ordered=false}:{title:string;items:React.ReactNode[];ordered?:boolean}){
+  if (!items.length) return null
+  return (
+    <section>
+      <b>{title}</b>
+      {ordered ? (
+        <ol className="workspace-numbered-list">
+          {items.map((item,i)=><li key={i}>{item}</li>)}
+        </ol>
+      ) : (
+        <ul className="workspace-bullet-list">
+          {items.map((item,i)=><li key={i}>{item}</li>)}
+        </ul>
+      )}
+    </section>
+  )
 }
 
 function BundleCard({bundle,caseId}:{bundle:EscalationBundle;caseId:string}){
@@ -54,9 +68,9 @@ function BundleCard({bundle,caseId}:{bundle:EscalationBundle;caseId:string}){
     <b>{bundle.escalation_recommended?'A lawyer should look at this':'Ready for a lawyer consultation'}</b>
     <BundleList title="Reasons for review" items={bundle.escalation_reasons}/>
     {bundle.executive_summary&&<section><b>Summary</b><p>{bundle.executive_summary}</p></section>}
-    <BundleList title="Chronology" items={bundle.chronology.map(e=><><span>{e.date}:</span> {e.summary}</>)}/>
+    <BundleList title="Chronology" items={bundle.chronology.map(e=><><b>{e.date}:</b> {e.summary}</>)} ordered={true}/>
     <BundleList title="Facts stated by the client" items={bundle.stated_facts}/>
-    <BundleList title="Questions for counsel" items={bundle.questions_for_counsel}/>
+    <BundleList title="Questions for counsel" items={bundle.questions_for_counsel} ordered={true}/>
     <BundleList title="Facts to be established" items={bundle.facts_to_establish}/>
     <BundleList title="Not yet verified by Nyay Saathi" items={bundle.not_confirmed}/>
     <BundleList title="Sources relied on" items={bundle.source_backed_analysis.verified_sources.map(s=>s.canonical_url?<a href={s.canonical_url} target="_blank" rel="noreferrer">{s.title}{s.locator?` · ${s.locator}`:''}</a>:<>{s.title}{s.locator?` · ${s.locator}`:''}</>)}/>
@@ -138,7 +152,11 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     {!!(conflicts.length||m.unknowns.length)&&<section className="case-attention-section">
       <h3>Needs your attention</h3>
       {conflicts.map((x,i)=><p className="workspace-warning" key={i}>{x.description||readable(x)}</p>)}
-      {m.unknowns.map((x,i)=><p key={i}>{x}</p>)}
+      {!!m.unknowns.length && (
+        <ul className="workspace-bullet-list">
+          {m.unknowns.map((x,i)=><li key={i}>{x}</li>)}
+        </ul>
+      )}
     </section>}
 
     {isUrgentOrCriminal && (
@@ -175,7 +193,17 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
 
     {!!m.events?.length&&<details className="case-section" open>
       <summary>Timeline <small>{m.events.length}</small></summary>
-      {m.events.map((item,i)=><div className="timeline-event" key={i}><small>{String(item.date||'Date to check')}</small><p>{String(item.description||'')}</p></div>)}
+      <div className="workspace-numbered-timeline">
+        {m.events.map((item,i)=>(
+          <div className="timeline-event" key={i}>
+            <span className="timeline-step-badge">{i+1}</span>
+            <div className="timeline-event-body">
+              <small className="timeline-date">{String(item.date||'Date to check')}</small>
+              <p className="timeline-desc">{String(item.description||'')}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </details>}
 
     <details className="case-section" open>
@@ -187,12 +215,32 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     {!!facts.length&&<details className="case-section">
       <summary>Important facts <small>{facts.length}</small></summary>
       {!!verifiedFacts.length&&<p className="muted"><b>Confirmed / documentary ({verifiedFacts.length})</b> · Reported / pending check ({reportedFacts.length})</p>}
-      {facts.map(([key,fact])=><div className="case-fact" key={key}><span>{humanLabel(key)}</span><p>{fact.value}</p><small className="fact-badge">{factStatus(fact.status)}</small>{!!fact.provenance?.length&&<details><summary>Source details</summary>{fact.provenance.map((p,i)=><p className="muted" key={i}>{p.source_type==='document'?(detail.attachments.find(a=>a.id===p.source_id)?.filename||'Document'):'Your message'}{p.page?` · page ${p.page}`:''}{p.span?` · ${p.span}`:''}</p>)}</details>}</div>)}
+      <div className="workspace-numbered-facts">
+        {facts.map(([key,fact], idx)=>(
+          <div className="case-fact" key={key}>
+            <span className="fact-index-badge">{idx+1}</span>
+            <div className="fact-details-wrap">
+              <div className="fact-head-row">
+                <span className="fact-title-text">{humanLabel(key)}</span>
+                <small className="fact-badge">{factStatus(fact.status)}</small>
+              </div>
+              <p className="fact-value-text">{fact.value}</p>
+              {!!fact.provenance?.length&&<details><summary>Source details</summary>{fact.provenance.map((p,i)=><p className="muted" key={i}>{p.source_type==='document'?(detail.attachments.find(a=>a.id===p.source_id)?.filename||'Document'):'Your message'}{p.page?` · page ${p.page}`:''}{p.span?` · ${p.span}`:''}</p>)}</details>}
+            </div>
+          </div>
+        ))}
+      </div>
     </details>}
 
     {!!(m.parties?.length||m.locations?.length)&&<details className="case-section">
-      <summary>People and places</summary>
-      {[...(m.parties||[]),...(m.locations||[])].map((item,i)=><p key={i}>{String(item.name||item.value||'')} <small>{humanLabel(String(item.role||''))}</small></p>)}
+      <summary>People and places <small>{(m.parties?.length||0)+(m.locations?.length||0)}</small></summary>
+      <ul className="workspace-bullet-list">
+        {[...(m.parties||[]),...(m.locations||[])].map((item,i)=>(
+          <li key={i}>
+            <b>{String(item.name||item.value||'')}</b> <small className="fact-badge">{humanLabel(String(item.role||''))}</small>
+          </li>
+        ))}
+      </ul>
     </details>}
 
     {/* TIER 3: DOMAIN-AWARE ACTION & PREPARATION */}
@@ -209,8 +257,16 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
         <button type="button" disabled={actionBusy||actionTitle.trim().length<2} onClick={logAction}>Add</button>
       </div>
       {detail.user_actions?.map(act=><div className="action-item" key={act.id}><label><input type="checkbox" checked={act.status==='completed'} onChange={()=>toggleAction(act.id,act.status)}/><span>{act.title}</span></label><small>{humanLabel(act.status)}</small></div>)}
-      {m.actions_completed.map((x,i)=><p className="workspace-line" key={i}>{x}</p>)}
-      {m.responses_received?.map((x,i)=><p className="workspace-line" key={`r${i}`}>{String(x.description||x.content||'Response recorded')}</p>)}
+      {!!m.actions_completed.length && (
+        <ul className="workspace-bullet-list">
+          {m.actions_completed.map((x,i)=><li key={i}><span className="completed-check">✓</span> {x}</li>)}
+        </ul>
+      )}
+      {!!m.responses_received?.length && (
+        <ul className="workspace-bullet-list">
+          {m.responses_received.map((x,i)=><li key={`r${i}`}>{String(x.description||x.content||'Response recorded')}</li>)}
+        </ul>
+      )}
     </details>
 
     {!!detail.drafts.length&&<details className="case-section">
@@ -284,7 +340,16 @@ export function KnowledgeBasePanel({data}:{data:KnowledgeBase}){const [tab,setTa
   <div className="knowledge-tabs" role="tablist">{(['overview','playbooks','procedures','sources','lawyer'] as KnowledgeTab[]).map(item=><button role="tab" aria-selected={tab===item} className={tab===item?'active':''} onClick={()=>setTab(item)} key={item}>{item}</button>)}</div>
   {tab==='overview'&&<>
     <div className="review-state"><b>{data.review_status.replaceAll('_',' ')}</b><span>Version {data.knowledge_version} · checked {data.last_checked}</span></div>
-    <p className="knowledge-scope">{data.scope}</p>
+    <div className="knowledge-scope-wrapper">
+      <b>Covered dispute categories ({Array.isArray(data.scope) ? data.scope.length : 1}):</b>
+      <div className="knowledge-scope-chips">
+        {(Array.isArray(data.scope) ? data.scope : [String(data.scope)]).map((item, idx) => (
+          <span className="scope-chip" key={idx}>
+            <span className="chip-num">{idx + 1}.</span> {item.replaceAll('_', ' ')}
+          </span>
+        ))}
+      </div>
+    </div>
     <h3>Knowledge layers</h3><div className="layer-grid">{data.layers.map(layer=><div key={layer.id}><b>{layer.count??'—'}</b><span>{layer.label}</span><small>{layer.storage}</small></div>)}</div>
     <h3>Retrieval pipeline</h3><div className="pipeline-chips">{data.retrieval_pipeline.map(item=><span key={item}>{item}</span>)}</div>
     <h3>Storage boundary</h3><div className="storage-map">{data.storage_map.map(item=><div key={item.store}><b>{item.store}</b><span>{item.content}</span></div>)}</div>
@@ -310,7 +375,7 @@ export function KnowledgeBasePanel({data}:{data:KnowledgeBase}){const [tab,setTa
   </section>)}</div><h3>Curated judgments</h3>{data.selected_judgments.map(item=><section className="judgment-card" key={item.judgment_id}><b>{item.case_name}</b><span>{item.court} · {item.decision_date} · {item.citation}</span><p>{item.holding_summary}</p><blockquote>“{item.exact_excerpt}” — {item.supporting_locator}</blockquote><p><b>Important distinctions:</b> {item.important_distinctions.join(' · ')}</p><p className="limitation">{item.use_rule} {item.treatment_status}.</p><a href={item.official_url} target="_blank" rel="noreferrer">Open official judgment <ExternalLink size={14}/></a></section>)}</>}
   {tab==='lawyer'&&<>
     <h3>Lawyer briefing pack</h3><ol className="pack-list">{data.lawyer_preparation.pack_sections.map(item=><li key={item}>{item.replaceAll('_',' ')}</li>)}</ol>
-    <h3>Consultation questions</h3>{data.lawyer_preparation.consultation_questions.map(item=><p className="workspace-line" key={item}>{item}</p>)}
+    <h3>Consultation questions</h3><ol className="pack-list">{data.lawyer_preparation.consultation_questions.map((item, idx)=><li key={idx}>{item}</li>)}</ol>
     <h3>Drafting structures</h3>{data.templates.map(item=><details className="knowledge-card" key={item.template_id}><summary>{item.title}</summary><p><b>Sections:</b> {item.sections.join(' · ').replaceAll('_',' ')}</p><p><b>Confirm first:</b> {item.required_confirmations.join(' · ').replaceAll('_',' ')}</p><p className="limitation"><b>Never invent:</b> {item.must_not_invent.join(' · ')}</p></details>)}
     <h3>Verified referral guidance</h3>{data.referrals.map(item=><section className="referral-card" key={item.referral_id}><b>{item.title}</b><p>{item.provider}</p><p>Services described: {item.services_described.join(' · ')}</p><p className="limitation">Do not promise: {item.do_not_promise.join(' · ')}</p><a href={item.official_url} target="_blank" rel="noreferrer">Open official guidance <ExternalLink size={14}/></a></section>)}
   </>}

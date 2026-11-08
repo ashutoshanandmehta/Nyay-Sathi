@@ -2,11 +2,13 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import { api } from '../api'
+import AgentFlowWidget from './AgentFlowWidget'
 import Composer from './Composer'
 import DevSpacePanel from './DevSpacePanel'
 import { AgentWorkflowPanel, CasePanel, KnowledgeBasePanel, Sources } from './Drawer'
 import MessageView from './MessageView'
 import PracticePanel from './PracticePanel'
+import SettingsPanel from './SettingsPanel'
 import Sidebar from './Sidebar'
 
 describe('chat interface',()=>{
@@ -15,7 +17,7 @@ describe('chat interface',()=>{
     expect(screen.getByText('Here is your factual draft.')).toBeInTheDocument();expect(screen.getByRole('note')).toHaveTextContent('Some help is ready');fireEvent.click(screen.getByText('Listen'));expect(speech).toHaveBeenCalledOnce()
   })
   it('distinguishes unverified public research and unknown effective dates',()=>{render(<Sources sources={[{source_id:'w',passage_id:'wp',title:'Public procedure candidate',locator:'Public webpage',text:'Supporting excerpt',canonical_url:'https://example.edu/',retrieved_at:'2026-11-06',limitations:'Current applicability requires review',origin:'web',verification_status:'unverified_public_source',effective_date:null}]}/>);expect(screen.getByText('Public source · authority not verified')).toBeInTheDocument();expect(screen.getByText('Current applicability requires review')).toBeInTheDocument();expect(screen.getByText(/Effective date unknown/)).toBeInTheDocument();expect(screen.queryByText('Official website · web research')).toBeNull()})
-  it('keeps New chat visible and exposes system information',()=>{const onNew=vi.fn(),onSelect=vi.fn(),onKnowledge=vi.fn(),onWorkflow=vi.fn();render(<Sidebar open items={[{id:'1',title:'Refund case',language:'en',created_at:'',updated_at:''}]} active="1" onNew={onNew} onSelect={onSelect} onClose={()=>{}} onKnowledge={onKnowledge} onWorkflow={onWorkflow}/>);fireEvent.click(screen.getByText('New chat'));expect(onNew).toHaveBeenCalled();fireEvent.click(screen.getByText('Refund case'));expect(onSelect).toHaveBeenCalledWith('1');fireEvent.click(screen.getByText('Knowledge Base'));expect(onKnowledge).toHaveBeenCalled();fireEvent.click(screen.getByText('Agent Workflow'));expect(onWorkflow).toHaveBeenCalled()})
+  it('keeps New chat visible and exposes system information',()=>{const onNew=vi.fn(),onSelect=vi.fn(),onKnowledge=vi.fn(),onWorkflow=vi.fn();render(<Sidebar open items={[{id:'1',title:'Refund case',language:'en',created_at:'',updated_at:''}]} active="1" onNew={onNew} onSelect={onSelect} onClose={()=>{}} onKnowledge={onKnowledge} onWorkflow={onWorkflow} isStreaming={true} streamEvents={[{stage:'primary'}]}/>);fireEvent.click(screen.getByText('New chat'));expect(onNew).toHaveBeenCalled();fireEvent.click(screen.getByText('Refund case'));expect(onSelect).toHaveBeenCalledWith('1');const settingsBtn=screen.getByRole('button',{name:'Settings'});expect(settingsBtn).toBeInTheDocument();fireEvent.click(settingsBtn);expect(onKnowledge).toHaveBeenCalled();const workflowBtn=screen.getByRole('button',{name:'Workflow'});expect(workflowBtn).toBeInTheDocument();fireEvent.click(workflowBtn);expect(onWorkflow).toHaveBeenCalled()})
   it('clears immediately and restores a failed draft',async()=>{let finish!:(ok:boolean)=>void;const send=vi.fn(()=>new Promise<boolean>(resolve=>{finish=resolve}));render(<Composer disabled={false} onSend={send} onUpload={()=>{}}/>);const input=screen.getByLabelText('Message');fireEvent.change(input,{target:{value:'My refund is late'}});fireEvent.keyDown(input,{key:'Enter',shiftKey:false});expect(send).toHaveBeenCalledWith('My refund is late');expect(input).toHaveValue('');await act(async()=>finish(false));await waitFor(()=>expect(input).toHaveValue('My refund is late'))})
   it('renders markdown without unsafe raw HTML',()=>{render(<MessageView message={{id:'m',role:'assistant',content:'**Safe** <script>alert(1)</script>',created_at:'',status:'complete',metadata:{}}} onSources={()=>{}}/>);expect(screen.getByText('Safe')).toBeInTheDocument();expect(document.querySelector('script')).toBeNull()})
   it('opens inspectable official source content',()=>{render(<Sources sources={[{source_id:'s',passage_id:'p',title:'Consumer Protection Act 2019',locator:'Section 69',text:'Two years',canonical_url:'https://www.indiacode.nic.in/',retrieved_at:'2026-11-05',limitations:'Check applicability'}]}/>);expect(screen.getByText('Section 69')).toBeInTheDocument();expect(screen.getByText('Check applicability')).toBeInTheDocument()})
@@ -231,14 +233,63 @@ describe('sidebar case actions',()=>{
     expect(onDelete).toHaveBeenCalledWith('1')
   })
 
-  it('places DevSpace under Agent Workflow',()=>{
+  it('clubs tools into bottom-left Settings and provides unified tabbed access',()=>{
     cleanup()
-    const onDevspace=vi.fn()
-    render(<Sidebar open items={[]} onNew={()=>{}} onSelect={()=>{}} onClose={()=>{}} onKnowledge={()=>{}} onWorkflow={()=>{}} onDevspace={onDevspace}/>)
-    const tools=within(screen.getByLabelText('About this assistant')).getAllByRole('button').map(b=>b.querySelector('b')?.textContent)
-    expect(tools).toEqual(['Knowledge Base','Agent Workflow','DevSpace'])
-    fireEvent.click(screen.getByText('DevSpace'))
-    expect(onDevspace).toHaveBeenCalled()
+    const onSettings=vi.fn()
+    render(<Sidebar open items={[]} onNew={()=>{}} onSelect={()=>{}} onClose={()=>{}} onKnowledge={()=>{}} onWorkflow={()=>{}} onSettings={onSettings}/>)
+    const settingsBtn=screen.getByRole('button',{name:'Settings'})
+    expect(settingsBtn).toBeInTheDocument()
+    fireEvent.click(settingsBtn)
+    expect(onSettings).toHaveBeenCalledWith('devspace')
+  })
+
+  it('renders Flowinggg showing one element at a time and disappears when idle',()=>{
+    cleanup()
+    const repairEvents = [
+      {stage:'saving',status:'running'},
+      {stage:'primary',status:'running',round:1},
+      {stage:'review',status:'running'},
+      {stage:'revision',status:'running',attempt:1}
+    ]
+    const {rerender} = render(<AgentFlowWidget isStreaming={true} events={repairEvents}/>)
+    // Box title
+    expect(screen.getByText('Flowinggg')).toBeInTheDocument()
+    // Current active element
+    expect(screen.getByText('Feedback Loop')).toBeInTheDocument()
+    expect(screen.getByText('5/6')).toBeInTheDocument()
+    // Other elements are not shown (only ONE element at a time)
+    expect(screen.queryByText('Context & Intake')).toBeNull()
+    expect(screen.queryByText('Primary Reasoning')).toBeNull()
+
+    // When idle / not streaming, widget disappears
+    cleanup()
+    render(<AgentFlowWidget isStreaming={false} events={[]}/>)
+    expect(screen.queryByText('Flowinggg')).toBeNull()
+  })
+
+  it('switches tabs smoothly in SettingsPanel',()=>{
+    cleanup()
+    const onLoadKnowledge = vi.fn()
+    const onLoadWorkflow = vi.fn()
+    render(
+      <SettingsPanel
+        initialTab="knowledge"
+        knowledge={null}
+        workflow={null}
+        devspaceEnabled={true}
+        onLoadKnowledge={onLoadKnowledge}
+        onLoadWorkflow={onLoadWorkflow}
+        onDevspaceSaved={()=>{}}
+      />
+    )
+    const tabs = screen.getAllByRole('tab').map(t => t.textContent)
+    expect(tabs).toEqual(['DevSpace', 'Agent Workflow', 'Knowledge Base'])
+    expect(onLoadKnowledge).toHaveBeenCalled()
+    const workflowTab = screen.getByRole('tab', {name: 'Agent Workflow'})
+    fireEvent.click(workflowTab)
+    expect(onLoadWorkflow).toHaveBeenCalled()
+    const devspaceTab = screen.getByRole('tab', {name: 'DevSpace'})
+    expect(devspaceTab).toBeInTheDocument()
   })
 
   it('deleting the open case opens the next one',async()=>{

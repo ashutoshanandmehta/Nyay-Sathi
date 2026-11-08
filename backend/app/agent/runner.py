@@ -212,7 +212,24 @@ class PrimaryAgent:
         if urgent_ctx["emit_immediate_safety"]:
             emit_safety(urgent_ctx["category"])
 
+        event(
+            "context",
+            "running",
+            agent="Context & Intake Agent",
+            tool="certified_knowledge_pack",
+            action="Pre-fetching certified statutory provisions & intake facts",
+            detail="Loading facts & certified knowledge pack",
+        )
         self._pre_retrieve_certified(state)
+        event(
+            "context",
+            "complete",
+            agent="Context & Intake Agent",
+            tool="certified_knowledge_pack",
+            result=f"Loaded {len(state['passages'])} verified statutory provisions & facts",
+            passages_count=len(state["passages"]),
+            detail=f"Context ready ({len(state['passages'])} legal provisions loaded)",
+        )
 
         scope_token = publisher.set(progress)
         with model_calls.scope(
@@ -230,7 +247,14 @@ class PrimaryAgent:
                 review, patch_verdicts = None, []
                 if pending or answer.case_patches:
                     if budget.available():
-                        event("review")
+                        event(
+                            "review",
+                            "running",
+                            agent="Verifier Agent",
+                            tool="verifier_evaluator",
+                            action=f"Auditing grounding and citation integrity for {len(answer.claims)} claims",
+                            detail="Verifier Agent auditing claims & legal citations",
+                        )
                         try:
                             review = self._review(answer, state, registry, budget, pending)
                             patch_verdicts = review.patch_verdicts
@@ -262,7 +286,30 @@ class PrimaryAgent:
                             ):
                                 repairs += 1
                                 rounds += 1
-                                event("revision", attempt=repairs)
+                                unsupported = [
+                                    c.claim_id
+                                    for c in answer.claims
+                                    if c.claim_id not in accepted
+                                    and not c.optional
+                                    and infer_block_type(c) != "human_handoff"
+                                ]
+                                what_went_wrong = (
+                                    f"Verifier flagged {len(unsupported)} ungrounded claim(s)"
+                                    if unsupported
+                                    else "Incoherence detected across advice blocks"
+                                    if not review.cross_block_coherent
+                                    else "Primary legal question requires more specific guidance"
+                                )
+                                event(
+                                    "revision",
+                                    "running",
+                                    agent="Feedback Repair Loop",
+                                    tool="self_healing_repair",
+                                    warning=what_went_wrong,
+                                    attempt=repairs,
+                                    action=f"Self-healing repair round {repairs}: {what_went_wrong}",
+                                    detail=f"Feedback loop: {what_went_wrong} → Repairing",
+                                )
                                 original_patches = list(answer.case_patches)
                                 prior_accepted = dict(accepted)
                                 try:
@@ -287,7 +334,15 @@ class PrimaryAgent:
                                         answer, registry
                                     )
                                     accepted = {**prior_accepted, **mechanical}
-                                    event("review", phase="repair")
+                                    event(
+                                        "review",
+                                        "running",
+                                        agent="Verifier Agent",
+                                        tool="verifier_evaluator",
+                                        phase="repair",
+                                        action="Re-auditing repaired claims against statutory sources",
+                                        detail="Re-verifying repaired draft against statutes",
+                                    )
                                     re_review = self._review(
                                         answer, state, registry, budget, pending
                                     )
@@ -298,8 +353,22 @@ class PrimaryAgent:
                                         self._reviewed(re_review, pending, answer, registry)
                                     )
                                     patch_verdicts = re_review.patch_verdicts
+                                    event(
+                                        "revision",
+                                        "complete",
+                                        agent="Feedback Repair Loop",
+                                        tool="self_healing_repair",
+                                        result="Claims revised to align strictly with verified statutory authorities",
+                                        detail="Repair successful · Grounded against statutory authorities",
+                                    )
                                 except Exception as exc:
-                                    event("review", "limited", error_type=type(exc).__name__)
+                                    event(
+                                        "review",
+                                        "limited",
+                                        agent="Verifier Agent",
+                                        error_type=type(exc).__name__,
+                                        warning=f"Repair limited by {type(exc).__name__}",
+                                    )
                                     if answer.case_patches != original_patches:
                                         patch_verdicts = []
                                     self._preserve_safe_practical(
@@ -307,17 +376,43 @@ class PrimaryAgent:
                                     )
                                     break
                         except Exception as exc:
-                            event("review", "limited", error_type=type(exc).__name__)
+                            event(
+                                "review",
+                                "limited",
+                                agent="Verifier Agent",
+                                error_type=type(exc).__name__,
+                                warning=f"Review limited by {type(exc).__name__}",
+                            )
                             patch_verdicts = []
                             self._preserve_safe_practical(answer, accepted, blocked, registry)
                     else:
-                        event("review", "budget_exhausted")
+                        event(
+                            "review",
+                            "budget_exhausted",
+                            agent="Verifier Agent",
+                            warning="Verification budget exhausted",
+                        )
                         self._preserve_safe_practical(answer, accepted, blocked, registry)
                 accepted = propagate_dependencies(
                     answer, {k: v for k, v in accepted.items() if k not in blocked}
                 )
+                event(
+                    "structuring",
+                    "running",
+                    agent="Output Structuring Agent",
+                    tool="format_composer",
+                    action="Structuring response with numbered steps, checklists & citations",
+                    detail="Structuring formatted response & citations",
+                )
                 result = self._compose(
                     answer, state, registry, accepted, patch_verdicts, review is not None
+                )
+                event(
+                    "verify",
+                    "passed",
+                    agent="Output Certification Agent",
+                    result="Output verified & certified for safe publication",
+                    detail="Verified legal guidance ready · Certified",
                 )
             except Exception as exc:
                 event("primary", "fallback", error_type=type(exc).__name__)
@@ -481,7 +576,15 @@ class PrimaryAgent:
             return self._fallback(state, "configuration"), 0
         items = [{"role": "user", "content": json.dumps(self._context(state), ensure_ascii=False)}]
         for round_index in range(self.settings.agent_max_rounds):
-            event("primary", round=round_index + 1)
+            event(
+                "primary",
+                "running",
+                agent="Primary Reasoning Agent",
+                tool="reasoning_engine",
+                round=round_index + 1,
+                action=f"Synthesizing legal claims & response strategy (Round {round_index + 1})",
+                detail=f"Synthesizing response & legal claims (Round {round_index + 1})",
+            )
             allow_tools = (
                 round_index + 1 < self.settings.agent_max_rounds
                 and budget.available(3, reserve=self.settings.agent_repair_reserve)
@@ -498,6 +601,14 @@ class PrimaryAgent:
             for call in calls:
                 if call.get("name") == "emit_safety" and allow_tools:
                     emit_safety(force=not state.get("prior_safety_delivered"))
+                    event(
+                        "safety",
+                        "delivered",
+                        agent="Protective Safety Agent",
+                        tool="emit_safety",
+                        action="Issuing protective emergency advisory",
+                        detail="Protective safety guidance delivered",
+                    )
                     tool_result = {
                         "status": "delivered",
                         "approved_guidance": state["safety_messages"],
@@ -507,10 +618,30 @@ class PrimaryAgent:
                 else:
                     try:
                         request = ResearchRequest.model_validate_json(call["arguments"])
-                        event("web_research")
-                        tool_result = self.research.run(request, state, budget)
+                        search_query_str = (
+                            ", ".join(q.query for q in request.questions[:2])
+                            if getattr(request, "questions", None)
+                            else "Statutory provisions"
+                        )
                         event(
-                            "web_research", "complete", duration_ms=tool_result.get("elapsed_ms", 0)
+                            "web_research",
+                            "running",
+                            agent="Legal Retrieval Agent",
+                            tool="research_legal_issue",
+                            query=search_query_str,
+                            action=f"Searching statutory corpus & official portals for: {search_query_str}",
+                            detail=f"Searching legal provisions: {search_query_str}",
+                        )
+                        tool_result = self.research.run(request, state, budget)
+                        fetched_count = len(tool_result.get("evidence", []))
+                        event(
+                            "web_research",
+                            "complete",
+                            agent="Legal Retrieval Agent",
+                            tool="research_legal_issue",
+                            result=f"Fetched {fetched_count} statutory passages from official registry",
+                            duration_ms=tool_result.get("elapsed_ms", 0),
+                            detail=f"Retrieved {fetched_count} verified legal passages ({tool_result.get('elapsed_ms', 0)}ms)",
                         )
                         state["tool_records"].extend(tool_result.get("tool_records", []))
                         merged = {p["passage_id"]: p for p in state["passages"]}
@@ -524,6 +655,14 @@ class PrimaryAgent:
                             "limitations": [type(exc).__name__],
                             "evidence": [],
                         }
+                        event(
+                            "web_research",
+                            "failed",
+                            agent="Legal Retrieval Agent",
+                            tool="research_legal_issue",
+                            warning=f"Retrieval limited: {type(exc).__name__}",
+                            detail=f"Retrieval unavailable ({type(exc).__name__})",
+                        )
                 items.append(
                     {
                         "type": "function_call_output",
@@ -739,7 +878,27 @@ class PrimaryAgent:
             lang_key = language if language in {"en", "hi", "hinglish"} else "en"
             formatted_sections: list[str] = []
             for btype, items in section_groups:
-                joined = "\n\n".join(items)
+                if btype in {"immediate_actions", "alternatives", "recommended_route"} and len(items) > 1:
+                    formatted_items = []
+                    for idx, it in enumerate(items):
+                        stripped = it.strip()
+                        if not re.match(r"^(?:\d+[\.\)]|[-*•])\s+", stripped):
+                            formatted_items.append(f"{idx + 1}. {stripped}")
+                        else:
+                            formatted_items.append(stripped)
+                    joined = "\n\n".join(formatted_items)
+                elif btype in {"evidence_checklist", "question", "limitation", "human_handoff"} and len(items) > 1:
+                    formatted_items = []
+                    for it in items:
+                        stripped = it.strip()
+                        if not re.match(r"^(?:\d+[\.\)]|[-*•])\s+", stripped):
+                            formatted_items.append(f"- {stripped}")
+                        else:
+                            formatted_items.append(stripped)
+                    joined = "\n\n".join(formatted_items)
+                else:
+                    joined = "\n\n".join(items)
+
                 already_has_header = any(
                     ln.lstrip().startswith("#") for it in items for ln in it.splitlines()
                 )

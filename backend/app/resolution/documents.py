@@ -5,11 +5,13 @@ from xml.sax.saxutils import escape
 
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
-from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.services.exports import _unicode_font
+from app.services.exports import NyayNumberedCanvas, _unicode_font
 
 
 def plain_line(line):
@@ -47,16 +49,81 @@ class CorrespondenceExporter:
     def pdf(self, path, title, content):
         font = _unicode_font()
         body = ParagraphStyle(
-            "Correspondence", fontName=font, fontSize=11, leading=16, spaceAfter=8
+            "Correspondence",
+            fontName=font,
+            fontSize=10,
+            leading=14.5,
+            textColor=colors.HexColor("#1c2421"),
+            spaceAfter=6,
         )
         heading = ParagraphStyle(
-            "CorrespondenceTitle", parent=body, fontSize=16, leading=22, spaceAfter=18
+            "CorrespondenceTitle",
+            parent=body,
+            fontSize=15,
+            leading=19,
+            textColor=colors.HexColor("#1b4332"),
+            spaceAfter=4,
         )
-        story = [Paragraph(escape(title), heading)]
-        for line in content.splitlines():
-            story.append(
-                Paragraph(escape(plain_line(line)), body) if line.strip() else Spacer(1, 8)
+        subheading = ParagraphStyle(
+            "CorrespondenceSubhead",
+            parent=body,
+            fontSize=11,
+            leading=15,
+            textColor=colors.HexColor("#2d6a4f"),
+            spaceBefore=8,
+            spaceAfter=4,
+            keepWithNext=True,
+        )
+        bullet = ParagraphStyle(
+            "CorrespondenceBullet",
+            parent=body,
+            leftIndent=12,
+            firstLineIndent=-8,
+            spaceAfter=3,
+        )
+
+        header_table = Table(
+            [[Paragraph(escape(title or "Prepared Correspondence"), heading)]],
+            colWidths=[178 * mm],
+        )
+        header_table.setStyle(
+            TableStyle(
+                [
+                    ("LINEBELOW", (0, 0), (-1, -1), 1, colors.HexColor("#1b4332")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ]
             )
+        )
+        story = [header_table, Spacer(1, 3 * mm)]
+
+        for line in content.splitlines():
+            cleaned = plain_line(line).strip()
+            if not cleaned:
+                story.append(Spacer(1, 3 * mm))
+            elif cleaned.startswith("#"):
+                story.append(Paragraph(escape(cleaned.lstrip("# ").strip()), subheading))
+            elif cleaned.startswith(("- ", "* ", "• ")):
+                bullet_text = cleaned.lstrip("-*• ")
+                story.append(Paragraph(f"• {escape(bullet_text)}", bullet))
+            else:
+                story.append(Paragraph(escape(cleaned), body))
+
+        def make_canvas(doc_title: str):
+            class CorrespondenceCanvas(NyayNumberedCanvas):
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.doc_case_title = doc_title
+
+            return CorrespondenceCanvas
+
         SimpleDocTemplate(
-            str(path), pagesize=letter, leftMargin=60, rightMargin=60, topMargin=54, bottomMargin=54
-        ).build(story)
+            str(path),
+            pagesize=A4,
+            leftMargin=16 * mm,
+            rightMargin=16 * mm,
+            topMargin=18 * mm,
+            bottomMargin=18 * mm,
+            title=title or "Prepared Correspondence",
+        ).build(story, canvasmaker=make_canvas(title or "Prepared Correspondence"))

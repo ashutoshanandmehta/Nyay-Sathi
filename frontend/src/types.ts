@@ -3,7 +3,7 @@ export type BlockType = 'direct_answer' | 'immediate_actions' | 'recommended_rou
 export type GroundingLabel = 'reported_by_user' | 'practical_precaution' | 'verified_legal_source' | 'requires_confirmation'
 export interface ResolutionBlock { block_id: string; block_type: BlockType; title: string; content: string; items: string[]; claim_ids: string[]; source_ids: string[]; grounding: GroundingLabel; document_title?: string | null }
 export interface SafetyMessage { type:'safety'; content_id:string; text:string; request_id:string; sources:string[] }
-export interface StreamEvent { stage:string; status?:string; type?:'safety'; content_id?:string; text?:string; request_id?:string; sources?:string[] }
+export interface StreamEvent { stage:string; status?:string; type?:'safety'; content_id?:string; text?:string; request_id?:string; sources?:string[]; round?:number; attempt?:number; phase?:string; detail?:string; duration_ms?:number; passages_count?:number; timestamp?:string; agent?:string; tool?:string; action?:string; result?:string; warning?:string; error?:string; query?:string }
 import type { Journey } from './resolution'
 export interface Conversation { id: string; title: string; language: Language; created_at: string; updated_at: string; last_message?: string }
 export interface Source { source_id: string; passage_id: string; title: string; locator: string; text: string; canonical_url: string; retrieved_at: string; limitations: string; origin?:string; content_hash?:string; verification_status?:string; source_type?:string; jurisdiction?:string|null; publication_date?:string|null; effective_date?:string|null; citation_number?:number }

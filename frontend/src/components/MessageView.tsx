@@ -8,6 +8,38 @@ import type { GroundingLabel, Message, ResolutionBlock, Source } from '../types'
 const CITE_HREF=/^#cite-(\d+)$/
 const CITE_MARKER=/\[(\d+)\]\(#cite-\d+\)/g
 
+export function enhanceListReadability(text: string): string {
+  if (!text) return ''
+  let inCode = false
+  return text
+    .split('\n')
+    .map(line => {
+      if (line.trim().startsWith('```')) {
+        inCode = !inCode
+        return line
+      }
+      if (inCode) return line
+
+      // "Step 1:" or "Step 1." -> "1. "
+      const stepMatch = line.match(/^(\s*)Step\s+(\d+)[:.]\s*(.*)$/i)
+      if (stepMatch) {
+        return `${stepMatch[1]}${stepMatch[2]}. ${stepMatch[3]}`
+      }
+      // "1)" or "2)" -> "1. "
+      const parenMatch = line.match(/^(\s*)(\d+)\)\s*(.*)$/)
+      if (parenMatch) {
+        return `${parenMatch[1]}${parenMatch[2]}. ${parenMatch[3]}`
+      }
+      // Unicode bullet characters •, ●, ▪, ⁃, ‣ -> "- "
+      const bulletMatch = line.match(/^(\s*)[•●▪⁃‣]\s*(.*)$/)
+      if (bulletMatch) {
+        return `${bulletMatch[1]}- ${bulletMatch[2]}`
+      }
+      return line
+    })
+    .join('\n')
+}
+
 function plainCitations(content:string, sources?:Source[]) {
   const text=content.replace(CITE_MARKER,'[$1]')
   const numbered=(sources||[]).filter(s=>s.citation_number)
@@ -24,6 +56,9 @@ function citationComponents(sources:Source[]|undefined, onSources:(s:Source[], f
       if(!source) return <span className="cite-chip cite-chip-missing">{number}</span>
       return <button type="button" className="cite-chip" title={`${source.title} — ${source.locator}`} aria-label={`Source ${number}: ${source.title}`} onClick={()=>onSources(sources!, number)}>{number}</button>
     },
+    ol: ({children}) => <ol className="prose-ordered-list">{children}</ol>,
+    ul: ({children}) => <ul className="prose-unordered-list">{children}</ul>,
+    li: ({children}) => <li className="prose-list-item">{children}</li>,
   }
 }
 
@@ -56,11 +91,11 @@ function BlockCard({block, onOpenCase}:{block:ResolutionBlock; onOpenCase?:()=>v
           </button>
         </div>
       ) : useList && block.block_type === 'immediate_actions' ? (
-        <ol className="res-list">{block.items.map((item, idx) => <li key={idx}>{item}</li>)}</ol>
+        <ol className="res-list res-list-ordered">{block.items.map((item, idx) => <li key={idx}><span className="res-list-num">{idx + 1}</span><span>{item}</span></li>)}</ol>
       ) : useList ? (
-        <ul className="res-list">{block.items.map((item, idx) => <li key={idx}>{item}</li>)}</ul>
+        <ul className="res-list res-list-bulleted">{block.items.map((item, idx) => <li key={idx}><span className="res-list-bullet">•</span><span>{item}</span></li>)}</ul>
       ) : (
-        <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>{block.content}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={citationComponents(undefined, () => {})}>{enhanceListReadability(block.content)}</ReactMarkdown>
       )}
       {block.block_type === 'human_handoff' && onOpenCase && (
         <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
@@ -100,7 +135,7 @@ export default function MessageView({message,onSources,onRetry,onSpeech,onOpenCa
             </div>
           ))}
           <div className="prose-content">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={citationComponents(message.metadata?.sources, onSources)}>{answerText}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={citationComponents(message.metadata?.sources, onSources)}>{enhanceListReadability(answerText)}</ReactMarkdown>
           </div>
           {docBlock && (
             <div className="res-document-box">

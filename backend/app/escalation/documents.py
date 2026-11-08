@@ -8,12 +8,26 @@ from xml.sax.saxutils import escape
 
 from docx import Document
 from docx.shared import Inches, Pt
+from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.services.exports import _unicode_font
+from app.services.exports import (
+    BORDER_LIGHT,
+    CALLOUT_BG,
+    CARD_BG,
+    PRIMARY_COLOR,
+    ROW_ALT,
+    ROW_WHITE,
+    SECONDARY_COLOR,
+    TEXT_DARK,
+    TEXT_LIGHT,
+    TEXT_MUTED,
+    NyayNumberedCanvas,
+    _unicode_font,
+)
 
 NOTICE = (
     "Prepared by Nyay Saathi from the client's own account and the sources listed. "
@@ -41,48 +55,213 @@ def sections(bundle: dict[str, Any]) -> list[tuple[str, list[str]]]:
 
 
 def write_bundle_pdf(path: Path, bundle: dict[str, Any]) -> None:
-    styles = getSampleStyleSheet()
     font = _unicode_font()
-    for name in ("Title", "Heading2", "BodyText", "Normal", "Italic"):
-        styles[name].fontName = font
+    body_font = font
 
-    def para(text: Any, style: str = "BodyText") -> Paragraph:
-        return Paragraph(escape(str(text)).replace("\n", "<br/>"), styles[style])
+    title_style = ParagraphStyle(
+        "BundleTitle",
+        fontName=body_font,
+        fontSize=18,
+        leading=22,
+        textColor=PRIMARY_COLOR,
+        spaceAfter=1,
+    )
+    subtitle_style = ParagraphStyle(
+        "BundleSubtitle",
+        fontName=body_font,
+        fontSize=8.5,
+        leading=11,
+        textColor=TEXT_MUTED,
+    )
+    badge_style = ParagraphStyle(
+        "BundleBadge",
+        fontName=body_font,
+        fontSize=7.5,
+        leading=10,
+        textColor=TEXT_MUTED,
+        alignment=2,
+    )
+    sec_head_style = ParagraphStyle(
+        "BundleSectionHead",
+        fontName=body_font,
+        fontSize=11,
+        leading=14,
+        textColor=PRIMARY_COLOR,
+        spaceBefore=10,
+        spaceAfter=4,
+        keepWithNext=True,
+    )
+    body_style = ParagraphStyle(
+        "BundleBody",
+        fontName=body_font,
+        fontSize=8.5,
+        leading=11.5,
+        textColor=TEXT_DARK,
+        spaceAfter=2,
+    )
+    disclaimer_style = ParagraphStyle(
+        "BundleDisclaimer",
+        fontName=body_font,
+        fontSize=7.5,
+        leading=10.5,
+        textColor=TEXT_MUTED,
+    )
+    bullet_style = ParagraphStyle(
+        "BundleBullet",
+        fontName=body_font,
+        fontSize=8.5,
+        leading=11.5,
+        textColor=TEXT_DARK,
+        leftIndent=10,
+        firstLineIndent=-6,
+        spaceAfter=2,
+    )
+    th_style = ParagraphStyle(
+        "BundleTH",
+        fontName=body_font,
+        fontSize=8,
+        leading=10,
+        textColor=colors.white,
+    )
+    td_style = ParagraphStyle(
+        "BundleTD",
+        fontName=body_font,
+        fontSize=8,
+        leading=10.5,
+        textColor=TEXT_DARK,
+    )
+
+    def para(text: Any, style=body_style, allow_markup: bool = False) -> Paragraph:
+        raw = str(text if text is not None else "")
+        clean = raw.replace("\n", "<br/>") if allow_markup else escape(raw).replace("\n", "<br/>")
+        return Paragraph(clean, style)
+
+    case_title = bundle.get("case_title") or "Case Brief"
+    date_str = str(bundle.get("generated_at", ""))[:10] or "Current"
+
+    header_left = [
+        para("Nyay Saathi — Case Note for Counsel", title_style),
+        para("Factual brief prepared for advocate review and consultation", subtitle_style),
+    ]
+    header_right = [
+        para("<b>COUNSEL BRIEF | PRIVILEGED</b>", badge_style, allow_markup=True),
+        para(f"Case: {case_title[:30]}", badge_style),
+        para(f"Date Prepared: {date_str}", badge_style),
+    ]
+    header_table = Table([[header_left, header_right]], colWidths=[105 * mm, 73 * mm])
+    header_table.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LINEBELOW", (0, 0), (-1, -1), 1.5, PRIMARY_COLOR),
+            ]
+        )
+    )
+
+    notice_box = Table(
+        [[para(f"<b>NOTICE FOR COUNSEL:</b> {NOTICE}", disclaimer_style, allow_markup=True)]],
+        colWidths=[178 * mm],
+    )
+    notice_box.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), CALLOUT_BG),
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER_LIGHT),
+                ("LINEBEFORE", (0, 0), (0, -1), 2.5, PRIMARY_COLOR),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
 
     story = [
-        para("Case note for counsel", "Title"),
-        para(f"{bundle['case_title']}, prepared {bundle['generated_at'][:10]}", "Normal"),
+        header_table,
         Spacer(1, 3 * mm),
-        para(NOTICE, "Italic"),
+        notice_box,
+        Spacer(1, 2 * mm),
     ]
-    if bundle["executive_summary"]:
-        story += [Spacer(1, 4 * mm), para("Summary", "Heading2"), para(bundle["executive_summary"])]
-    if bundle["chronology"]:
-        rows = [[para("Date"), para("Event")]] + [
-            [para(e["date"]), para(e["summary"])] for e in bundle["chronology"]
+
+    if bundle.get("executive_summary"):
+        story += [
+            para("Executive Summary", sec_head_style),
+            para(bundle["executive_summary"], body_style),
         ]
-        table = Table(rows, colWidths=[32 * mm, 140 * mm], repeatRows=1)
+
+    if bundle.get("chronology"):
+        rows = [
+            [para("Date", th_style), para("Event Description", th_style)]
+        ] + [
+            [para(f"<b>{escape(e['date'])}</b>", td_style, allow_markup=True), para(escape(e["summary"]), td_style, allow_markup=True)]
+            for e in bundle["chronology"]
+        ]
+        table = Table(rows, colWidths=[32 * mm, 146 * mm], repeatRows=1)
         table.setStyle(
             TableStyle(
                 [
-                    ("BACKGROUND", (0, 0), (-1, 0), "#E8EFEC"),
-                    ("GRID", (0, 0), (-1, -1), 0.5, "#D9D9D9"),
+                    ("BACKGROUND", (0, 0), (-1, 0), SECONDARY_COLOR),
+                    ("GRID", (0, 0), (-1, -1), 0.5, BORDER_LIGHT),
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                    *[
+                        ("BACKGROUND", (0, r), (-1, r), ROW_ALT if r % 2 == 1 else ROW_WHITE)
+                        for r in range(1, len(rows))
+                    ],
                 ]
             )
         )
-        story += [Spacer(1, 4 * mm), para("Chronology", "Heading2"), table]
+        story += [para("Chronology of Stated Events", sec_head_style), table]
+
     for title, items in sections(bundle):
-        story += [Spacer(1, 4 * mm), para(title, "Heading2")]
-        story += [para(f"• {item}") for item in items]
-    story += [Spacer(1, 6 * mm), para(bundle["autonomy_notice"], "Italic")]
-    SimpleDocTemplate(
+        story += [para(title, sec_head_style)]
+        for item in items:
+            story += [para(f"• {escape(item)}", bullet_style, allow_markup=True)]
+
+    if bundle.get("autonomy_notice"):
+        auto_box = Table(
+            [[para(f"<b>AUTONOMY & COMPLIANCE:</b> {bundle['autonomy_notice']}", disclaimer_style, allow_markup=True)]],
+            colWidths=[178 * mm],
+        )
+        auto_box.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), CALLOUT_BG),
+                    ("BOX", (0, 0), (-1, -1), 0.5, BORDER_LIGHT),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ]
+            )
+        )
+        story += [Spacer(1, 4 * mm), auto_box]
+
+    def make_canvas(title: str):
+        class BundleCanvas(NyayNumberedCanvas):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.doc_case_title = title
+
+        return BundleCanvas
+
+    doc = SimpleDocTemplate(
         str(path),
         pagesize=A4,
-        leftMargin=18 * mm,
-        rightMargin=18 * mm,
+        leftMargin=16 * mm,
+        rightMargin=16 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
         title="Case note for counsel",
-    ).build(story)
+    )
+    doc.build(story, canvasmaker=make_canvas(case_title))
 
 
 def write_bundle_docx(path: Path, bundle: dict[str, Any]) -> None:
