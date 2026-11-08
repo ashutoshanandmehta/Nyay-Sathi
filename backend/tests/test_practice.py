@@ -6,7 +6,7 @@ import pytest
 
 from app.agent.safety import safety_event
 from app.db import Database
-from app.practice.contracts import PracticeScenario
+from app.practice.contracts import PersonaCard, PracticeScenario
 from app.practice.engine import PracticeEngine
 from app.schemas.models import CaseFact, CaseMemory
 from app.security.privacy import EnvelopeCipher
@@ -368,11 +368,14 @@ BIHAR_MESSAGE = "My brother was taking his car from Patna and police found alcoh
 class FakeResponses:
     def __init__(self, text="Show me the seizure memo first.", error=None):
         self.text, self.error, self.calls = text, error, []
+        self.queue: list[str] = []  # per-call texts, used before ``text``
 
     def create(self, **kwargs):
         self.calls.append(kwargs)
         if self.error:
             raise self.error
+        if self.queue:
+            self.text = self.queue.pop(0)
         if not kwargs.get("stream"):
             return SimpleNamespace(status="completed", output_text=self.text)
         words = self.text.split(" ")
@@ -559,7 +562,7 @@ def test_roleplay_session_keeps_the_synopsis_and_counts_model_calls(client, monk
     ).json()
     assert start["case_synopsis"] == "Deposit kept."
     session = client.get(f"/api/conversations/{cid}/practice/sessions/{start['session_id']}").json()
-    assert session["objective"] == "Deposit kept."
+    assert engine_module.session_case(session["objective"])[0] == "Deposit kept."
 
     recorded = []
     monkeypatch.setattr(app.state.abuse, "record_turn_usage", lambda *a, **k: recorded.append(a))
@@ -623,17 +626,163 @@ def test_reopening_roleplay_setup_reuses_the_summary(client, monkeypatch):
     assert first == second and len(calls) == 1
 
 
-def test_persona_setup_writes_the_opening_line_in_character(live_engine):
+POLICE_CARD = PersonaCard(
+    identity="Sub-Inspector at the police station that made the arrest",
+    involved=True,
+    goals="Close the station formalities without trouble.",
+    can_do=["Tell which court has the case", "Explain how to get the FIR copy"],
+    outside_role=["Bail chances: 'That's for the court and your lawyer.'"],
+    manner="Brisk and official.",
+    opening_line="Haan, boliye. Kis silsile mein aaye ho?",
+)
+
+
+def test_persona_setup_writes_the_card_and_opening_in_character(live_engine):
     engine, responses = live_engine
-    responses.text = "Haan, boliye. Kis silsile mein aaye ho?"
-    opening = engine.get_opening_message("Police officer", "My brother was arrested.", "hinglish")
-    assert opening == responses.text
+    responses.text = POLICE_CARD.model_dump_json()
+    card = engine.build_persona("Police officer", "My brother was arrested.", "hinglish")
+    assert card == POLICE_CARD
     sent = responses.calls[0]
-    assert "You are Police officer" in sent["instructions"]
-    assert "My brother was arrested." in sent["instructions"]
-    assert "Hinglish" in sent["instructions"] and sent["input"][0]["role"] == "developer"
+    assert sent["text"]["format"]["name"] == "PersonaCard"
+    assert (
+        "Police officer" in sent["instructions"]
+        and "My brother was arrested." in sent["instructions"]
+    )
+    assert "Hinglish" in sent["instructions"] and engine.model_calls == 1
+    assert "never turn them into someone else" in sent["instructions"]
+
+    long_card = POLICE_CARD.model_copy(update={"outside_role": [f"Item {i}" for i in range(6)]})
+    responses.text = long_card.model_dump_json()
+    assert len(engine.build_persona("Police officer", "x").outside_role) == 3
+
+
+def test_setup_prompt_keeps_the_users_own_side_out():
+    prompt = engine_module.SETUP_INSTRUCTIONS
+    assert "each a different person or office" in prompt
+    assert "Never the user's own family or friends who are on their side" in prompt
+
+
+def test_persona_call_failure_uses_the_template_card(live_engine):
+    engine, responses = live_engine
+    responses.error = RuntimeError("timeout")
+    card = engine.build_persona("Police officer", BIHAR_MESSAGE)
+    assert card.identity == "Police officer" and card.involved
+    assert card.opening_line == engine_module.CANNED_LINES["police"]["en"][0]
+    assert any("court and your lawyer" in item for item in card.outside_role)
+
+
+def test_reply_prompt_carries_the_card_and_verified_texts(live_engine):
+    engine, responses = live_engine
+    engine.roleplay_turn(
+        "Police officer",
+        "Liquor was found in my brother's car in Bihar and the car was seized.",
+        [],
+        "How do we get the car released?",
+        persona=POLICE_CARD,
+        opening=POLICE_CARD.opening_line,
+    )
+    instructions = responses.calls[0]["instructions"]
+    assert instructions.startswith("You are Sub-Inspector at the police station")
+    assert "Bail chances: 'That's for the court and your lawyer.'" in instructions
+    assert "never answer it anyway" in instructions
+    texts = instructions.split("Verified legal texts:", 1)[1]
+    assert "Bihar Prohibition and Excise Act" in texts or "Kalam Ansari" in texts
+    assert len(responses.calls) == 1 and responses.calls[0]["stream"] is True
+
+
+def test_uninvolved_persona_is_told_to_send_the_user_elsewhere(live_engine):
+    engine, responses = live_engine
+    card = POLICE_CARD.model_copy(update={"identity": "Income Tax Officer", "involved": False})
+    engine.roleplay_turn("Income Tax Officer", BIHAR_MESSAGE, [], "Release the car.", persona=card)
+    assert engine_module.NOT_INVOLVED.strip() in responses.calls[0]["instructions"]
+
+
+def test_setup_tops_up_to_three_and_caps_at_four(live_engine):
+    engine, responses = live_engine
+    draft = {"case_title": "Liquor case · Bihar", "case_synopsis": "You say liquor was found."}
+    responses.text = json.dumps(
+        {
+            **draft,
+            "stakeholders": [
+                "SHO at the police station",
+                "sho at the police station",
+                "Someone else",
+            ],
+        }
+    )
+    few = engine.extract_roleplay_setup(None, [BIHAR_MESSAGE])["stakeholders"]
+    assert few[0] == "SHO at the police station" and len(few) == 3
+    assert "Someone else" not in few and len({x.casefold() for x in few}) == 3
+
+    responses.text = json.dumps({**draft, "stakeholders": [f"Person {i}" for i in range(6)]})
+    assert len(engine.extract_roleplay_setup(None, [BIHAR_MESSAGE])["stakeholders"]) == 4
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        BIHAR_MESSAGE,
+        "Police arrested my son",
+        "Amazon refused my refund",
+        "Landlord kept my deposit",
+        "My salary is unpaid",
+        "My neighbour blocks my gate",
+    ],
+)
+def test_offline_setup_always_offers_at_least_three_people(message):
+    stakeholders = PracticeEngine().extract_roleplay_setup(None, [message])["stakeholders"]
+    assert 3 <= len(stakeholders) <= 4 and "Someone else" not in stakeholders
+
+
+def test_typed_stakeholder_gets_a_persona_saved_with_the_session(client):
+    from tests.conftest import create_case
+
+    cid = create_case(client)
+    start = client.post(
+        f"/api/conversations/{cid}/roleplay/start",
+        json={
+            "stakeholder": "Someone else",
+            "custom_stakeholder": "Collector's office",
+            "case_synopsis": "Our car was seized in Bihar.",
+        },
+    ).json()
+    assert start["stakeholder"] == "Collector's office"
+    session = client.get(f"/api/conversations/{cid}/practice/sessions/{start['session_id']}").json()
+    synopsis, persona = engine_module.session_case(session["objective"])
+    assert synopsis == "Our car was seized in Bihar." and persona.identity == "Collector's office"
+    assert start["opening_message"] == persona.opening_line
+
+
+def test_older_plain_text_sessions_still_chat(client):
+    from app.main import app
+    from tests.conftest import create_case
+
+    cid = create_case(client)
+    with app.state.db.connect() as connection:
+        owner = connection.execute(
+            "SELECT owner_id FROM conversations WHERE id=?", (cid,)
+        ).fetchone()[0]
+    legacy = app.state.db.create_practice_session(
+        owner,
+        cid,
+        "roleplay-landlord",
+        "Roleplay: Landlord",
+        "general",
+        "Landlord",
+        "Direct Conversation",
+        "Deposit kept.",
+        "I've seen the flat.",
+    )
+    response = client.post(
+        f"/api/conversations/{cid}/roleplay/chat?session_id={legacy['id']}",
+        json={"message": "Please return my deposit."},
+    )
+    assert response.status_code == 200 and response.json()["reply"]
 
 
 def test_opening_falls_back_to_a_canned_line_offline():
     opening = PracticeEngine().get_opening_message("Landlord", "Deposit kept.")
     assert opening == engine_module.CANNED_LINES["landlord"]["en"][0]
+    assert engine_module._role_key("Your advocate") == "advisor"
+    assert engine_module._role_key("Their lawyer") == "lawyer"
+    assert engine_module._role_key("Labour office officer") == "official"

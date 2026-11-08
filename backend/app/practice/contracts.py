@@ -113,6 +113,18 @@ class RoleplayChatRequest(BaseModel):
     language: str = "en"
 
 
+class PersonaCard(BaseModel):
+    """Who the roleplay character is, written once at session start and reused every turn."""
+
+    identity: str
+    involved: bool
+    goals: str
+    can_do: list[str]
+    outside_role: list[str]
+    manner: str
+    opening_line: str
+
+
 class RoleplayReply(BaseModel):
     reply: str
     # False when the reply is safety guidance rather than the character speaking.

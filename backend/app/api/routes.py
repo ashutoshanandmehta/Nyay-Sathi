@@ -27,7 +27,7 @@ from app.practice.contracts import (
     RoleplayStartRequest,
     RoleplayStartResponse,
 )
-from app.practice.engine import PracticeEngine
+from app.practice.engine import PracticeEngine, session_case, session_objective
 from app.resolution.documents import CorrespondenceExporter
 from app.routing.contracts import CaseUpdateProposal, RequestInterpretation
 from app.routing.policy import CapabilityRegistry
@@ -522,15 +522,14 @@ def start_roleplay_session(
                 setup = engine.extract_roleplay_setup(
                     memory, recent_user, conv.get("title", ""), body.language
                 )
-            # Persona setup: the role and case go into the character's prompt, which writes
-            # the opening line during the panel's setup screen.
-            opening = engine.get_opening_message(
-                stakeholder, setup["case_synopsis"], body.language
-            )
+            # Persona setup, during the panel's setup screen: who this person really is,
+            # what is and isn't their job, and their first line.
+            persona = engine.build_persona(stakeholder, setup["case_synopsis"], body.language)
         finally:
             _record_practice_usage(request, owner, engine)
+        opening = persona.opening_line
         scenario_slug = "roleplay-" + re.sub(r"\W+", "-", stakeholder.lower()).strip("-")
-        # The synopsis is kept with the session, so every chat turn plays the same case.
+        # Synopsis and persona are kept with the session, so every turn plays the same person.
         session = database.create_practice_session(
             owner.owner_id,
             conversation_id,
@@ -539,7 +538,7 @@ def start_roleplay_session(
             domain=memory.domain or "general",
             opponent_role=stakeholder,
             setting="Direct Conversation",
-            objective=setup["case_synopsis"],
+            objective=session_objective(setup["case_synopsis"], persona),
             opening_statement=opening,
         )
         return RoleplayStartResponse(
@@ -566,15 +565,17 @@ def chat_roleplay_turn(
     try:
         database = db(request)
         session = database.get_practice_session(owner.owner_id, conversation_id, session_id)
-        engine = _practice_engine(request, owner, conversation_id)
+        synopsis, persona = session_case(session["objective"])
+        engine = _practice_engine(request, owner, conversation_id, with_index=True)
         try:
             result = engine.roleplay_turn(
                 session["opponent_role"],
-                session["objective"],
+                synopsis,
                 session.get("turns", []),
                 body.message,
                 body.language,
                 opening=session["opening_statement"],
+                persona=persona,
             )
         finally:
             _record_practice_usage(request, owner, engine)
@@ -607,18 +608,20 @@ def stream_roleplay_turn(
         session = database.get_practice_session(owner.owner_id, conversation_id, session_id)
     except KeyError as exc:
         raise http_not_found(exc) from exc
-    engine = _practice_engine(request, owner, conversation_id)
+    synopsis, persona = session_case(session["objective"])
+    engine = _practice_engine(request, owner, conversation_id, with_index=True)
 
     def events():
         try:
             result = None
             for kind, value in engine.roleplay_stream(
                 session["opponent_role"],
-                session["objective"],
+                synopsis,
                 session.get("turns", []),
                 body.message,
                 body.language,
                 opening=session["opening_statement"],
+                persona=persona,
             ):
                 if kind == "delta":
                     yield "event: delta\ndata: " + json.dumps({"text": value}) + "\n\n"

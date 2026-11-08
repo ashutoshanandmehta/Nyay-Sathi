@@ -80,6 +80,10 @@ export default function PracticePanel({
     const t2 = setTimeout(() => {
       setSetupStepText('Starting roleplay simulation...')
     }, Math.min(delay * 0.8, 2800))
+    // Shown only if the persona is still being written when the timer runs out.
+    const t3 = setTimeout(() => {
+      setSetupStepText('Almost ready...')
+    }, delay + 300)
 
     // The persona is set up (and its opening line written) while the setup screen shows,
     // so the chat opens after the longer of the two, not their sum.
@@ -93,6 +97,7 @@ export default function PracticePanel({
         setupData
       )
       await minimumSetup
+      clearTimeout(t3)
       setSessionId(res.session_id)
       setActiveStakeholder(res.stakeholder)
       setMessages([
@@ -106,6 +111,7 @@ export default function PracticePanel({
     } catch (e) {
       clearTimeout(t1)
       clearTimeout(t2)
+      clearTimeout(t3)
       setIsSettingUp(false)
       setError((e as Error).message || 'Could not start roleplay session.')
     }
