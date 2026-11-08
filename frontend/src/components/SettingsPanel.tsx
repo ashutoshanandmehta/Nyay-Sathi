@@ -14,6 +14,7 @@ export interface SettingsPanelProps {
   onLoadKnowledge: () => Promise<void>
   onLoadWorkflow: () => Promise<void>
   onDevspaceSaved: (result: DevspaceSaveResult) => void
+  onTabChange?: (tab: SettingsTab) => void
 }
 
 export default function SettingsPanel({
@@ -24,8 +25,20 @@ export default function SettingsPanel({
   onLoadKnowledge,
   onLoadWorkflow,
   onDevspaceSaved,
+  onTabChange,
 }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(devspaceEnabled ? initialTab : 'workflow')
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(devspaceEnabled ? initialTab : (initialTab === 'devspace' ? 'workflow' : initialTab))
+    }
+  }, [initialTab, devspaceEnabled])
+
+  const selectTab = (tab: SettingsTab) => {
+    setActiveTab(tab)
+    onTabChange?.(tab)
+  }
 
   useEffect(() => {
     if (activeTab === 'knowledge' && !knowledge) {
@@ -45,7 +58,7 @@ export default function SettingsPanel({
             role="tab"
             aria-selected={activeTab === 'devspace'}
             className={`settings-tab-btn ${activeTab === 'devspace' ? 'active' : ''}`}
-            onClick={() => setActiveTab('devspace')}
+            onClick={() => selectTab('devspace')}
           >
             <Terminal size={15} />
             <span>DevSpace</span>
@@ -56,7 +69,7 @@ export default function SettingsPanel({
           role="tab"
           aria-selected={activeTab === 'workflow'}
           className={`settings-tab-btn ${activeTab === 'workflow' ? 'active' : ''}`}
-          onClick={() => setActiveTab('workflow')}
+          onClick={() => selectTab('workflow')}
         >
           <GitBranch size={15} />
           <span>Agent Workflow</span>
@@ -66,7 +79,7 @@ export default function SettingsPanel({
           role="tab"
           aria-selected={activeTab === 'knowledge'}
           className={`settings-tab-btn ${activeTab === 'knowledge' ? 'active' : ''}`}
-          onClick={() => setActiveTab('knowledge')}
+          onClick={() => selectTab('knowledge')}
         >
           <BookOpenText size={15} />
           <span>Knowledge Base</span>

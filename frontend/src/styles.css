@@ -6,7 +6,7 @@
   --jade-ink: #2E7D6D;
   --jade-tint: #E6F4F0;
   --coral: #F08A73;
-  --coral-ink: #B4513A;
+  --coral-ink: #A5442E;
   --coral-tint: #FDECE7;
 
   /* Neutrals */
@@ -20,7 +20,7 @@
 
   /* Status */
   --success: var(--jade-ink);
-  --warning: #B7791F;
+  --warning: #8C5A07;
   --warning-tint: #FEF3C7;
   --danger: #B42318;
   --danger-tint: #FEE4E2;
@@ -1802,4 +1802,28 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
   color: var(--evergreen);
   margin: 0 0 12px;
+}
+
+/* ==========================================================================
+   Step 7: Motion Accessibility & Global Focus Rings
+   ========================================================================== */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
