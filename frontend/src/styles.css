@@ -424,36 +424,6 @@ h1, h2, h3, h4, h5, h6 {
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
-.flowing-detail {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  padding-left: 22px;
-  font-size: 10.5px;
-  line-height: 1.35;
-  color: var(--muted);
-}
-.flowing-detail span {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.flowing-detail code {
-  flex-shrink: 0;
-  max-width: 55%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 9.5px;
-  color: var(--jade-ink);
-  background: var(--jade-tint);
-  border-radius: 4px;
-  padding: 0 4px;
-}
-.flowing-detail.warning { color: var(--coral-ink); }
-.flowing-detail.warning svg { flex-shrink: 0; color: var(--coral); }
 @keyframes pulse-ring {
   0% { box-shadow: 0 0 0 0 rgba(46, 125, 109, 0.7); }
   70% { box-shadow: 0 0 0 5px rgba(46, 125, 109, 0); }
