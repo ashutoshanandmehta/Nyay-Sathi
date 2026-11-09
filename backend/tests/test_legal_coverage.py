@@ -81,6 +81,25 @@ def test_bns_passages_in_official_pack(official_pack_passages):
         assert p.get("content_hash")
 
 
+def test_hsa_passages_in_official_pack(official_pack_passages):
+    hsa_pids = [p for p in official_pack_passages if "hindu-succession" in p]
+    if not hsa_pids:
+        pytest.skip("Hindu Succession Act 1956 PDF not downloaded into data/sources/originals/")
+    for s in ["6", "8", "9", "10"]:
+        pid = f"pack-hindu-succession-act-1956-s{s}"
+        assert pid in official_pack_passages
+        p = official_pack_passages[pid]
+        assert len(p["text"]) > 80
+
+
+def test_bihar_land_passages_in_official_pack(official_pack_passages):
+    bihar_pids = [p for p in official_pack_passages if "bihar-land-" in p]
+    if not bihar_pids:
+        pytest.skip("Bihar land Act PDFs not downloaded into data/sources/originals/")
+    for pid in bihar_pids:
+        assert len(official_pack_passages[pid]["text"]) > 80
+
+
 def test_concept_mappings_match_positives_and_reject_negatives():
     test_cases = [
         (
