@@ -205,9 +205,46 @@ def check_exhausted_channel_progression(answer, message: str = "") -> str | None
     return None
 
 
+TERMINAL_PUNCTUATION = {".", "?", "!", ":", ")", "”", '"', "]", "।"}
+
+
+def is_sentence_complete(text: str) -> bool:
+    stripped = (text or "").strip()
+    if not stripped:
+        return False
+    lines = [line.strip() for line in stripped.splitlines() if line.strip()]
+    if all(re.match(r"^(?:[-*•]|\d+[.)]|\||#+)\s*", line) for line in lines):
+        return True
+    if all(line.startswith("|") for line in lines):
+        return True
+    if stripped.startswith("#"):
+        return True
+    return stripped[-1] in TERMINAL_PUNCTUATION
+
+
+class PendingList(list):
+    """List of pending claim IDs that also supports mapping access to pending reasons."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._reasons: dict[str, str] = {}
+
+    def append_reason(self, claim_id: str, reason: str):
+        self.append(claim_id)
+        self._reasons[claim_id] = reason
+
+    def get(self, key, default=None):
+        return self._reasons.get(key, default)
+
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            return self._reasons[item]
+        return super().__getitem__(item)
+
+
 def mechanical_checks(answer, registry):
     """Return blocked reasons, risk-calibrated deterministic approvals, and claims needing review."""
-    blocked, approved, pending = {}, {}, []
+    blocked, approved, pending = {}, {}, PendingList()
     ids = {c.claim_id for c in answer.claims}
     public_ids = registry.public_ids()
 
@@ -269,6 +306,8 @@ def mechanical_checks(answer, registry):
                 approved[claim.claim_id] = "approved_template"
             else:
                 blocked[claim.claim_id] = "invalid_template"
+        elif not is_sentence_complete(claim.text):
+            pending.append_reason(claim.claim_id, "unfinished sentence")
         elif claim.kind == "quote":
             private = [registry.entries[k] for k in claim.evidence_ids if k not in public_ids]
             if (

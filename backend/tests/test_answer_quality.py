@@ -448,3 +448,79 @@ def test_primary_prompt_v2_structure_and_constraints():
 
     for gl in get_args(GroundingLabel):
         assert gl in text, f"Missing GroundingLabel '{gl}' in primary.md"
+
+
+def test_completeness_check_sends_unfinished_sentence_to_repair():
+    state = {"current_message": "Deposit not returned.", "memory": {"facts": {}}, "passages": []}
+    reg = EvidenceRegistry(state)
+
+    # 1. Unfinished claim
+    c_unfin = AnswerClaim(
+        claim_id="c1",
+        task_id="task-1",
+        kind="practical",
+        grounding="practical_precaution",
+        block_type="immediate_actions",
+        text="Keep the rent receipts and lease agreement",  # Missing full stop
+    )
+    ans1 = AgentAnswer(central_question="q", tasks=[_task()], claims=[c_unfin])
+    blocked, approved, pending = mechanical_checks(ans1, reg)
+    assert not blocked
+    assert not approved
+    assert "c1" in pending
+    assert pending.get("c1") == "unfinished sentence"
+
+    # 2. Finished claim passes to approved
+    c_fin = AnswerClaim(
+        claim_id="c2",
+        task_id="task-1",
+        kind="practical",
+        grounding="practical_precaution",
+        block_type="immediate_actions",
+        text="Keep the rent receipts and lease agreement.",
+    )
+    ans2 = AgentAnswer(central_question="q", tasks=[_task()], claims=[c_fin])
+    _, approved2, pending2 = mechanical_checks(ans2, reg)
+    assert approved2 == {"c2": "risk_calibrated_consistency"}
+    assert not pending2
+
+    # 3. Markdown list passes
+    c_list = AnswerClaim(
+        claim_id="c3",
+        task_id="task-1",
+        kind="practical",
+        grounding="practical_precaution",
+        block_type="evidence_checklist",
+        text="- Rent receipts\n- Landlord WhatsApp chats",
+    )
+    ans3 = AgentAnswer(central_question="q", tasks=[_task()], claims=[c_list])
+    _, approved3, pending3 = mechanical_checks(ans3, reg)
+    assert approved3 == {"c3": "risk_calibrated_consistency"}
+    assert not pending3
+
+    # 4. Markdown table passes
+    c_table = AnswerClaim(
+        claim_id="c4",
+        task_id="task-1",
+        kind="practical",
+        grounding="practical_precaution",
+        block_type="immediate_actions",
+        text="| Item | Description |\n|---|---|\n| Receipts | Rent payment proof |",
+    )
+    ans4 = AgentAnswer(central_question="q", tasks=[_task()], claims=[c_table])
+    _, approved4, pending4 = mechanical_checks(ans4, reg)
+    assert approved4 == {"c4": "risk_calibrated_consistency"}
+    assert not pending4
+
+    # 5. Template claim is untouched (approved directly as template)
+    c_tmpl = AnswerClaim(
+        claim_id="c5",
+        task_id="task-1",
+        kind="template",
+        template_id="handoff_liberty",
+        text="",
+    )
+    ans5 = AgentAnswer(central_question="q", tasks=[_task()], claims=[c_tmpl])
+    _, approved5, pending5 = mechanical_checks(ans5, reg)
+    assert approved5 == {"c5": "approved_template"}
+    assert not pending5

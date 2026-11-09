@@ -23,6 +23,7 @@ from app.agent.research import ResearchService
 from app.agent.safety import classify_urgent_context, detect_india_context, safety_event
 from app.agent.verification import (
     TEMPLATES,
+    is_sentence_complete,
     mechanical_checks,
     needs_semantic_review,
     propagate_dependencies,
@@ -749,6 +750,7 @@ class PrimaryAgent:
             for key in pending
             if len([v for v in review.claims if v.claim_id == key]) == 1
             and next(v for v in review.claims if v.claim_id == key).support == "supported"
+            and is_sentence_complete(next((c.text for c in answer.claims if c.claim_id == key), ""))
             and (
                 not next(v for v in review.claims if v.claim_id == key).requires_public_evidence
                 or any(
