@@ -61,6 +61,9 @@ export default function App(){
   const [language,setLanguage]=useState<Language>('en'),[sending,setSending]=useState(false),[error,setError]=useState(''),[menu,setMenu]=useState(false)
   const [devspace,setDevspace]=useState(false)
   const [configured,setConfigured]=useState(true),pending=useRef<{text:string;id:string;caseId:string;language:Language;attachments:string[]}|null>(null),attachments=useRef<string[]>([]),bottom=useRef<HTMLDivElement>(null)
+  const thinkingStartRef = useRef<number | null>(null)
+  const [elapsedThinking, setElapsedThinking] = useState(0)
+  const [lastDuration, setLastDuration] = useState<number | null>(null)
   const [progress,setProgress]=useState('Saving your message…')
   const [safety,setSafety]=useState<SafetyMessage[]>([])
   const initialized=useRef(false)
@@ -73,6 +76,15 @@ export default function App(){
   }
   const stageLabels:Record<string,string>={saving:'Saving your message…',triage:'Checking what help you need…',intake:'Organising the facts…',research:'Searching saved legal sources…',assess_information:'Checking whether the sources cover your question…',web_research:'Researching the missing information…',web_search:'Searching official websites…',web_fetch:'Reading official pages and documents…',respond:'Preparing your response…',review:'Checking facts and citations…',revise:'Refining the response after review…',verify:'Finalising the checked response…'}
   useEffect(()=>{if(initialized.current)return;initialized.current=true;void initialise()},[]); useEffect(()=>{bottom.current?.scrollIntoView({behavior:'smooth'})},[detail?.messages,sending])
+  useEffect(() => {
+    if (!sending) return
+    const timer = setInterval(() => {
+      if (thinkingStartRef.current) {
+        setElapsedThinking(Math.max(1, Math.floor((Date.now() - thinkingStartRef.current) / 1000)))
+      }
+    }, 500)
+    return () => clearInterval(timer)
+  }, [sending])
   stageLabels.plan_resolution='Comparing suitable next steps and preparation…'
   stageLabels.execute_tasks='Working on the parts of your request…'
   stageLabels.web_search='Searching relevant public sources…'
@@ -84,6 +96,8 @@ export default function App(){
   async function send(text:string){
     if(!active||sending)return false
     const cid=active, req=crypto.randomUUID(), files=[...attachments.current]
+    thinkingStartRef.current = Date.now()
+    setElapsedThinking(0)
     setSending(true);setProgress('Saving your message…');setError('')
     setStreamEvents([{stage:'saving',status:'running',timestamp:new Date().toLocaleTimeString()}])
     pending.current={text,id:req,caseId:cid,language,attachments:files}
@@ -95,7 +109,14 @@ export default function App(){
       const result=await api.detail(cid);setDetail(d=>d?.conversation.id===cid?result:d)
       await refresh();return true
     }catch(e){setError((e as Error).message);setDetail(d=>d?{...d,messages:d.messages.map(m=>m.id===req?{...m,status:'failed'}:m)}:d);return false}
-    finally{setSending(false)}
+    finally{
+      if (thinkingStartRef.current) {
+        const secs = Math.max(1, Math.round((Date.now() - thinkingStartRef.current) / 100) / 10)
+        setLastDuration(secs)
+      }
+      thinkingStartRef.current = null
+      setSending(false)
+    }
   }
   // Shared by the sidebar menu and the topbar menu.
   async function renameCase(id:string,title:string){try{await api.rename(id,title);setDetail(d=>d?.conversation.id===id?{...d,conversation:{...d.conversation,title}}:d);await refresh()}catch(e){setError((e as Error).message)}}
@@ -115,7 +136,7 @@ export default function App(){
   async function showKnowledge(){showSettings('knowledge');try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}
   async function showWorkflow(){showSettings('workflow');try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}
   function showDevspace(){showSettings('devspace')}
-  async function retry(){const p=pending.current;if(!p||p.caseId!==active||sending)return;setSending(true);setError('');try{await api.streamTurn(p.caseId,p.text,p.language,p.id,p.attachments,onProgress);const result=await api.detail(p.caseId);setDetail(d=>d?.conversation.id===p.caseId?result:d);pending.current=null;await refresh()}catch(e){setError((e as Error).message)}finally{setSending(false)}}
+  async function retry(){const p=pending.current;if(!p||p.caseId!==active||sending)return;thinkingStartRef.current=Date.now();setElapsedThinking(0);setSending(true);setError('');try{await api.streamTurn(p.caseId,p.text,p.language,p.id,p.attachments,onProgress);const result=await api.detail(p.caseId);setDetail(d=>d?.conversation.id===p.caseId?result:d);pending.current=null;await refresh()}catch(e){setError((e as Error).message)}finally{if(thinkingStartRef.current){setLastDuration(Math.max(1,Math.round((Date.now()-thinkingStartRef.current)/100)/10))};thinkingStartRef.current=null;setSending(false)}}
   async function speech(m:Message){const response=await fetch(`/api/conversations/${active}/messages/${m.id}/speech`,{method:'POST',credentials:'include',headers:{'X-CSRF-Token':decodeURIComponent(document.cookie.split('; ').find(x=>x.startsWith('nyay_csrf='))?.split('=')[1]||'')}});if(!response.ok){setError('Audio could not be created. The text answer is still available.');return}new Audio(URL.createObjectURL(await response.blob())).play()}
   const messages=detail?.messages.length?detail.messages:[welcome]
   const hasSufficientContext = Boolean(
@@ -185,7 +206,20 @@ export default function App(){
         </div>
       )}
       <section className="messages" aria-live="polite"><div className="message-column">
-        {messages.map(m=><MessageView key={m.id} message={m} onSources={(s,focus)=>{setSources(s);setSourceFocus(focus);setPanel('sources')}} onRetry={m.status==='failed'?retry:undefined} onSpeech={m.role==='assistant'?()=>speech(m):undefined} onOpenCase={()=>setPanel('case')}/>)}
+        {messages.map((m, idx) => {
+          const isLatestAssistant = m.role === 'assistant' && idx === messages.length - 1
+          return (
+            <MessageView
+              key={m.id}
+              message={m}
+              thoughtDuration={isLatestAssistant ? lastDuration : undefined}
+              onSources={(s, focus) => { setSources(s); setSourceFocus(focus); setPanel('sources') }}
+              onRetry={m.status === 'failed' ? retry : undefined}
+              onSpeech={m.role === 'assistant' ? () => speech(m) : undefined}
+              onOpenCase={() => setPanel('case')}
+            />
+          )
+        })}
         {safety.filter(item=>!messages.some(m=>m.metadata?.safety_messages?.some(s=>s.request_id===item.request_id&&s.content_id===item.content_id))).map(item=>(
           <div className="safety-alert-card" role="alert" key={`${item.request_id}:${item.content_id}`}>
             <div className="safety-banner">
@@ -218,7 +252,11 @@ export default function App(){
         )}
         {sending&&(
           <div className="thinking" role="status">
-            <i/><i/><i/>
+            <span className="thinking-pulse-track" aria-hidden="true">
+              <span className="thinking-dot" />
+              <span className="thinking-dot" />
+              <span className="thinking-dot" />
+            </span>
             <span className="thinking-stage-wrap">
               {progress.toLowerCase().includes('research')||progress.toLowerCase().includes('retriev')?(
                 <Search size={13} aria-hidden="true" />
@@ -230,6 +268,7 @@ export default function App(){
                 <Cpu size={13} aria-hidden="true" />
               )}
               <span>{progress}</span>
+              <span className="thinking-timer-badge">⏱️ {elapsedThinking}s</span>
             </span>
           </div>
         )}{error&&<div className="inline-error" role="alert">{error}</div>}<div ref={bottom}/>

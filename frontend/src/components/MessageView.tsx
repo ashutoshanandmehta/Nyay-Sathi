@@ -1,4 +1,18 @@
-import { Check, Copy, FileText, RotateCcw, Scale, Siren, Volume2 } from 'lucide-react'
+import {
+  BookOpen,
+  Check,
+  ClipboardList,
+  Copy,
+  FileText,
+  GitFork,
+  ListChecks,
+  RotateCcw,
+  Route,
+  Scale,
+  Siren,
+  Sparkles,
+  Volume2,
+} from 'lucide-react'
 import { useState } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -41,6 +55,15 @@ export function enhanceListReadability(text: string): string {
     .join('\n')
 }
 
+export function formatInlineCitations(text: string): string {
+  if (!text) return ''
+  // If text has (Title, Locator) right before [N](#cite-N), format as secondary bibliographic note
+  return text.replace(
+    /(?<!\])\(([^)\n]{3,100}?)\)\s*(?=\[\d+\]\(#cite-\d+\))/g,
+    '*($1)* '
+  )
+}
+
 function plainCitations(content:string, sources?:Source[]) {
   const text=content.replace(CITE_MARKER,'[$1]')
   const numbered=(sources||[]).filter(s=>s.citation_number)
@@ -52,10 +75,25 @@ function citationComponents(sources:Source[]|undefined, onSources:(s:Source[], f
   return {
     a: ({href, children}) => {
       const match=CITE_HREF.exec(href||'')
-      if(!match) return <a href={href}>{children}</a>
+      if(!match) return <a href={href} target="_blank" rel="noreferrer">{children}</a>
       const number=Number(match[1]), source=sources?.find(s=>s.citation_number===number)
       if(!source) return <span className="cite-chip cite-chip-missing">{number}</span>
       return <button type="button" className="cite-chip" title={`${source.title} — ${source.locator}`} aria-label={`Source ${number}: ${source.title}`} onClick={()=>onSources(sources!, number)}>{number}</button>
+    },
+    h3: ({children}) => {
+      const text = String(children || '')
+      const isEscalation = /fails|escalat|court|police|lawyer|advocate|dispute/i.test(text)
+      const isAction = /action|step|do this|now|precaution/i.test(text)
+      const isRoute = /route|recommen|path|procedure/i.test(text)
+      const isEvidence = /evidence|checklist|document|proof|record/i.test(text)
+      const Icon = isEscalation ? GitFork : isAction ? ListChecks : isRoute ? Route : isEvidence ? ClipboardList : Sparkles
+      const colorVar = isEscalation ? 'var(--coral)' : isAction ? 'var(--coral-ink)' : 'var(--jade-ink)'
+      return (
+        <div className="semantic-h3-card" style={{ borderLeftColor: colorVar }}>
+          <Icon size={15} style={{ color: colorVar }} aria-hidden="true" />
+          <h3 className="semantic-h3-title">{children}</h3>
+        </div>
+      )
     },
     ol: ({children}) => <ol className="prose-ordered-list">{children}</ol>,
     ul: ({children}) => <ul className="prose-unordered-list">{children}</ul>,
@@ -63,7 +101,17 @@ function citationComponents(sources:Source[]|undefined, onSources:(s:Source[], f
   }
 }
 
-function BlockCard({block, onOpenCase}:{block:ResolutionBlock; onOpenCase?:()=>void}) {
+function BlockCard({
+  block,
+  onOpenCase,
+  sources,
+  onSources,
+}:{
+  block:ResolutionBlock
+  onOpenCase?:()=>void
+  sources?:Source[]
+  onSources:(s:Source[], focus?:number)=>void
+}) {
   const [copiedDoc, setCopiedDoc] = useState(false)
   async function copyDoc() {
     await navigator.clipboard.writeText(block.content)
@@ -90,17 +138,40 @@ function BlockCard({block, onOpenCase}:{block:ResolutionBlock; onOpenCase?:()=>v
       </div>
       {block.block_type === 'document' ? (
         <div className="res-document-box">
+          {block.document_title && <div className="res-document-title"><strong>{block.document_title}</strong></div>}
           <pre>{block.content}</pre>
           <button type="button" className="doc-copy-btn" onClick={copyDoc}>
             <FileText size={13} aria-hidden="true" /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
           </button>
         </div>
       ) : useList && block.block_type === 'immediate_actions' ? (
-        <ol className="res-list res-list-ordered">{block.items.map((item, idx) => <li key={idx}><span className="res-list-num">{idx + 1}</span><span>{item}</span></li>)}</ol>
+        <ol className="res-list res-list-ordered">
+          {block.items.map((item, idx) => (
+            <li key={idx}>
+              <span className="res-list-num">{idx + 1}</span>
+              <span className="res-list-text">{item}</span>
+            </li>
+          ))}
+        </ol>
       ) : useList ? (
-        <ul className="res-list res-list-bulleted">{block.items.map((item, idx) => <li key={idx}><span className="res-list-bullet">•</span><span>{item}</span></li>)}</ul>
+        <ul className="res-list res-list-bulleted">
+          {block.items.map((item, idx) => (
+            <li key={idx}>
+              <span className="res-list-bullet">•</span>
+              <span className="res-list-text">{item}</span>
+            </li>
+          ))}
+        </ul>
       ) : (
-        <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={citationComponents(undefined, () => {})}>{enhanceListReadability(block.content)}</ReactMarkdown>
+        <div className="res-block-body">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            skipHtml
+            components={citationComponents(sources, onSources)}
+          >
+            {enhanceListReadability(formatInlineCitations(block.content))}
+          </ReactMarkdown>
+        </div>
       )}
       {block.block_type === 'human_handoff' && onOpenCase && (
         <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
@@ -111,7 +182,21 @@ function BlockCard({block, onOpenCase}:{block:ResolutionBlock; onOpenCase?:()=>v
   )
 }
 
-export default function MessageView({message,onSources,onRetry,onSpeech,onOpenCase}:{message:Message;onSources:(s:Source[], focus?:number)=>void;onRetry?:()=>void;onSpeech?:()=>void;onOpenCase?:()=>void}) {
+export default function MessageView({
+  message,
+  onSources,
+  onRetry,
+  onSpeech,
+  onOpenCase,
+  thoughtDuration,
+}:{
+  message:Message
+  onSources:(s:Source[], focus?:number)=>void
+  onRetry?:()=>void
+  onSpeech?:()=>void
+  onOpenCase?:()=>void
+  thoughtDuration?:number|null
+}) {
   const [copied,setCopied]=useState(false)
   const [copiedDoc,setCopiedDoc]=useState(false)
   async function copy(){await navigator.clipboard.writeText(plainCitations(message.content,message.metadata?.sources));setCopied(true);setTimeout(()=>setCopied(false),1200)}
@@ -132,7 +217,16 @@ export default function MessageView({message,onSources,onRetry,onSpeech,onOpenCa
     <div className="avatar" aria-hidden="true">
       {message.role==='assistant'?<Scale size={16} />:'You'}
     </div>
-    <div className="message-body"><div className="message-role">{message.role==='assistant'?'Nyay Saathi':'You'}</div>
+    <div className="message-body">
+      <div className="message-header-row">
+        <div className="message-role">{message.role==='assistant'?'Nyay Saathi':'You'}</div>
+        {message.role==='assistant' && thoughtDuration && (
+          <div className="thought-duration-badge" title="Response generation and verification time">
+            <Sparkles size={11} aria-hidden="true" />
+            <span>Thought for {thoughtDuration}s</span>
+          </div>
+        )}
+      </div>
       {message.role==='assistant' ? (
         <div className="assistant-content">
           {safetyItems?.map(item => (
@@ -141,22 +235,42 @@ export default function MessageView({message,onSources,onRetry,onSpeech,onOpenCa
               <p>{item.text}</p>
             </div>
           ))}
-          <div className="prose-content">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={citationComponents(message.metadata?.sources, onSources)}>{enhanceListReadability(answerText)}</ReactMarkdown>
-          </div>
-          {docBlock && (
-            <div className="res-document-box">
-              {docBlock.document_title && <div className="res-document-title"><strong>{docBlock.document_title}</strong></div>}
-              <pre>{docBlock.content}</pre>
-              <button type="button" className="doc-copy-btn" onClick={() => copyDoc(docBlock.content)}>
-                <FileText size={13} /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
-              </button>
+          {blocks && blocks.length > 0 ? (
+            <div className="resolution-blocks-container">
+              {blocks.map((block, idx) => (
+                <BlockCard
+                  key={block.block_id || `${block.block_type}-${idx}`}
+                  block={block}
+                  onOpenCase={onOpenCase}
+                  sources={message.metadata?.sources}
+                  onSources={onSources}
+                />
+              ))}
             </div>
-          )}
-          {blocks?.some(b => b.block_type === 'human_handoff') && onOpenCase && (
-            <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
-              Open Lawyer Escalation Bundle in Your case
-            </button>
+          ) : (
+            <div className="prose-content">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                skipHtml
+                components={citationComponents(message.metadata?.sources, onSources)}
+              >
+                {enhanceListReadability(formatInlineCitations(answerText))}
+              </ReactMarkdown>
+              {docBlock && (
+                <div className="res-document-box">
+                  {docBlock.document_title && <div className="res-document-title"><strong>{docBlock.document_title}</strong></div>}
+                  <pre>{docBlock.content}</pre>
+                  <button type="button" className="doc-copy-btn" onClick={() => copyDoc(docBlock.content)}>
+                    <FileText size={13} /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
+                  </button>
+                </div>
+              )}
+              {blocks?.some(b => b.block_type === 'human_handoff') && onOpenCase && (
+                <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
+                  Open Lawyer Escalation Bundle in Your case
+                </button>
+              )}
+            </div>
           )}
         </div>
       ) : (

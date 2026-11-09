@@ -91,12 +91,23 @@ export default function AgentFlowWidget({
 }: AgentFlowWidgetProps) {
   const [visible, setVisible] = useState(isStreaming)
   const [showTrace, setShowTrace] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
   const traceEndRef = useRef<HTMLDivElement>(null)
+  const startTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (isStreaming) {
       setVisible(true)
+      startTimeRef.current = Date.now()
+      setElapsed(0)
+      const timer = setInterval(() => {
+        if (startTimeRef.current) {
+          setElapsed(Math.max(0, Math.floor((Date.now() - startTimeRef.current) / 1000)))
+        }
+      }, 500)
+      return () => clearInterval(timer)
     } else {
+      startTimeRef.current = null
       // Disappear smoothly after response is delivered
       const timer = setTimeout(() => {
         setVisible(false)
@@ -147,10 +158,9 @@ export default function AgentFlowWidget({
 
   // Last event details for comprehensive transparency
   const lastEvent = events[events.length - 1]
-  const activeAgent = lastEvent?.agent || activeStage.agentName
   const activeTool = lastEvent?.tool
   const fetchedResult = lastEvent?.result || (lastEvent?.passages_count ? `Loaded ${lastEvent.passages_count} legal provisions` : null)
-  const whatWentWrong = lastEvent?.warning || lastEvent?.error || (isLoop ? 'Verifier flagged ungrounded claim → Self-healing feedback loop' : null)
+  const whatWentWrong = lastEvent?.warning || lastEvent?.error || (isLoop ? 'Verifier flagged repair → Feedback loop' : null)
   const currentAction = lastEvent?.action || lastEvent?.detail || activeStage.sublabel
 
   // Disappear when not streaming and no active visible turn
@@ -162,22 +172,27 @@ export default function AgentFlowWidget({
       role="status"
       aria-label="Flowinggg"
     >
-      {/* Flowinggg Header */}
+      {/* Flowinggg Header with Elapsed Timer */}
       <div className="flowing-header">
         <div className="flowing-brand">
           <span className="flowing-pulse-dot" />
           <span className="flowing-title">Flowinggg</span>
+          {isStreaming && (
+            <span className="flowing-timer-pill" title="Elapsed execution time">
+              ⏱️ {elapsed}s
+            </span>
+          )}
         </div>
         <div className="flowing-meta">
           <button
             type="button"
             className="flowing-trace-toggle-btn"
             onClick={() => setShowTrace(prev => !prev)}
-            title="Toggle live execution trace and tool results"
+            title="Toggle live execution trace"
           >
-            <Terminal size={11} />
+            <Terminal size={10} />
             <span>Trace ({events.length})</span>
-            {showTrace ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            {showTrace ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
           </button>
           <span className="flowing-step-pill">{stageIndex + 1}/6</span>
           {onOpenWorkflow && (
@@ -202,23 +217,18 @@ export default function AgentFlowWidget({
             color: activeStage.color,
           }}
         >
-          <Icon size={16} className={isLoop ? 'spin-loop' : 'flowing-icon-breathing'} />
+          <Icon size={15} className={isLoop ? 'spin-loop' : 'flowing-icon-breathing'} />
         </div>
 
         <div className="flowing-info">
           <div className="flowing-stage-name-row">
-            <span className="flowing-stage-name">{activeStage.label}</span>
-            {activeAgent && activeAgent !== activeStage.label && (
-              <span className="flowing-agent-pill" title={`Active Agent: ${activeAgent}`}>
-                {activeAgent.replace(' Agent', '')}
-              </span>
-            )}
+            <span className="flowing-stage-name" title={activeStage.label}>{activeStage.label}</span>
             <span
               className="flowing-status-badge"
               style={{
-                background: `${activeStage.color}15`,
+                background: `${activeStage.color}25`,
                 color: activeStage.color,
-                borderColor: `${activeStage.color}30`,
+                borderColor: `${activeStage.color}45`,
               }}
             >
               {isLoop ? 'Loop active' : isFinal ? 'Certified' : 'Working'}
@@ -227,26 +237,26 @@ export default function AgentFlowWidget({
 
           {/* Tool Pill if tool was called */}
           {activeTool && (
-            <div className="flowing-tool-pill">
+            <div className="flowing-tool-pill" title={`Tool: ${activeTool}`}>
               <Wrench size={10} />
-              <span>Tool: <b>{activeTool}</b></span>
+              <span>{activeTool}</span>
             </div>
           )}
 
           {/* Current action / detail */}
-          <p className="flowing-detail-text">{currentAction}</p>
+          <p className="flowing-detail-text" title={currentAction}>{currentAction}</p>
 
           {/* Fetched Result Banner */}
           {fetchedResult && (
-            <div className="flowing-result-pill">
+            <div className="flowing-result-pill" title={fetchedResult}>
               <span>📥 {fetchedResult}</span>
             </div>
           )}
 
           {/* What Went Wrong / Warning Banner */}
           {whatWentWrong && (
-            <div className="flowing-warning-pill">
-              <AlertTriangle size={11} />
+            <div className="flowing-warning-pill" title={whatWentWrong}>
+              <AlertTriangle size={10} />
               <span>{whatWentWrong}</span>
             </div>
           )}
