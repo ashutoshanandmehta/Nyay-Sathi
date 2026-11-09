@@ -416,3 +416,35 @@ def test_runtime_referral_matches_the_situation(message, safety_category, delive
     }
     answer = AgentAnswer(central_question="q", tasks=[_task()], claims=[])
     assert handoff_template_id(answer, state) == expected
+
+
+def test_primary_prompt_v2_structure_and_constraints():
+    from typing import get_args
+
+    from app.agent.contracts import BlockType, GroundingLabel
+
+    prompt_path = Path(__file__).resolve().parents[1] / "app" / "prompts" / "primary.md"
+    assert prompt_path.exists(), "primary.md prompt file is missing"
+    text = prompt_path.read_text(encoding="utf-8")
+
+    assert len(text) < 10500, f"Prompt too long: {len(text)} chars (limit 10500)"
+
+    required_phrases = [
+        "Work it out before you write",
+        "what to do if it is refused or ignored",
+        "next tier of the **same** route",
+        "only when the user's message suggests a current risk",
+        "matched to that route",
+        "Before you finish",
+        "phrased as questions for a lawyer",
+        "knowledgeable friend",
+        "never name sources inline",
+    ]
+    for phrase in required_phrases:
+        assert phrase in text, f"Missing required phrase in primary.md: {phrase}"
+
+    for bt in get_args(BlockType):
+        assert bt in text, f"Missing BlockType '{bt}' in primary.md"
+
+    for gl in get_args(GroundingLabel):
+        assert gl in text, f"Missing GroundingLabel '{gl}' in primary.md"
