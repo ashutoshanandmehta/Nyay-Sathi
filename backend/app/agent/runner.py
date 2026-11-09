@@ -67,7 +67,14 @@ CONCEPT_EXPANSIONS = (
     ),
     (
         re.compile(
-            r"\b(?:harass\w*|threat\w*|dhamki|abuse\w*|gaali|beat\w*|maar-?peet)\b|परेशान|pareshan|धमकी|मारपीट|गाली",
+            r"\b(?:harass\w*|threat\w*|dhamki|pareshan)\b|परेशान|धमकी",
+            re.I,
+        ),
+        "criminal intimidation",
+    ),
+    (
+        re.compile(
+            r"\b(?:abuse\w*|gaali|beat\w*|maar-?peet)\b|मारपीट|गाली",
             re.I,
         ),
         "criminal intimidation hurt wrongful restraint insult breach of peace",

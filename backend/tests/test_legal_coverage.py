@@ -15,7 +15,7 @@ UNCLE_LAND_QUERY = (
     "disputes in my village Chorsua, Bihar; the land was owned by my grandfather who died 1 month back."
 )
 HINGLISH_QUERY = "chacha zameen ke liye papa ko dhamki de rahe hain, thana mein shikayat kaise karein, Bihar"
-CONSUMER_QUERY = "I ordered two fans on Amazon, returned both to the delivery agent, but only received refund for one."
+CONSUMER_QUERY = "Amazon picked up my returned item 12 days ago and closed my refund ticket."
 
 
 @pytest.fixture(scope="module")
@@ -122,16 +122,29 @@ def test_pre_retrieval_for_real_query(agent):
     ids = _prefetch(agent, UNCLE_LAND_QUERY)
     assert "pack-bnss-2023-s173" in ids
     assert "pack-bnss-2023-s164" in ids
+    assert "pack-bns-2023-s351" in ids
 
 
 def test_hinglish_query_pre_retrieval(agent):
     ids = _prefetch(agent, HINGLISH_QUERY)
     assert "pack-bnss-2023-s173" in ids
+    assert "pack-bns-2023-s351" in ids
+
+
+def test_state_filter_suppresses_bihar_on_up_query(agent):
+    up_query = (
+        "How to file complaint against my uncle who has harassed my father for some land "
+        "disputes in my village, Uttar Pradesh; the land was owned by my grandfather who died 1 month back."
+    )
+    ids = _prefetch(agent, up_query)
+    for pid in ids:
+        assert not pid.startswith("pack-bihar-land-"), f"Unexpected Bihar land passage {pid} for UP query"
+        assert not pid.startswith("pack-bihar-prohibition-"), f"Unexpected Bihar passage {pid} for UP query"
 
 
 def test_no_false_matches_on_consumer_refund_query(agent):
     ids = _prefetch(agent, CONSUMER_QUERY)
+    assert "pack-bns-2023-s351" not in ids
     for pid in ids:
-        assert not pid.startswith("pack-bns-2023-"), f"Unexpected BNS passage {pid} for consumer query"
         assert not pid.startswith("pack-hindu-succession-"), f"Unexpected HSA passage {pid} for consumer query"
         assert not pid.startswith("pack-bihar-land-"), f"Unexpected Bihar land passage {pid} for consumer query"
