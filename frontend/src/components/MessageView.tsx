@@ -80,24 +80,26 @@ function citationComponents(sources:Source[]|undefined, onSources:(s:Source[], f
       if(!source) return <span className="cite-chip cite-chip-missing">{number}</span>
       return <button type="button" className="cite-chip" title={`${source.title} — ${source.locator}`} aria-label={`Source ${number}: ${source.title}`} onClick={()=>onSources(sources!, number)}>{number}</button>
     },
+    h2: ({children}) => <h2 className="prose-h2">{children}</h2>,
     h3: ({children}) => {
       const text = String(children || '')
       const isEscalation = /fails|escalat|court|police|lawyer|advocate|dispute/i.test(text)
       const isAction = /action|step|do this|now|precaution/i.test(text)
       const isRoute = /route|recommen|path|procedure/i.test(text)
       const isEvidence = /evidence|checklist|document|proof|record/i.test(text)
-      const Icon = isEscalation ? GitFork : isAction ? ListChecks : isRoute ? Route : isEvidence ? ClipboardList : Sparkles
-      const colorVar = isEscalation ? 'var(--coral)' : isAction ? 'var(--coral-ink)' : 'var(--jade-ink)'
+      const Icon = isEscalation ? GitFork : isAction ? ListChecks : isRoute ? Route : isEvidence ? ClipboardList : null
       return (
-        <div className="semantic-h3-card" style={{ borderLeftColor: colorVar }}>
-          <Icon size={15} style={{ color: colorVar }} aria-hidden="true" />
-          <h3 className="semantic-h3-title">{children}</h3>
-        </div>
+        <h3 className="prose-h3">
+          {Icon && <Icon size={16} className="prose-heading-icon" aria-hidden="true" />}
+          <span>{children}</span>
+        </h3>
       )
     },
     ol: ({children}) => <ol className="prose-ordered-list">{children}</ol>,
     ul: ({children}) => <ul className="prose-unordered-list">{children}</ul>,
     li: ({children}) => <li className="prose-list-item">{children}</li>,
+    hr: () => <hr className="markdown-divider" />,
+    blockquote: ({children}) => <blockquote className="markdown-quote">{children}</blockquote>,
   }
 }
 
@@ -235,43 +237,29 @@ export default function MessageView({
               <p>{item.text}</p>
             </div>
           ))}
-          {blocks && blocks.length > 0 ? (
-            <div className="resolution-blocks-container">
-              {blocks.map((block, idx) => (
-                <BlockCard
-                  key={block.block_id || `${block.block_type}-${idx}`}
-                  block={block}
-                  onOpenCase={onOpenCase}
-                  sources={message.metadata?.sources}
-                  onSources={onSources}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="prose-content">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                skipHtml
-                components={citationComponents(message.metadata?.sources, onSources)}
-              >
-                {enhanceListReadability(formatInlineCitations(answerText))}
-              </ReactMarkdown>
-              {docBlock && (
-                <div className="res-document-box">
-                  {docBlock.document_title && <div className="res-document-title"><strong>{docBlock.document_title}</strong></div>}
-                  <pre>{docBlock.content}</pre>
-                  <button type="button" className="doc-copy-btn" onClick={() => copyDoc(docBlock.content)}>
-                    <FileText size={13} /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
-                  </button>
-                </div>
-              )}
-              {blocks?.some(b => b.block_type === 'human_handoff') && onOpenCase && (
-                <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
-                  Open Lawyer Escalation Bundle in Your case
+          <div className="prose-content">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              skipHtml
+              components={citationComponents(message.metadata?.sources, onSources)}
+            >
+              {enhanceListReadability(formatInlineCitations(answerText))}
+            </ReactMarkdown>
+            {docBlock && (
+              <div className="res-document-box">
+                {docBlock.document_title && <div className="res-document-title"><strong>{docBlock.document_title}</strong></div>}
+                <pre>{docBlock.content}</pre>
+                <button type="button" className="doc-copy-btn" onClick={() => copyDoc(docBlock.content)}>
+                  <FileText size={13} /> {copiedDoc ? 'Draft copied' : 'Copy prepared draft'}
                 </button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+            {blocks?.some(b => b.block_type === 'human_handoff') && onOpenCase && (
+              <button type="button" className="handoff-open-btn" onClick={onOpenCase}>
+                <Scale size={14} aria-hidden="true" /> Open Lawyer Escalation Bundle in Your case
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <p>{message.content}</p>
