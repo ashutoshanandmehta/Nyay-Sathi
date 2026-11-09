@@ -418,7 +418,9 @@ class OpenSearchLegalIndex:
                 and is_generic_index_or_snippet(doc, q_set)
             ):
                 continue
-            selected.append(self._clean(doc))
+            clean = self._clean(doc)
+            clean["search_score"] = round(total, 3)
+            selected.append(clean)
             seen_hashes.add(h)
             per_source[sid] = per_source.get(sid, 0) + 1
             if len(selected) >= limit:

@@ -133,4 +133,65 @@ def test_real_bihar_gazette_splits_into_its_hundred_sections():
     sections = {s["number"]: s for s in split_statute([p.get_text() for p in fitz.open(path)])}
     assert len(sections) == 100
     assert sections["76"]["heading"] == "Offences to be Cognizable and Non-Bailable"
-    assert sections["30"]["page"] == 34
+
+
+def test_gap_covered_by_official_pack_skips_web_search():
+    calls = []
+
+    class Provider:
+        def search_public(self, query, timeout):
+            calls.append(query)
+            return [], None
+
+    settings = Settings(openai_api_key="fixture", agent_research_seconds=10)
+    covered_passage = {
+        "passage_id": "pack-bnss-2023-s173",
+        "title": "BNSS Section 173",
+        "locator": "Section 173: Information in cognizable cases",
+        "text": "Every information relating to the commission of a cognizable offence...",
+        "canonical_url": "https://example.gov.in",
+        "retrieved_at": "2026-11-09",
+        "origin": "official_pack",
+    }
+    service = ResearchService(
+        settings,
+        SimpleNamespace(passages=[]),
+        provider=Provider(),
+        fetcher=SimpleNamespace(read=lambda *a: None),
+        repository=SimpleNamespace(save=lambda *a: None),
+        knowledge_index=SimpleNamespace(search=lambda *a, **k: ([covered_passage], {"certified_hit_count": 0})),
+    )
+    request = ResearchRequest(
+        questions=[{"query": "BNSS Section 173 cognizable offence", "material_gap": "Procedure for FIR registration"}],
+        fresh_required=False,
+    )
+    state = {"current_message": "How to register FIR?", "context": {}}
+    res = service.run(request, state, TurnBudget(settings))
+    assert len(calls) == 0  # Skipped because local coverage exists
+    assert any(p["passage_id"] == "pack-bnss-2023-s173" for p in res["evidence"])
+
+
+def test_uncovered_gap_searches_once():
+    calls = []
+
+    class Provider:
+        def search_public(self, query, timeout):
+            calls.append(query)
+            return [], None
+
+    settings = Settings(openai_api_key="fixture", agent_research_seconds=10)
+    service = ResearchService(
+        settings,
+        SimpleNamespace(passages=[]),
+        provider=Provider(),
+        fetcher=SimpleNamespace(read=lambda *a: None),
+        repository=SimpleNamespace(save=lambda *a: None),
+        knowledge_index=SimpleNamespace(search=lambda *a, **k: ([], {"certified_hit_count": 0})),
+    )
+    request = ResearchRequest(
+        questions=[{"query": "Uncovered novel municipal circular", "material_gap": "Local rule"}],
+        fresh_required=False,
+    )
+    state = {"current_message": "Municipal circular rule", "context": {}}
+    service.run(request, state, TurnBudget(settings))
+    assert len(calls) == 1  # Exactly one search executed

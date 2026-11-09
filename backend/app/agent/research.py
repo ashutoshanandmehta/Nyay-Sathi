@@ -271,29 +271,52 @@ class ResearchService:
                             }
                         )
 
-                cached = None if request.fresh_required else self.cache.get(key)
-                if cached:
-                    passages.extend(cached)
-                    records.append({"tool": "evidence_cache", "status": "hit", "query_hash": key})
+                pack_or_cert_hits = []
+                if not request.fresh_required:
+                    pack_hits, _ = self.retrieve_certified(
+                        query,
+                        jurisdiction=question.jurisdiction or "India",
+                        limit=4,
+                        min_relative_score=0.65,
+                    )
+                    pack_or_cert_hits = [
+                        h
+                        for h in pack_hits
+                        if h.get("origin") == "official_pack" or h.get("certified_proposition")
+                    ]
+                if pack_or_cert_hits:
+                    passages.extend(pack_or_cert_hits)
+                    records.append(
+                        {
+                            "tool": "web_search",
+                            "status": "skipped_local_coverage",
+                            "query_hash": key,
+                        }
+                    )
                 else:
-                    # If OpenSearch already supplied certified propositions and we are using the
-                    # default live OfficialSearchProvider, skip redundant live web search unless
-                    # gap-filling is needed; injected test providers still execute as requested.
-                    has_strong_certified = any(p.get("certified_proposition") for p in passages)
-                    if (
-                        has_strong_certified
-                        and not request.fresh_required
-                        and isinstance(self.provider, OfficialSearchProvider)
-                    ):
-                        records.append(
-                            {
-                                "tool": "web_search",
-                                "status": "skipped_certified_sufficient",
-                                "query_hash": key,
-                            }
-                        )
+                    cached = None if request.fresh_required else self.cache.get(key)
+                    if cached:
+                        passages.extend(cached)
+                        records.append({"tool": "evidence_cache", "status": "hit", "query_hash": key})
                     else:
-                        queries.append((query, key))
+                        # If OpenSearch already supplied certified propositions and we are using the
+                        # default live OfficialSearchProvider, skip redundant live web search unless
+                        # gap-filling is needed; injected test providers still execute as requested.
+                        has_strong_certified = any(p.get("certified_proposition") for p in passages)
+                        if (
+                            has_strong_certified
+                            and not request.fresh_required
+                            and isinstance(self.provider, OfficialSearchProvider)
+                        ):
+                            records.append(
+                                {
+                                    "tool": "web_search",
+                                    "status": "skipped_certified_sufficient",
+                                    "query_hash": key,
+                                }
+                            )
+                        else:
+                            queries.append((query, key))
 
                 if not request.fresh_required:
                     for p in getattr(self.retriever, "passages", []):

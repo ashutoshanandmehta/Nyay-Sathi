@@ -188,30 +188,53 @@ class PrimaryAgent:
             min_relative_score=0.65,
             origin="official_pack",
         )
-        trusted += pack_hits
         # Each everyday concept gets its own small lookup, so a strong topic (say, Bihar liquor
         # law) cannot crowd out a needed one (free legal aid for someone in custody).
+        concept_guaranteed = []
+        concept_extras = []
         for concepts in matched_concepts(conversation_text):
             extra, _ = self.research.retrieve_certified(
                 concepts, jurisdiction="India", limit=2, origin="official_pack"
             )
-            trusted += extra
-        trusted = list({h["passage_id"]: h for h in trusted}.values())
+            if extra:
+                concept_guaranteed.append(extra[0])
+                concept_extras.extend(extra[1:])
+
+        # Cap at agent_max_passages (8) for the first primary call, keeping order by relevance;
+        # follow-up turns merging earlier conversation context allow up to agent_max_passages * 2.
+        cap = self.settings.agent_max_passages if not earlier else self.settings.agent_max_passages * 2
+        guaranteed_ids = {h["passage_id"] for h in concept_guaranteed}
+        selected = list(concept_guaranteed)
+        seen = set(guaranteed_ids)
+
+        candidates = []
+        for h in (trusted + pack_hits + concept_extras):
+            if h["passage_id"] not in seen:
+                seen.add(h["passage_id"])
+                candidates.append(h)
+
+        candidates.sort(key=lambda h: h.get("search_score", 0.0), reverse=True)
+        for h in candidates:
+            if len(selected) >= cap:
+                break
+            selected.append(h)
+
+        trusted = selected
         if trusted:
             merged = {p["passage_id"]: p for p in state["passages"]}
             for hit in trusted:
                 merged.setdefault(hit["passage_id"], hit)
-            state["passages"] = list(merged.values())[: self.settings.agent_max_passages * 2]
+            state["passages"] = list(merged.values())[:cap]
             state["tool_records"].append(
                 {
                     "tool": "certified_knowledge_pack",
                     "status": "hit",
                     "query_hash": diag["query_hash"],
                     "certified_hit_count": sum(
-                        1 for h in trusted if h.get("certified_proposition")
+                        1 for h in state["passages"] if h.get("certified_proposition")
                     ),
                     "official_pack_hit_count": sum(
-                        1 for h in trusted if h.get("origin") == "official_pack"
+                        1 for h in state["passages"] if h.get("origin") == "official_pack"
                     ),
                 }
             )
