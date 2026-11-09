@@ -52,10 +52,54 @@ CONCEPT_EXPANSIONS = (
         "free legal aid custody legal services",
     ),
     (
-        re.compile(r"\b(?:salary|wages?|tankhwah|vetan|payslip)\b|वेतन|तनख्वाह", re.I),
+        re.compile(
+            r"\b(?:complaint|fir|thana|police\s+station|report\s+to\s+police)\b|शिकायत|shikayat",
+            re.I,
+        ),
+        "information cognizable offence police station complaint superintendent",
+    ),
+    (
+        re.compile(
+            r"\b(?:police\s+refused|not\s+registering|complaint\s+not\s+taken)\b|fir\s+nah[ií]\s+likh\w*|शिकायत\s+न(?:हीं|ही)\s+लिख\w*",
+            re.I,
+        ),
+        "non-cognizable information superintendent magistrate investigate",
+    ),
+    (
+        re.compile(
+            r"\b(?:harass\w*|threat\w*|dhamki|abuse\w*|gaali|beat\w*|maar-?peet)\b|परेशान|pareshan|धमकी|मारपीट|गाली",
+            re.I,
+        ),
+        "criminal intimidation hurt wrongful restraint insult breach of peace",
+    ),
+    (
+        re.compile(
+            r"\b(?:land|zameen|jameen|khet|plot|kabza|boundary|encroach\w*)\b|ज़मीन|जमीन|खेत|कब्ज़ा|कब्जा",
+            re.I,
+        ),
+        "land dispute possession breach of peace trespass mutation",
+    ),
+    (
+        re.compile(
+            r"\b(?:died|death|expired|inheritance|wirasat|waris|hissa|batwara|partition|property\s+share)\b|guzar\s+ga[ye]|गुज़र\s+गए|विरासत|वारिस|बंटवारा|हिस्सा|उत्तराधिकार",
+            re.I,
+        ),
+        "succession heirs inheritance class I share coparcenary mutation",
+    ),
+    (
+        re.compile(
+            r"\b(?:salary|wages?|tankhwah|vetan|payslip)\b|वेतन|तनख्वाह",
+            re.I,
+        ),
         "wages payment claims",
     ),
-    (re.compile(r"\b(?:lawyer|vakil|advocate)\b|वकील", re.I), "legal aid"),
+    (
+        re.compile(
+            r"\b(?:lawyer(?:\s+fees?)?|free\s+lawyer|can['’]t\s+afford|vakil(?:\s+ka\s+paisa)?|advocate)\b|वकील|मुफ्त\s+वकील",
+            re.I,
+        ),
+        "free legal aid legal services criteria",
+    ),
     (
         re.compile(r"\b(?:car|vehicle|bike|scooter|truck|gaadi|gadi)\b|गाड़ी|गाडी", re.I),
         "vehicle seized confiscation release penalty",

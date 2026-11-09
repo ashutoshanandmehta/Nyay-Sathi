@@ -78,8 +78,56 @@ SOURCES = [
             "57": ARREST + ["magistrate"],
             "58": ARREST + ["twenty-four hours", "24 hours", "magistrate", "detention"],
             "144": ["maintenance", "wife", "children", "parents", "guzara", "kharcha"],
-            "173": ["fir", "first information report", "complaint", "police", "zero fir"],
+            "164": [
+                "land",
+                "zameen",
+                "jameen",
+                "khet",
+                "plot",
+                "boundary",
+                "kabza",
+                "possession",
+                "dispute",
+                "jhagda",
+                "breach of peace",
+                "SDM",
+                "executive magistrate",
+            ],
+            "173": [
+                "fir",
+                "first information report",
+                "complaint",
+                "police",
+                "zero fir",
+                "shikayat",
+                "शिकायत",
+                "police refused",
+                "superintendent of police",
+                "SP",
+                "written complaint",
+                "harassment",
+            ],
+            "174": [
+                "NCR",
+                "non-cognizable",
+                "police refused",
+                "complaint not registered",
+                "minor offence",
+                "magistrate permission",
+            ],
+            "175": [
+                "175(3)",
+                "magistrate order investigation",
+                "police not acting",
+                "FIR not registered",
+            ],
             "187": BAIL + ["remand", "police custody", "judicial custody", "investigation"],
+            "223": [
+                "complaint to magistrate",
+                "private complaint",
+                "court complaint",
+                "parivad",
+            ],
             "341": ["legal aid", "free lawyer", "state expense", "accused", "vakil"],
             "478": BAIL + ["bailable offence"],
             "479": BAIL + ["undertrial", "maximum period"],
@@ -232,7 +280,9 @@ def arrangement(pdf, first, last):
     for m in re.finditer(
         r"(?<![\w(])(\d{1,3}[A-Z]?)\.\s+(.+?)(?=\s+\d{1,3}[A-Z]?\.\s+[A-Z]|$)", flat
     ):
-        head = re.sub(r"\s+(?:CHAPTER\s+[IVXLC]+|[A-Z][A-Z ,.'’—-]{6,}).*$", "", m.group(2)).strip()
+        head = re.sub(
+            r"\s+(?:CHAPTER\s+[IVXLC]+|Of\s+[A-Za-z].*|[A-Z][A-Z ,.'’—-]{6,}).*$", "", m.group(2)
+        ).strip()
         found.setdefault(m.group(1), head.rstrip("."))
     return found
 
@@ -241,7 +291,7 @@ def heading_above_sections(src, pdf):
     heads = arrangement(pdf, *src["arrangement_pages"])
     body = re.sub(r"P a g e\s*\|\s*\d+", " ", pages_text(pdf, *src["body_pages"]))
     starts = {}
-    for m in re.finditer(r"(?m)^\s*(\d{1,3}[A-Z]?)\.\s+(?=\(1\)|[A-Z])", body):
+    for m in re.finditer(r"(?m)^\s*(\d{1,3}[A-Z]?)\.\s*(?=\(1\)|[A-Z])", body):
         num = m.group(1)
         head_words = set(re.findall(r"[a-z]{3,}", heads.get(num, "").casefold()))
         before = set(re.findall(r"[a-z]{3,}", body[max(0, m.start() - 260) : m.start()].casefold()))
