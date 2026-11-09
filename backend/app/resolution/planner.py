@@ -17,7 +17,9 @@ from app.resolution.models import (
     utc_now,
 )
 
-ROOT = Path(__file__).parents[3]
+_backend_root = Path(__file__).resolve().parents[2]
+_data_root = (_backend_root / "data") if (_backend_root / "data").exists() else (_backend_root.parent / "data")
+ROOT = _backend_root.parent if (_backend_root.parent / "data").exists() else _backend_root
 
 
 class ChannelRegistry:

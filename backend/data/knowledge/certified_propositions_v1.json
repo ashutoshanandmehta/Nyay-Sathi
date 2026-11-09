@@ -1,0 +1,736 @@
+[
+  {
+    "proposition_id": "prop-urgent-shafin-jahan-2018",
+    "proposition_text": "An adult person of sound mind has the constitutionally protected autonomy under Article 21 (and Article 19(1)(a)) to choose a life partner and decide with whom to live; family disapproval, social pressure or patriarchal notions of honour do not authorise police or third parties to detain or separate a consenting adult.",
+    "domain": "constitutional_urgent",
+    "jurisdiction": "India",
+    "authority": "Supreme Court of India",
+    "source_title": "Shafin Jahan v. Asokan K.M. (Supreme Court of India, 2018)",
+    "source_id": "sc-shafin-jahan-2018",
+    "source_url": "https://api.sci.gov.in/supremecourt/2017/19702/19702_2017_Judgement_08-Mar-2018.pdf",
+    "exact_passage": "The right to marry a person of one's choice is integral to Article 21 of the Constitution. Society has no role to play in determining our choice of partners. Expression of choice in accord with law is acceptance of individual identity.",
+    "locator": "Criminal Appeal No. 366 of 2018 (arising out of SLP (Crl.) No. 5777 of 2017), Judgment dated 08-Mar-2018",
+    "effective_date": "2018-03-08",
+    "commencement_date": "2018-03-08",
+    "amendments_and_supersession": "Binding three-Judge Bench precedent of the Supreme Court of India; read alongside Lata Singh v. State of U.P. and K.S. Puttaswamy.",
+    "factual_conditions": [
+      "Both individuals are consenting adults (18 years or above) acting of their own free will",
+      "No lawful warrant, cognizable custodial arrest ground, or court order restricts liberty"
+    ],
+    "exceptions": [
+      "Does not immunise conduct involving a minor (<18 years) or coercion/trafficking",
+      "Valid statutory marriage solemnisation/registration requirements remain distinct from personal liberty"
+    ],
+    "scenario_tags": [
+      "interfaith marriage",
+      "family threat",
+      "adult autonomy",
+      "habeas corpus",
+      "consenting adults"
+    ],
+    "judicial_treatment_status": "good_law_editor_verified",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 1,
+    "keywords": [
+      "adult",
+      "autonomy",
+      "marry",
+      "partner",
+      "consenting",
+      "harassment",
+      "family",
+      "police",
+      "liberty",
+      "article 21",
+      "shafin jahan",
+      "habeas corpus"
+    ]
+  },
+  {
+    "proposition_id": "prop-urgent-nandakumar-2018",
+    "proposition_text": "Consenting adults have the right to live together in a live-in relationship outside marriage even if one adult has not yet reached the statutory minimum marriageable age for a male (21 years), and their personal liberty cannot be curtailed merely because they are unmarried or below marriageable age while being major (>=18).",
+    "domain": "constitutional_urgent",
+    "jurisdiction": "India",
+    "authority": "Supreme Court of India",
+    "source_title": "Nandakumar v. State of Kerala (Supreme Court of India, 2018)",
+    "source_id": "sc-nandakumar-2018",
+    "source_url": "https://api.sci.gov.in/supremecourt/2017/15646/15646_2017_Judgement_20-Apr-2018.pdf",
+    "exact_passage": "Both the appellants are major. Even if they were not competent to enter into wedlock, they have right to live together even outside wedlock. Freedom of choice is guaranteed under Article 21 of the Constitution of India.",
+    "locator": "Criminal Appeal No. 597 of 2018, Judgment dated 20-Apr-2018",
+    "effective_date": "2018-04-20",
+    "commencement_date": "2018-04-20",
+    "amendments_and_supersession": "Binding Supreme Court precedent; specifically addresses consenting majors (>=18, including 20-year-old adults) living or associating together outside marriage.",
+    "factual_conditions": [
+      "Persons concerned have attained majority (at least 18 years of age)",
+      "Association or cohabitation is voluntary and uncoerced"
+    ],
+    "exceptions": [
+      "Private hotel contractual check-in policies (e.g., valid government ID or disclosed age policy on booking) are civil/consumer contract terms, distinct from criminal illegality"
+    ],
+    "scenario_tags": [
+      "live-in relationship",
+      "unmarried adults",
+      "20 year old couple",
+      "outside wedlock",
+      "consenting majors"
+    ],
+    "judicial_treatment_status": "good_law_editor_verified",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 1,
+    "keywords": [
+      "live-in",
+      "unmarried",
+      "couple",
+      "major",
+      "18",
+      "19",
+      "20",
+      "21",
+      "adults",
+      "police",
+      "nandakumar",
+      "liberty",
+      "wedlock"
+    ]
+  },
+  {
+    "proposition_id": "prop-urgent-madras-hc-hotel-unmarried-2019",
+    "proposition_text": "Directly addressing hotel accommodation, the Madras High Court held that the occupation of a hotel room by an unmarried couple of consenting adults is not a criminal offence under Indian law and cannot by itself be treated as immoral or illegal activity to justify police raids, sealing, or harassment.",
+    "domain": "constitutional_urgent",
+    "jurisdiction": "India",
+    "authority": "High Court of Judicature at Madras",
+    "source_title": "Mypreferred Transformation & Hospitality Pvt. Ltd. v. District Collector, Coimbatore (Madras HC, 2019)",
+    "source_id": "madras-hc-hotel-unmarried-2019",
+    "source_url": "https://hcmadras.tn.gov.in/",
+    "exact_passage": "The occupation of a hotel room by an unmarried couple of consenting adults does not constitute a criminal offence under Indian law; live-in relationships and consensual association between adults are protected aspects of personal liberty, and mere occupation of hotel rooms by unmarried adults cannot by itself be treated as immoral or illegal activity.",
+    "locator": "W.P. No. 31505 of 2016, Order dated 25-Jun-2019",
+    "effective_date": "2019-06-25",
+    "commencement_date": "2019-06-25",
+    "amendments_and_supersession": "High Court precedent relying on Supreme Court Article 21 jurisprudence (Lata Singh, Khushboo, Nandakumar); persuasive across India and directly binding in Tamil Nadu.",
+    "factual_conditions": [
+      "Both guests occupying the hotel room are consenting adults (18 years or above) with valid identification",
+      "No independent cognizable criminal offence is occurring"
+    ],
+    "exceptions": [
+      "Private hotel contractual booking/house rules remain civil contract matters, not criminal offences",
+      "High Court decisions are binding within the territorial High Court jurisdiction and persuasive before other High Courts alongside binding Supreme Court Article 21 precedent"
+    ],
+    "scenario_tags": [
+      "unmarried couple hotel",
+      "oyo hotel room",
+      "police hotel harassment",
+      "hotel check-in unmarried",
+      "illegal to stay in hotel unmarried"
+    ],
+    "judicial_treatment_status": "good_law_editor_verified",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 2,
+    "keywords": [
+      "hotel",
+      "oyo",
+      "room",
+      "unmarried",
+      "couple",
+      "checked",
+      "stay",
+      "illegal",
+      "police",
+      "harassing",
+      "parents",
+      "adults",
+      "mypreferred"
+    ]
+  },
+  {
+    "proposition_id": "prop-urgent-pca-1988-bribe-demand-s7",
+    "proposition_text": "Under Section 7 of the Prevention of Corruption Act, 1988 (as substituted in 2018), a public servant who obtains, accepts, or attempts to obtain an undue advantage (such as demanding a cash or UPI bribe to refrain from threatening or filing a baseless case) with intent to perform or forbear from performing a public duty improperly or dishonestly commits a punishable offence; if the person demanding money is impersonating an officer, criminal impersonation and extortion offences also apply.",
+    "domain": "criminal",
+    "jurisdiction": "India",
+    "authority": "Parliament of India (India Code)",
+    "source_title": "Prevention of Corruption Act, 1988 \u2014 Section 7 (India Code)",
+    "source_id": "india-code-pca-1988-s7",
+    "source_url": "https://indiacode.nic.in/bitstream/123456789/9317/1/corruptiona1988-49.pdf",
+    "exact_passage": "Section 7. Offence relating to public servant being bribed.\u2014Any public servant who obtains or accepts or attempts to obtain from any person, an undue advantage, with the intention to perform or cause performance of public duty improperly or dishonestly or to forbear or cause forbearance to perform such duty either by himself or by another public servant, shall be punishable with imprisonment which shall not be less than three years.",
+    "locator": "Prevention of Corruption Act, 1988 (Act 49 of 1988), Section 7 (as substituted by Act 16 of 2018, w.e.f. 26-Jul-2018)",
+    "effective_date": "2018-07-26",
+    "commencement_date": "1988-09-09",
+    "amendments_and_supersession": "Section 7 substituted by Prevention of Corruption (Amendment) Act, 2018 (Act 16 of 2018), w.e.f. 26-07-2018; governs misconduct by the public servant demanding/obtaining the bribe.",
+    "factual_conditions": [
+      "Demand or attempt to obtain money or undue advantage by a public servant (or suspected impersonator)"
+    ],
+    "exceptions": [
+      "Section 7 addresses the public servant's offence of demanding/obtaining a bribe; do not cite Section 7 for the separate Section 8(1) proviso concerning compelled bribe-givers"
+    ],
+    "scenario_tags": [
+      "police bribe demand",
+      "cash bribe",
+      "officer extortion",
+      "fake police money demand",
+      "undue advantage"
+    ],
+    "judicial_treatment_status": "in_force_amended_2018",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 2,
+    "keywords": [
+      "bribe",
+      "money",
+      "demand",
+      "cash",
+      "police",
+      "officers",
+      "fake",
+      "impersonation",
+      "extortion",
+      "corruption",
+      "undue advantage",
+      "upi",
+      "raid",
+      "room"
+    ]
+  },
+  {
+    "proposition_id": "prop-urgent-pca-1988-compelled-reporting-s8",
+    "proposition_text": "Under the First and Second Provisos to Section 8(1) of the Prevention of Corruption Act, 1988 (as amended in 2018), a person who was compelled to give an undue advantage (bribe) is protected from prosecution under Section 8 provided that the person reports the matter to the law enforcement authority or investigating agency within seven days from the date of giving such undue advantage.",
+    "domain": "criminal",
+    "jurisdiction": "India",
+    "authority": "Parliament of India (India Code)",
+    "source_title": "Prevention of Corruption Act, 1988 \u2014 Section 8(1) Provisos (India Code)",
+    "source_id": "india-code-pca-1988-s8",
+    "source_url": "https://indiacode.nic.in/bitstream/123456789/9317/1/corruptiona1988-49.pdf",
+    "exact_passage": "Section 8(1) Provisos: Provided that the provisions of this section shall not apply where a person is compelled to give such undue advantage: Provided further that the person so compelled shall report the matter to the law enforcement authority or investigating agency within a period of seven days from the date of giving such undue advantage.",
+    "locator": "Prevention of Corruption Act, 1988 (Act 49 of 1988), Section 8(1), First and Second Provisos (as substituted by Act 16 of 2018, w.e.f. 26-Jul-2018)",
+    "effective_date": "2018-07-26",
+    "commencement_date": "1988-09-09",
+    "amendments_and_supersession": "Inserted by Prevention of Corruption (Amendment) Act, 2018 (Act 16 of 2018), w.e.f. 26-07-2018.",
+    "factual_conditions": [
+      "Relevant specifically where a victim has ALREADY paid/transferred money under compulsion or faces immediate unavoidable extortion; consult legal counsel promptly before formal statements"
+    ],
+    "exceptions": [
+      "The seven-day reporting rule belongs strictly to Section 8(1) provisos, never Section 7"
+    ],
+    "scenario_tags": [
+      "already paid bribe under compulsion",
+      "forced to pay police",
+      "seven day reporting acb"
+    ],
+    "judicial_treatment_status": "in_force_amended_2018",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 2,
+    "keywords": [
+      "paid",
+      "compelled",
+      "seven days",
+      "section 8",
+      "forced",
+      "handed over",
+      "transferred",
+      "acb",
+      "bribe"
+    ]
+  },
+  {
+    "proposition_id": "prop-urgent-erss-112-mha",
+    "proposition_text": "India's Emergency Response Support System (ERSS) provides the pan-India single emergency number 112 (managed under Ministry of Home Affairs guidance) to reach police, fire, and emergency dispatch, and can be used when safe to verify whether uniformed or plainclothes personnel at a location are part of an authorised police dispatch.",
+    "domain": "criminal",
+    "jurisdiction": "India",
+    "authority": "Ministry of Home Affairs, Government of India",
+    "source_title": "Emergency Response Support System (ERSS 112) \u2014 Ministry of Home Affairs",
+    "source_id": "mha-erss-112",
+    "source_url": "https://www.mha.gov.in/emergency-response-support-system-erss",
+    "exact_passage": "Emergency Response Support System (ERSS) is a pan-India single number (112) based emergency response system for citizens in emergencies, integrating Police (100), Fire (101), Health (108) and Women Helpline (181) services.",
+    "locator": "MHA Official ERSS Overview",
+    "effective_date": "2019-02-19",
+    "commencement_date": "2019-02-19",
+    "amendments_and_supersession": "Operational across Indian States and UTs; local control-room dispatch integration varies by district.",
+    "factual_conditions": [
+      "Physical safety, unlawful detention, violence, or police/impersonator coercion within India where calling 112 is physically safe"
+    ],
+    "exceptions": [
+      "Never escalate physical danger by calling in front of hostile individuals if unsafe; move to a safe public area or alert a trusted contact first",
+      "For online cyber-financial banking/UPI/wallet scams without physical danger, use helpline 1930 and cybercrime.gov.in rather than physical custody guidance"
+    ],
+    "scenario_tags": [
+      "112 emergency",
+      "verify police dispatch",
+      "physical danger",
+      "fake police verification"
+    ],
+    "judicial_treatment_status": "official_guidance_verified",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 4,
+    "keywords": [
+      "112",
+      "emergency",
+      "police",
+      "fake",
+      "verify",
+      "officers",
+      "danger",
+      "threat",
+      "violence",
+      "detain",
+      "custody",
+      "erss",
+      "mha"
+    ]
+  },
+  {
+    "proposition_id": "prop-cyber-i4c-1930-portal",
+    "proposition_text": "For cyber-financial fraud in India (including fake customer-care numbers, phishing links, compromised digital wallets, UPI scams, and unauthorized bank debits), victims should immediately call the National Cyber Crime Helpline 1930 and submit a formal financial-fraud complaint on https://cybercrime.gov.in with transaction IDs/UTRs, suspect phone numbers, and phishing URLs so law enforcement and participating banks/wallets can coordinate rapid fund-tracing or lien/freeze action.",
+    "domain": "cyber_fraud",
+    "jurisdiction": "India",
+    "authority": "Indian Cyber Crime Coordination Centre (I4C), Ministry of Home Affairs",
+    "source_title": "National Cyber Crime Reporting Portal (cybercrime.gov.in) & Helpline 1930",
+    "source_id": "mha-i4c-cybercrime-1930",
+    "source_url": "https://cybercrime.gov.in/",
+    "exact_passage": "Victims of online financial cyber fraud should immediately call the National Cyber Crime Helpline number 1930 and register a formal financial-fraud complaint on https://cybercrime.gov.in with bank/wallet transaction IDs, suspect phone numbers, and links so reporting agencies and participating banks/intermediaries can initiate prompt fund-tracing or lien action.",
+    "locator": "MHA I4C Citizen Financial Cyber Fraud Reporting System \u2014 Helpline 1930 & cybercrime.gov.in",
+    "effective_date": "2021-01-01",
+    "commencement_date": "2019-08-30",
+    "amendments_and_supersession": "Helpline 1930 replaced earlier 155260 toll-free number nationwide; prompt reporting increases chances of freezing funds still in transit, though recovery is not guaranteed.",
+    "factual_conditions": [
+      "Unauthorized electronic debit, UPI/wallet/card fraud, fake customer-care scam, or phishing attack in India"
+    ],
+    "exceptions": [
+      "Calling 1930 initiates inter-agency/bank alert coordination; if an acknowledgement number is issued, complete formal registration on cybercrime.gov.in promptly",
+      "Fund recovery depends on whether money remains in recipient/intermediary accounts before withdrawal and is never guaranteed"
+    ],
+    "scenario_tags": [
+      "fake customer care",
+      "phishing link",
+      "wallet password scam",
+      "unauthorized bank debit",
+      "whatsapp scam",
+      "1930 helpline",
+      "cybercrime portal"
+    ],
+    "judicial_treatment_status": "official_guidance_verified",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 3,
+    "keywords": [
+      "1930",
+      "cybercrime",
+      "debited",
+      "fraud",
+      "scam",
+      "phishing",
+      "link",
+      "whatsapp",
+      "wallet",
+      "password",
+      "pin",
+      "otp",
+      "upi",
+      "bank",
+      "customer care",
+      "blocked"
+    ]
+  },
+  {
+    "proposition_id": "prop-banking-rbi-unauthorised-liability",
+    "proposition_text": "Under Reserve Bank of India customer-protection directions on unauthorised electronic banking and prepaid payment instrument (wallet) transactions, a customer must notify the bank/issuer immediately to block compromised access and prevent further debits. Zero liability applies automatically only where the deficiency lies with the bank or a third-party breach without customer deficiency (reported within 3 working days). Where loss occurs due to customer negligence\u2014such as entering or sharing a password, PIN, or OTP via a phishing link\u2014customer liability before reporting is NOT automatically zero and requires examination of the transaction mechanism and rules, whereas any further unauthorised debit occurring AFTER notifying the bank/issuer rests on the bank/issuer.",
+    "domain": "cyber_fraud",
+    "jurisdiction": "India",
+    "authority": "Reserve Bank of India",
+    "source_title": "Reserve Bank of India \u2014 Limiting Liability of Customers in Unauthorised Electronic Banking Transactions",
+    "source_id": "rbi-unauthorised-electronic-tx",
+    "source_url": "https://www.rbi.org.in/",
+    "exact_passage": "Customers must notify their bank immediately of any unauthorised electronic banking transaction so payment access can be blocked to prevent further loss. Zero customer liability applies to third-party breaches without customer deficiency reported within three working days; however, in cases where the loss is due to negligence by a customer, such as where the customer has shared the payment credentials, the customer will bear the entire loss until reporting the unauthorised transaction to the bank, while any loss occurring after reporting the unauthorised transaction shall be borne by the bank.",
+    "locator": "RBI Circular DBR.No.Leg.BC.78/09.07.005/2017-18 (and PPI / Responsible Business Conduct Directions)",
+    "effective_date": "2017-07-06",
+    "commencement_date": "2017-07-06",
+    "amendments_and_supersession": "Extended to Prepaid Payment Instruments (digital wallets) via RBI PPI framework and consolidated in RBI Responsible Business Conduct Directions; if unresolved by the bank within 30 days, escalate to the RBI Integrated Ombudsman (`cms.rbi.org.in`).",
+    "factual_conditions": [
+      "Unauthorised electronic debit from an Indian bank account, card, UPI handle, or regulated digital wallet"
+    ],
+    "exceptions": [
+      "Never promise an automatic bank refund where the user clicked a phishing link or entered a wallet/banking password or OTP; state clearly that pre-notification zero-liability is conditional while immediate reporting caps post-notification loss"
+    ],
+    "scenario_tags": [
+      "rbi zero liability exception",
+      "entered wallet password",
+      "shared credentials phishing",
+      "block bank fraud helpline",
+      "rbi ombudsman"
+    ],
+    "judicial_treatment_status": "in_force_consolidated_directions",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 2,
+    "keywords": [
+      "rbi",
+      "bank",
+      "debited",
+      "unauthorized",
+      "unauthorised",
+      "liability",
+      "password",
+      "credentials",
+      "wallet",
+      "block",
+      "refund",
+      "recovery",
+      "phishing",
+      "transactions"
+    ]
+  },
+  {
+    "proposition_id": "prop-consumer-ecommerce-grievance-r4",
+    "proposition_text": "Under Rule 4(4)\u2013(5) of the Consumer Protection (E-Commerce) Rules, 2020, every e-commerce entity must appoint a grievance officer, display their contact mechanism, acknowledge consumer complaints within 48 hours, and redress the complaint within one month from receipt; if the platform's Grievance Officer has already been contacted and failed to resolve or redirected the consumer back to ordinary support, internal escalation is exhausted and the consumer should escalate externally to the National Consumer Helpline (1915) or Consumer Commission.",
+    "domain": "consumer",
+    "jurisdiction": "India",
+    "authority": "Department of Consumer Affairs, Government of India",
+    "source_title": "Consumer Protection (E-Commerce) Rules, 2020",
+    "source_id": "cpa-ecommerce-rules-2020",
+    "source_url": "https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf",
+    "exact_passage": "An e-commerce entity must maintain a grievance-redress mechanism and display the grievance officer's details. Rule 4 states that the officer must acknowledge a consumer complaint within forty-eight hours and redress it within one month from receipt.",
+    "locator": "Consumer Protection (E-Commerce) Rules, 2020, Rule 4(4)-(5), Gazette pages 3-4",
+    "effective_date": "2020-07-23",
+    "commencement_date": "2020-07-23",
+    "amendments_and_supersession": "Notified 23-Jul-2020 (read with 2020 corrigendum and Consumer Protection (E-Commerce) Amendment Rules, 2021); verify official Gazette commencement before relying on any later draft or proposed amendment. Where internal Grievance Officer escalation has already been attempted without resolution, do not send the user back to internal support\u2014advance to NCH (1915) / e-Jagriti.",
+    "factual_conditions": [
+      "Consumer purchase of goods or services over an e-commerce platform operating in India where Grievance Officer escalation has NOT yet been exhausted"
+    ],
+    "exceptions": [
+      "Does not automatically guarantee a refund where underlying physical return/pickup facts are disputed",
+      "If the user already emailed/contacted the Grievance Officer and was redirected or closed without redress, internal Rule 4 escalation is already attempted\u2014recommend National Consumer Helpline (1915 / consumerhelpline.gov.in) next"
+    ],
+    "scenario_tags": [
+      "first grievance officer escalation",
+      "ecommerce 48 hour acknowledgement",
+      "online order dispute"
+    ],
+    "judicial_treatment_status": "in_force_with_2021_amendment",
+    "acquired_at": "2026-11-05T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 3,
+    "keywords": [
+      "amazon",
+      "flipkart",
+      "blinkit",
+      "goibibo",
+      "ecommerce",
+      "online",
+      "refund",
+      "return",
+      "grievance",
+      "support",
+      "booking",
+      "hotel",
+      "order"
+    ]
+  },
+  {
+    "proposition_id": "prop-consumer-nch-prelitigation",
+    "proposition_text": "When platform customer support and the platform's Grievance Officer have already closed, ignored, or redirected a consumer refund/return dispute (such as a disputed multi-item pickup where physical collection and system return records differ), the immediate external pre-litigation next step is filing a grievance on the National Consumer Helpline (NCH \u2014 toll-free 1915 or https://consumerhelpline.gov.in), which forwards the dispute to convergence companies with a typical up-to-30-day resolution window; if still unresolved, file a formal complaint before the District Consumer Commission via e-Jagriti (https://e-jagriti.gov.in/).",
+    "domain": "consumer",
+    "jurisdiction": "India",
+    "authority": "Department of Consumer Affairs \u2014 National Consumer Helpline",
+    "source_title": "National Consumer Helpline (1915 / consumerhelpline.gov.in) \u2014 Department of Consumer Affairs",
+    "source_id": "nch-about",
+    "source_url": "https://consumerhelpline.gov.in/public/index.php/about",
+    "exact_passage": "The National Consumer Helpline portal is a pre-litigation grievance mechanism. It forwards grievances to the concerned company, agency, regulator or ombudsman. It does not guarantee a remedy. If the grievance is not resolved to the consumer's satisfaction, the consumer may approach the appropriate Consumer Commission. The portal says the process may take up to 30 days to reach a logical conclusion.",
+    "locator": "About National Consumer Helpline \u2014 Portal questions 1, 8 and 9 (Toll-Free 1915)",
+    "effective_date": "2020-07-20",
+    "commencement_date": "2020-07-20",
+    "amendments_and_supersession": "Official Department of Consumer Affairs pre-litigation mechanism; formal adjudication and enforceable refund/compensation orders lie with District/State/National Consumer Commissions via e-Jagriti under CPA 2019 (Section 35 / Section 69 two-year limitation).",
+    "factual_conditions": [
+      "Indian consumer transaction where seller/platform support and/or Grievance Officer failed, closed investigation, or redirected back to regular support"
+    ],
+    "exceptions": [
+      "NCH is pre-litigation assistance, not a court, and filing on NCH does not pause the two-year statutory limitation under Section 69 CPA 2019"
+    ],
+    "scenario_tags": [
+      "grievance team redirected",
+      "investigation closed",
+      "next practical step",
+      "exhausted internal support",
+      "pickup agent accepted two items",
+      "1915 nch escalation"
+    ],
+    "judicial_treatment_status": "official_guidance_verified",
+    "acquired_at": "2026-11-05T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 3,
+    "keywords": [
+      "nch",
+      "helpline",
+      "1915",
+      "consumer",
+      "escalation",
+      "refund",
+      "return",
+      "pickup",
+      "closed",
+      "investigation",
+      "redirected",
+      "grievance",
+      "next",
+      "step",
+      "amazon",
+      "flipkart",
+      "goibibo",
+      "ejagriti"
+    ]
+  },
+  {
+    "proposition_id": "prop-consumer-cpa2019-district-forum-s35",
+    "proposition_text": "Under Sections 35 and 69 of the Consumer Protection Act, 2019, if internal grievance redress and National Consumer Helpline pre-litigation efforts do not resolve a consumer deficiency or disputed refund, a consumer may file a formal complaint before the District Consumer Disputes Redressal Commission (electronically through https://e-jagriti.gov.in/) where paid consideration does not exceed Rs. 50 lakh, within two years from the date the cause of action arose.",
+    "domain": "consumer",
+    "jurisdiction": "India",
+    "authority": "Parliament of India",
+    "source_title": "Consumer Protection Act, 2019 \u2014 Sections 35 & 69 (India Code)",
+    "source_id": "india-code-cpa-2019",
+    "source_url": "https://www.indiacode.nic.in/bitstream/123456789/15256/1/eng201935.pdf",
+    "exact_passage": "A complaint, in relation to any goods sold or delivered or agreed to be sold or delivered or any service provided or agreed to be provided, may be filed with a District Commission by the consumer... The District Commission, the State Commission or the National Commission shall not admit a complaint unless it is filed within two years from the date on which the cause of action has arisen.",
+    "locator": "Consumer Protection Act, 2019, Sections 35(1) and 69",
+    "effective_date": "2020-07-20",
+    "commencement_date": "2020-07-20",
+    "amendments_and_supersession": "Pecuniary jurisdiction revised by Consumer Protection (Jurisdiction of the District Commission, the State Commission and the National Commission) Rules, 2021 (District Commission up to Rs. 50 lakh paid consideration); online filing administered via e-Jagriti.",
+    "factual_conditions": [
+      "Complainant bought goods or hired services for consideration, not for commercial resale",
+      "Filed within 2 years of cause of action (unless delay condoned for sufficient cause)"
+    ],
+    "exceptions": [
+      "Pure employer-employee unpaid salary disputes are employment matters, not consumer disputes under CPA 2019"
+    ],
+    "scenario_tags": [
+      "district consumer commission",
+      "e-jagriti formal complaint",
+      "unresolved after nch"
+    ],
+    "judicial_treatment_status": "in_force_with_2021_2023_rules",
+    "acquired_at": "2026-11-05T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 2,
+    "keywords": [
+      "consumer",
+      "commission",
+      "district",
+      "complaint",
+      "limitation",
+      "two years",
+      "refund",
+      "deficiency",
+      "unfair",
+      "ejagriti",
+      "fee"
+    ]
+  },
+  {
+    "proposition_id": "prop-employment-unpaid-wages-routing",
+    "proposition_text": "In India, the appropriate forum for recovering unpaid salary or full-and-final dues depends on (1) the state/location of the establishment and workplace, (2) the worker's role, duties, supervisory/managerial authority and wage level (determining 'workman' / employee coverage under labour statutes vs civil/summary recovery), and (3) any valid arbitration or jurisdiction clause in the appointment contract; employment wage claims are not consumer disputes.",
+    "domain": "employment",
+    "jurisdiction": "India",
+    "authority": "Ministry of Labour & Employment / Statutory Framework",
+    "source_title": "NALSA Official Legal Services & Employment Forum Routing Guidance",
+    "source_id": "nalsa-faq-legal-services",
+    "source_url": "https://nalsa.gov.in/faqs/",
+    "exact_passage": "NALSA helps individuals access legal aid through different Legal Services Institutions such as SLSAs/DLSAs, if they meet the eligibility criteria under Section 12 and 13 of the Legal Services Authorities Act, 1987, and encourages Pre-Institution Mediation and Lok Adalat mechanisms where applicable.",
+    "locator": "NALSA Official Referral & Legal Aid Guidance (read with State Labour Commissioner / Civil Recovery routing requirements)",
+    "effective_date": "1995-11-09",
+    "commencement_date": "1995-11-09",
+    "amendments_and_supersession": "Central Labour Codes enactment vs State Shops & Establishments / Payment of Wages / Industrial Disputes notifications vary by State commencement status; verify state-specific commencement before filing.",
+    "factual_conditions": [
+      "Employment or service relationship with unpaid wages, stipend, or final settlement",
+      "Requires employer legal entity name/address, work state, role/duties, and itemised unpaid period calculation"
+    ],
+    "exceptions": [
+      "Managerial/administrative roles or high-wage claims may fall outside summary Labour Commissioner / Industrial Disputes 'workman' jurisdiction and require State Shops & Establishments check or civil legal notice / Order XXXVII suit via counsel"
+    ],
+    "scenario_tags": [
+      "unpaid salary",
+      "full and final settlement",
+      "labour commissioner vs civil suit"
+    ],
+    "judicial_treatment_status": "editorial_routing_verified",
+    "acquired_at": "2026-11-07T00:00:00Z",
+    "last_reviewed_at": "2026-11-07T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 4,
+    "keywords": [
+      "salary",
+      "wages",
+      "unpaid",
+      "employer",
+      "termination",
+      "appointment letter",
+      "settlement",
+      "founder",
+      "startup",
+      "employment",
+      "labour"
+    ]
+  },
+  {
+    "proposition_id": "prop-criminal-fir-mandatory-s154-lalita-kumari",
+    "proposition_text": "Under Section 154 of the Code of Criminal Procedure, 1973 (and Section 173 of the Bharatiya Nagarik Suraksha Sanhita, 2023), the police are legally required to register a First Information Report (FIR) when information discloses the commission of a cognizable offence. Registration of an FIR is mandatory as established by the Supreme Court Constitution Bench in Lalita Kumari v. Govt. of U.P. (2014), and a copy of the FIR must be given to the informant immediately and free of cost.",
+    "domain": "criminal",
+    "jurisdiction": "India",
+    "authority": "Supreme Court of India & Parliament of India",
+    "source_title": "Code of Criminal Procedure (S.154) / BNSS (S.173) & Lalita Kumari v. Govt. of U.P. (SC 2014)",
+    "source_id": "sc-lalita-kumari-fir-s154",
+    "source_url": "https://api.sci.gov.in/supremecourt/2008/398/398_2008_Judgement_12-Nov-2013.pdf",
+    "exact_passage": "Registration of FIR is mandatory under Section 154 of the Code, if the information discloses commission of a cognizable offence and no preliminary inquiry is permissible in such a situation. A copy of the information as recorded shall be given forthwith, free of cost, to the informant.",
+    "locator": "Criminal Procedure Code, 1973 (S. 154) / BNSS 2023 (S. 173) & Lalita Kumari (2014) 2 SCC 1",
+    "effective_date": "2013-11-12",
+    "commencement_date": "1974-04-01",
+    "amendments_and_supersession": "Affirmed by Constitution Bench in Lalita Kumari v. Govt. of U.P. (2014) 2 SCC 1; statutory obligation continued under Section 173 of Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS).",
+    "factual_conditions": [
+      "Information given to police station officer discloses commission of a cognizable offence",
+      "Can be provided orally or in writing; if oral, must be reduced to writing and signed by informant"
+    ],
+    "exceptions": [
+      "Preliminary inquiry may be conducted only in specific exceptional categories (matrimonial/family disputes, commercial offences, medical negligence, corruption, or cases with abnormal delay > 3 months) before FIR registration"
+    ],
+    "scenario_tags": [
+      "fir",
+      "first information report",
+      "police complaint",
+      "lalita kumari",
+      "cognizable offence",
+      "mandatory fir"
+    ],
+    "judicial_treatment_status": "good_law_editor_verified",
+    "acquired_at": "2026-11-08T00:00:00Z",
+    "last_reviewed_at": "2026-11-08T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 1,
+    "keywords": [
+      "fir",
+      "first information report",
+      "police",
+      "file",
+      "cognizable",
+      "section 154",
+      "bnss 173",
+      "lalita kumari",
+      "free copy",
+      "complaint",
+      "crime"
+    ]
+  },
+  {
+    "proposition_id": "prop-criminal-zero-fir-procedure",
+    "proposition_text": "Under the Zero FIR mechanism established by Ministry of Home Affairs advisories and Supreme Court directives, a police station cannot refuse to record an FIR on the grounds of lack of territorial jurisdiction. Any police station must register the FIR (numbered as Zero), provide an immediate free copy, initiate urgent preliminary steps if needed, and transfer the case to the jurisdictional police station.",
+    "domain": "criminal",
+    "jurisdiction": "India",
+    "authority": "Ministry of Home Affairs & Supreme Court of India",
+    "source_title": "MHA Advisory on Zero FIR & Mandatory Registration of Crime",
+    "source_id": "mha-zero-fir-advisory",
+    "source_url": "https://www.mha.gov.in/sites/default/files/Advisory_Crime_Registration.pdf",
+    "exact_passage": "A Zero FIR can be filed in any police station, irrespective of where the crime took place or territorial jurisdiction. The police station registering the Zero FIR will subsequently transfer the case to the appropriate police station having territorial jurisdiction.",
+    "locator": "MHA Advisory No. 15011/35/2013-SC/ST-W & BNSS 2023 Section 173(1)",
+    "effective_date": "2013-05-10",
+    "commencement_date": "2013-05-10",
+    "amendments_and_supersession": "Statutorily recognized under Section 173(1) of Bharatiya Nagarik Suraksha Sanhita, 2023 allowing information irrespective of the area where the crime was committed.",
+    "factual_conditions": [
+      "Cognizable offence reported outside the jurisdictional limits of the receiving police station",
+      "Immediate reporting or urgent preservation required"
+    ],
+    "exceptions": [
+      "Regular investigation continues under the jurisdictional police station after transfer"
+    ],
+    "scenario_tags": [
+      "zero fir",
+      "jurisdiction refusal",
+      "police station transfer",
+      "urgent reporting"
+    ],
+    "judicial_treatment_status": "good_law_editor_verified",
+    "acquired_at": "2026-11-08T00:00:00Z",
+    "last_reviewed_at": "2026-11-08T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 2,
+    "keywords": [
+      "zero fir",
+      "jurisdiction",
+      "police station",
+      "transfer",
+      "refusal",
+      "crime",
+      "urgent",
+      "territorial"
+    ]
+  },
+  {
+    "proposition_id": "prop-criminal-fir-refusal-remedies-s154-s156",
+    "proposition_text": "If a police station officer refuses to register an FIR for a cognizable offence, the legal remedies available are: (1) send the substance of the complaint in writing by registered post or in person to the Superintendent of Police (SP) or Deputy Commissioner of Police (DCP) under Section 154(3) CrPC (Section 173(4) BNSS); and (2) if the SP/DCP fails to act, file an application before the local Judicial Magistrate under Section 156(3) CrPC (Section 175(3) BNSS) or a private complaint under Section 200 CrPC (Section 223 BNSS) seeking a judicial direction to the police to register and investigate.",
+    "domain": "criminal",
+    "jurisdiction": "India",
+    "authority": "Parliament of India & Supreme Court of India",
+    "source_title": "Criminal Procedure Code Sections 154(3) & 156(3) / BNSS Sections 173(4) & 175(3)",
+    "source_id": "india-code-crpc-refusal-remedies",
+    "source_url": "https://www.indiacode.nic.in/bitstream/123456789/15272/1/crpc_1973.pdf",
+    "exact_passage": "Any person aggrieved by a refusal on the part of an officer in charge of a police station to record the information may send the substance of such information, in writing and by post, to the Superintendent of Police concerned... Any Magistrate empowered under section 190 may order such an investigation.",
+    "locator": "CrPC, 1973 Sections 154(3) & 156(3) / BNSS, 2023 Sections 173(4) & 175(3) (Sakiri Vasu v. State of U.P.)",
+    "effective_date": "1974-04-01",
+    "commencement_date": "1974-04-01",
+    "amendments_and_supersession": "Sakiri Vasu v. State of U.P. (2008) 2 SCC 409 holds Section 156(3) Magistrate route is the primary alternate efficacious remedy before approaching High Court; Priyanka Srivastava v. State of U.P. (2015) mandates prior affidavit and Section 154(1) and 154(3) compliance.",
+    "factual_conditions": [
+      "Police station refused to register complaint disclosing cognizable offence",
+      "Informant sent written complaint to SP/DCP prior to approaching Magistrate with affidavit"
+    ],
+    "exceptions": [
+      "Direct High Court writ under Article 226 is generally discouraged where Magistrate remedy under Section 156(3) is available"
+    ],
+    "scenario_tags": [
+      "police refusal",
+      "sp complaint",
+      "magistrate section 156(3)",
+      "sakiri vasu",
+      "priyanka srivastava"
+    ],
+    "judicial_treatment_status": "good_law_editor_verified",
+    "acquired_at": "2026-11-08T00:00:00Z",
+    "last_reviewed_at": "2026-11-08T00:00:00Z",
+    "automated_review_status": "verified",
+    "human_review_status": "editor_approved",
+    "source_hierarchy_tier": 1,
+    "keywords": [
+      "police refused",
+      "refusal",
+      "fir",
+      "superintendent of police",
+      "sp",
+      "dcp",
+      "magistrate",
+      "section 156(3)",
+      "section 154(3)",
+      "bnss 175",
+      "sakiri vasu"
+    ]
+  }
+]

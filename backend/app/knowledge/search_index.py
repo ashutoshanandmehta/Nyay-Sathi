@@ -16,9 +16,9 @@ from rank_bm25 import BM25Okapi
 from app.knowledge.propositions import LegalKnowledgeFactory
 
 # Verbatim official sections built by scripts/build_official_packs.py (not lawyer-reviewed).
-OFFICIAL_PACKS_PATH = (
-    Path(__file__).resolve().parents[3] / "data" / "knowledge" / "official_law_packs_v1.json"
-)
+_backend_root = Path(__file__).resolve().parents[2]
+_data_root = (_backend_root / "data") if (_backend_root / "data").exists() else (_backend_root.parent / "data")
+OFFICIAL_PACKS_PATH = _data_root / "knowledge" / "official_law_packs_v1.json"
 
 STOPWORDS = {
     "what",

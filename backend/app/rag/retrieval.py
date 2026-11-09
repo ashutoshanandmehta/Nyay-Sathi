@@ -18,7 +18,9 @@ class HybridRetriever:
 
     def __init__(self, settings: Settings):
         self.settings = settings
-        passages_path = Path(__file__).parents[3] / "data" / "sources" / "consumer_passages.json"
+        backend_root = Path(__file__).resolve().parents[2]
+        data_dir = (backend_root / "data") if (backend_root / "data").exists() else (backend_root.parent / "data")
+        passages_path = data_dir / "sources" / "consumer_passages.json"
         curated = json.loads(passages_path.read_text()) if passages_path.exists() else []
         self.curated_ids = {item["passage_id"] for item in curated}
         self.passages: list[dict[str, Any]] = curated

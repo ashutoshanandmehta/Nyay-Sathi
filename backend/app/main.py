@@ -70,6 +70,15 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def ensure_api_path_prefix(request: Request, call_next):
+    # Support both /api/foo and stripped /foo in serverless/proxy configurations
+    path = request.scope.get("path", "")
+    if path and not path.startswith("/api") and not path.startswith("/docs") and not path.startswith("/openapi"):
+        request.scope["path"] = f"/api{path}"
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def security_and_limits(request: Request, call_next):
     trace_id = generate_trace_id(
         request.headers.get("traceparent") or request.headers.get("X-Trace-Id")

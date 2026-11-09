@@ -9,7 +9,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-DATA_ROOT = Path(__file__).resolve().parents[3] / "data" / "knowledge"
+_backend_root = Path(__file__).resolve().parents[2]
+_data_root = (_backend_root / "data") if (_backend_root / "data").exists() else (_backend_root.parent / "data")
+DATA_ROOT = _data_root / "knowledge"
 
 
 class LegalProposition(BaseModel):

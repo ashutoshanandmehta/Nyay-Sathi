@@ -5,8 +5,10 @@ from typing import Any
 
 from app.schemas.models import CaseMemory
 
-ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_KNOWLEDGE_PATH = ROOT / "data" / "knowledge" / "consumer_support_v1.json"
+_backend_root = Path(__file__).resolve().parents[2]
+_data_root = (_backend_root / "data") if (_backend_root / "data").exists() else (_backend_root.parent / "data")
+ROOT = _backend_root.parent if (_backend_root.parent / "data").exists() else _backend_root
+DEFAULT_KNOWLEDGE_PATH = _data_root / "knowledge" / "consumer_support_v1.json"
 
 
 class SharedKnowledgeService:
