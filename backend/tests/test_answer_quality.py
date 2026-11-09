@@ -157,8 +157,8 @@ def test_reviewed_lawyer_referral_is_published_last_under_its_heading(client, is
     content = data["assistant_message"]["content"]
     blocks = data["assistant_message"]["metadata"]["resolution_blocks"]
     assert blocks[-1]["block_type"] == "human_handoff"
-    assert blocks[-1]["title"] == "When to involve a lawyer"
-    assert content.index("### When to involve a lawyer") > content.index("where he is being held")
+    assert blocks[-1]["title"] == "When a lawyer would help"
+    assert content.index("### When a lawyer would help") > content.index("where he is being held")
 
 
 def test_when_nothing_verifies_the_message_does_not_promise_more_below(client, isolated_app):
