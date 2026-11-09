@@ -17,7 +17,13 @@ from app.agent.blocks import (
     infer_block_type,
 )
 from app.agent.budget import TurnBudget
-from app.agent.contracts import AgentAnswer, AgentTask, AnswerClaim, ResearchRequest
+from app.agent.contracts import (
+    AgentAnswer,
+    AgentTask,
+    AnswerClaim,
+    RepairPatch,
+    ResearchRequest,
+)
 from app.agent.provider import ResponsesProvider
 from app.agent.research import ResearchService
 from app.agent.safety import classify_urgent_context, detect_india_context, safety_event
@@ -366,22 +372,43 @@ class PrimaryAgent:
                                 prior_accepted = dict(accepted)
                                 try:
                                     repaired = self._repair(answer, review, state, registry, budget)
-                                    if repaired.tasks != answer.tasks:
-                                        raise ValueError("Repair changed task scope")
-                                    # Preserve supported claims byte-for-byte without scrambling claim order.
-                                    stable_by_id = {
-                                        c.claim_id: c
-                                        for c in answer.claims
-                                        if c.claim_id in accepted
-                                    }
-                                    merged_claims = [
-                                        stable_by_id.pop(c.claim_id)
-                                        if c.claim_id in stable_by_id
-                                        else c
-                                        for c in repaired.claims
-                                    ]
-                                    repaired.claims = list(stable_by_id.values()) + merged_claims
-                                    answer = AgentAnswer.model_validate(repaired.model_dump())
+                                    if isinstance(repaired, RepairPatch):
+                                        existing_ids = {c.claim_id for c in answer.claims}
+                                        for cid in repaired.removals:
+                                            if cid not in existing_ids:
+                                                raise ValueError(f"Repair patch referenced unknown removal claim: {cid}")
+                                        for c in repaired.replacements:
+                                            if c.claim_id not in existing_ids:
+                                                raise ValueError(f"Repair patch referenced unknown replacement claim: {c.claim_id}")
+                                        replacements_by_id = {c.claim_id: c for c in repaired.replacements}
+                                        merged_claims = []
+                                        for c in answer.claims:
+                                            if c.claim_id in repaired.removals:
+                                                continue
+                                            if c.claim_id in replacements_by_id:
+                                                merged_claims.append(replacements_by_id[c.claim_id])
+                                            else:
+                                                merged_claims.append(c)
+                                        merged_claims.extend(repaired.additions)
+                                        answer = answer.model_copy(update={"claims": merged_claims})
+                                    elif isinstance(repaired, AgentAnswer):
+                                        if repaired.tasks != answer.tasks:
+                                            raise ValueError("Repair changed task scope")
+                                        stable_by_id = {
+                                            c.claim_id: c
+                                            for c in answer.claims
+                                            if c.claim_id in accepted
+                                        }
+                                        merged_claims = [
+                                            stable_by_id.pop(c.claim_id)
+                                            if c.claim_id in stable_by_id
+                                            else c
+                                            for c in repaired.claims
+                                        ]
+                                        repaired.claims = list(stable_by_id.values()) + merged_claims
+                                        answer = AgentAnswer.model_validate(repaired.model_dump())
+                                    else:
+                                        raise ValueError("Unknown repair response type")
                                     blocked, mechanical, pending = mechanical_checks(
                                         answer, registry
                                     )
@@ -790,18 +817,51 @@ class PrimaryAgent:
         }
 
     def _repair(self, answer, review, state, registry, budget):
+        rejected_or_uncertain_ids = {
+            v.claim_id
+            for v in review.claims
+            if v.support in {"unsupported", "uncertain"}
+        }
+        claims_to_repair = [
+            c for c in answer.claims if c.claim_id in rejected_or_uncertain_ids
+        ]
+        other_claims_compact = [
+            {"claim_id": c.claim_id, "block_type": c.block_type or infer_block_type(c), "text": c.text}
+            for c in answer.claims
+            if c.claim_id not in rejected_or_uncertain_ids
+        ]
+        needed_evidence_ids = {
+            eid for c in claims_to_repair for eid in c.evidence_ids
+        }
+        cited_evidence = [
+            entry
+            for entry in registry.payload()
+            if entry.get("evidence_id") in needed_evidence_ids
+        ]
         payload = {
+            "current_message": state.get("current_message", ""),
+            "rejected_or_uncertain_claims": [c.model_dump(mode="json") for c in claims_to_repair],
+            "repair_instructions": review.repair_instructions,
+            "cited_evidence": cited_evidence,
+            "other_claims": other_claims_compact,
+            "prior_assistant_coverage": state.get("context", {}).get("prior_assistant_coverage", {}),
+            "instruction": "Repair only specific rejected or uncertain claims. Propose replacements, removals or additions in a RepairPatch. Do not rewrite supported claims.",
             "context": self._context(state),
             "previous_answer": answer.model_dump(mode="json"),
             "review": review.model_dump(mode="json"),
-            "instruction": "Repair only specific rejected claims and material omissions. Preserve tasks, evidence IDs and all supported claims byte-for-byte. Do not add tools.",
         }
+        repair_instructions = (
+            "You are repairing specific rejected or uncertain claims. "
+            "Return a RepairPatch with replacements, removals, or additions. "
+            "Preserve verified statutory references and ensure claims end with terminal punctuation."
+        )
         _, calls, repaired = self.provider.complete(
             [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
-            self.prompt,
+            repair_instructions,
             budget,
             allow_tools=False,
             stage="repair",
+            schema=RepairPatch,
         )
         if calls or repaired is None:
             raise ValueError("Repair did not complete")

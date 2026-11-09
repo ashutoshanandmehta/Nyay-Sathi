@@ -5,7 +5,7 @@ import json
 from openai import OpenAI
 from openai.lib._pydantic import to_strict_json_schema
 
-from app.agent.contracts import ActionPlan, AgentAnswer, AgentReview, ResearchRequest
+from app.agent.contracts import ActionPlan, AgentAnswer, AgentReview, RepairPatch, ResearchRequest
 from app.services.model_calls import model_calls, normalize_usage
 
 
@@ -109,9 +109,18 @@ class ResponsesProvider:
             raise
 
     def complete(
-        self, items, instructions, budget, *, review=False, allow_tools=True, stage="primary"
+        self,
+        items,
+        instructions,
+        budget,
+        *,
+        review=False,
+        allow_tools=True,
+        stage="primary",
+        schema=None,
     ):
-        schema = AgentReview if review else AgentAnswer
+        if schema is None:
+            schema = RepairPatch if stage == "repair" else (AgentReview if review else AgentAnswer)
         model = self.settings.openai_review_model if review else self.settings.openai_chat_model
         schema_json = to_strict_json_schema(schema)
         size = (

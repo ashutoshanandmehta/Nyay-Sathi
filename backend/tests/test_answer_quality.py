@@ -13,7 +13,14 @@ from types import SimpleNamespace
 import pytest
 
 from app.agent.budget import TurnBudget
-from app.agent.contracts import AgentAnswer, AgentReview, AgentTask, AnswerClaim, ClaimVerdict
+from app.agent.contracts import (
+    AgentAnswer,
+    AgentReview,
+    AgentTask,
+    AnswerClaim,
+    ClaimVerdict,
+    RepairPatch,
+)
 from app.agent.runner import PrimaryAgent
 from app.agent.safety import detect_india_context
 from app.agent.verification import mechanical_checks, template_text
@@ -656,3 +663,141 @@ def test_reviewer_payload_contains_only_pending_claim_evidence_and_compact_claim
     evidence_ids = [e["evidence_id"] for e in payload["evidence"]]
     assert "cited_p1" in evidence_ids
     assert "uncited_p2" not in evidence_ids
+
+
+def test_repair_patch_merges_replacements_removes_and_appends_additions(client, isolated_app):
+    cid = create_case(client)
+
+    c1 = AnswerClaim(
+        claim_id="c1",
+        task_id="task-1",
+        kind="practical",
+        block_type="direct_answer",
+        grounding="practical_precaution",
+        text="Keep quiet and observe.",
+    )
+    c2 = AnswerClaim(
+        claim_id="c2",
+        task_id="task-1",
+        kind="legal",
+        block_type="recommended_route",
+        grounding="verified_legal_source",
+        text="Unverified initial route.",
+        evidence_ids=["fix-law"],
+    )
+    initial_answer = AgentAnswer(
+        central_question="q",
+        tasks=[_task()],
+        claims=[c1, c2],
+    )
+
+    first_review = AgentReview(
+        claims=[
+            ClaimVerdict(claim_id="c1", support="supported", reason="ok", requires_public_evidence=False),
+            ClaimVerdict(claim_id="c2", support="unsupported", reason="rejected", requires_public_evidence=True),
+        ],
+        primary_question_answered=True,
+        next_action_useful=True,
+        repair_instructions=["Cite correct statutory section."],
+    )
+
+    # RepairPatch replacing c2 with a verified claim and adding an immediate action c3
+    patch = RepairPatch(
+        replacements=[
+            AnswerClaim(
+                claim_id="c2",
+                task_id="task-1",
+                kind="legal",
+                block_type="recommended_route",
+                grounding="verified_legal_source",
+                text="Repaired verified route under BNSS Section 47.",
+                evidence_ids=["fix-law"],
+            )
+        ],
+        removals=[],
+        additions=[
+            AnswerClaim(
+                claim_id="c3",
+                task_id="task-1",
+                kind="practical",
+                block_type="immediate_actions",
+                grounding="practical_precaution",
+                text="Collect your receipts today.",
+                evidence_ids=[],
+            )
+        ],
+    )
+
+    second_review = AgentReview(
+        claims=[
+            ClaimVerdict(claim_id="c2", support="supported", reason="now verified", requires_public_evidence=True),
+            ClaimVerdict(claim_id="c3", support="supported", reason="practical ok", requires_public_evidence=False),
+        ],
+        primary_question_answered=True,
+        next_action_useful=True,
+    )
+
+    provider = ScriptedProvider(initial_answer, first_review, patch, second_review)
+    runner = install(isolated_app, provider, _research_with(_fixture_passage()))
+    runner.settings.agent_max_rounds, runner.settings.agent_max_repairs = 5, 2
+
+    res = _post(client, cid, "Arrest query").json()["assistant_message"]
+    assert res["metadata"]["publication_status"] == "supported"
+    # c1 untouched and preserved byte-for-byte
+    assert "Keep quiet and observe." in res["content"]
+    # c2 replaced
+    assert "Repaired verified route under BNSS Section 47." in res["content"]
+    assert "Unverified initial route." not in res["content"]
+    # c3 added
+    assert "Collect your receipts today." in res["content"]
+
+
+def test_repair_patch_with_unknown_claim_id_is_rejected_and_falls_back(client, isolated_app):
+    cid = create_case(client)
+
+    c1 = AnswerClaim(
+        claim_id="c1",
+        task_id="task-1",
+        kind="legal",
+        block_type="direct_answer",
+        grounding="verified_legal_source",
+        text="Unverified claim.",
+        evidence_ids=["fix-law"],
+    )
+    initial_answer = AgentAnswer(
+        central_question="q",
+        tasks=[_task()],
+        claims=[c1],
+    )
+
+    review = AgentReview(
+        claims=[
+            ClaimVerdict(claim_id="c1", support="unsupported", reason="rejected", requires_public_evidence=True),
+        ],
+        primary_question_answered=True,
+        next_action_useful=True,
+    )
+
+    # Patch with invalid unknown claim_id
+    bad_patch = RepairPatch(
+        replacements=[
+            AnswerClaim(
+                claim_id="c_nonexistent",
+                task_id="task-1",
+                kind="legal",
+                block_type="direct_answer",
+                grounding="verified_legal_source",
+                text="Invalid replacement.",
+            )
+        ],
+    )
+
+    provider = ScriptedProvider(initial_answer, review, bad_patch)
+    runner = install(isolated_app, provider, _research_with(_fixture_passage()))
+    runner.settings.agent_max_rounds, runner.settings.agent_max_repairs = 5, 2
+
+    res = _post(client, cid, "Arrest query").json()["assistant_message"]
+    # Bad patch was rejected and unverified claim c1 was withheld; answer falls back safely
+    assert "Invalid replacement." not in res["content"]
+    assert "Unverified claim." not in res["content"]
+    assert res["metadata"]["publication_status"] in {"partial", "withheld"}

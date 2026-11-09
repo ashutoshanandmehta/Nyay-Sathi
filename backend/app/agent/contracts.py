@@ -171,6 +171,12 @@ class ClaimVerdict(Contract):
     requires_public_evidence: bool = True
 
 
+class RepairPatch(Contract):
+    replacements: list[AnswerClaim] = Field(default_factory=list, max_length=24)
+    removals: list[str] = Field(default_factory=list, max_length=24)
+    additions: list[AnswerClaim] = Field(default_factory=list, max_length=24)
+
+
 class AgentReview(Contract):
     claims: list[ClaimVerdict] = Field(max_length=48)
     patch_verdicts: list[PatchVerdict] = Field(default_factory=list, max_length=24)
