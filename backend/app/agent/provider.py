@@ -118,6 +118,8 @@ class ResponsesProvider:
         allow_tools=True,
         stage="primary",
         schema=None,
+        prompt_cache_key=None,
+        conversation_id=None,
     ):
         if schema is None:
             schema = RepairPatch if stage == "repair" else (AgentReview if review else AgentAnswer)
@@ -159,6 +161,11 @@ class ResponsesProvider:
             },
             "include": ["reasoning.encrypted_content"],
         }
+        stage_family = "review" if review else "primary"
+        if not prompt_cache_key and conversation_id:
+            prompt_cache_key = f"nyay:{stage_family}:{conversation_id}"
+        if prompt_cache_key:
+            kwargs["prompt_cache_key"] = prompt_cache_key
         if allow_tools and not review:
             kwargs.update(tools=[research_tool(), safety_tool()], parallel_tool_calls=False)
         if settings.agent_reasoning_effort:

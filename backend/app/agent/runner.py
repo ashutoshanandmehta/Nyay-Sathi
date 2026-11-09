@@ -646,18 +646,20 @@ class PrimaryAgent:
             ):
                 item["already_cited_in_prior_turn"] = True
             public_entries.append(item)
+        evidence_all = bounded + public_entries
+        evidence_all.sort(key=lambda e: (e.get("passage_id") or e.get("evidence_id") or ""))
         payload = {
-            "current_message": state["current_message"],
-            "language": state.get("language", "en"),
-            "segments": segment_message(state["current_message"]),
-            "conversation_context": context,
-            "case_version": state["memory"].get("version", 0),
-            "case_domain": state["memory"].get("domain", "unknown"),
-            "evidence": bounded + public_entries,
             "templates": {
                 key: template_text(key, state.get("language", "en")) for key in TEMPLATES
             },
+            "case_domain": state["memory"].get("domain", "unknown"),
+            "case_version": state["memory"].get("version", 0),
+            "evidence": evidence_all,
             "safety_already_delivered": state.get("safety_messages", []),
+            "conversation_context": context,
+            "language": state.get("language", "en"),
+            "current_message": state["current_message"],
+            "segments": segment_message(state["current_message"]),
         }
         if state.get("urgent_continuation"):
             payload["urgent_case_continuity"] = {
@@ -693,7 +695,11 @@ class PrimaryAgent:
                 and budget.batches < self.settings.agent_max_batches
             )
             output, calls, answer = self.provider.complete(
-                items, self.prompt, budget, allow_tools=allow_tools
+                items,
+                self.prompt,
+                budget,
+                allow_tools=allow_tools,
+                conversation_id=state.get("conversation_id"),
             )
             if answer is not None:
                 if answer.risk == "urgent":
@@ -815,6 +821,7 @@ class PrimaryAgent:
             review=True,
             allow_tools=False,
             stage="review",
+            conversation_id=state.get("conversation_id"),
         )
         if calls or review is None:
             raise ValueError("Review did not complete")
@@ -885,6 +892,7 @@ class PrimaryAgent:
             allow_tools=False,
             stage="repair",
             schema=RepairPatch,
+            conversation_id=state.get("conversation_id"),
         )
         if calls or repaired is None:
             raise ValueError("Repair did not complete")

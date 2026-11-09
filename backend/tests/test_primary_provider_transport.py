@@ -4,6 +4,7 @@ import json
 
 import httpx2
 import pytest
+from pydantic import BaseModel
 
 from app.agent.budget import TurnBudget
 from app.agent.contracts import AgentAnswer
@@ -170,3 +171,121 @@ def test_sdk_refusal_truncation_and_invalid_structured_output_are_not_published(
     settings = Settings(openai_api_key="fixture-not-real")
     with pytest.raises(ValueError):
         ResponsesProvider(settings).complete([], "instructions", TurnBudget(settings))
+
+
+def test_prompt_cache_key_is_sent_and_stable(monkeypatch):
+    captured = []
+    dummy_answer = {
+        "central_question": "Respond to greeting",
+        "tasks": [{"task_id": "task-1", "title": "Hello", "intent": "conversation", "domain": "general", "case_link": "unrelated"}],
+        "claims": [{"claim_id": "c1", "task_id": "task-1", "kind": "template", "text": "", "template_id": "greeting"}],
+    }
+
+    class DummyReviewSchema(BaseModel):
+        pass
+
+    def handle(request):
+        body = json.loads(request.content)
+        captured.append(body)
+        resp_text = json.dumps({}) if "review" in body.get("instructions", "") else json.dumps(dummy_answer)
+        return httpx2.Response(
+            200,
+            json={
+                "id": "resp_fixture",
+                "object": "response",
+                "created_at": 1,
+                "model": "fixture",
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "role": "assistant",
+                        "status": "completed",
+                        "content": [
+                            {"type": "output_text", "text": resp_text, "annotations": []}
+                        ],
+                    }
+                ],
+                "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+            },
+        )
+
+    monkeypatch.setattr(
+        "app.services.model_calls.DefaultHttpx2Client",
+        lambda **kw: httpx2.Client(transport=httpx2.MockTransport(handle), **kw),
+    )
+    settings = Settings(openai_api_key="fixture-not-real")
+    provider = ResponsesProvider(settings)
+
+    # Round 1: primary stage
+    provider.complete(
+        [{"role": "user", "content": "test 1"}],
+        "system instructions",
+        TurnBudget(settings),
+        stage="primary",
+        conversation_id="conv-abc",
+        schema=AgentAnswer,
+    )
+    # Round 2: same conversation primary stage
+    provider.complete(
+        [{"role": "user", "content": "test 2"}],
+        "system instructions",
+        TurnBudget(settings),
+        stage="primary",
+        conversation_id="conv-abc",
+        schema=AgentAnswer,
+    )
+    # Round 3: review stage
+    provider.complete(
+        [{"role": "user", "content": "review 1"}],
+        "review instructions",
+        TurnBudget(settings),
+        stage="review",
+        review=True,
+        conversation_id="conv-abc",
+        schema=DummyReviewSchema,
+    )
+
+    assert len(captured) == 3
+    assert captured[0]["prompt_cache_key"] == "nyay:primary:conv-abc"
+    assert captured[1]["prompt_cache_key"] == "nyay:primary:conv-abc"
+    assert captured[2]["prompt_cache_key"] == "nyay:review:conv-abc"
+    assert captured[0]["prompt_cache_key"] == captured[1]["prompt_cache_key"]
+
+
+def test_static_context_and_evidence_byte_identical_between_rounds():
+    from app.agent.runner import PrimaryAgent
+
+    settings = Settings(openai_api_key="fixture-not-real")
+    state = {
+        "owner_id": "test-owner",
+        "conversation_id": "conv-test",
+        "request_id": "req-1",
+        "message_id": "msg-1",
+        "current_message": "My complaint details",
+        "memory": {"version": 1, "domain": "consumer"},
+        "summary": "User needs help",
+        "language": "en",
+        "passages": [
+            {"passage_id": "b-pass", "text": "Second statute passage", "canonical_url": "https://gov.in/b"},
+            {"passage_id": "a-pass", "text": "First statute passage", "canonical_url": "https://gov.in/a"},
+        ],
+        "context": {"recent_turns": []},
+        "tool_records": [],
+    }
+
+    agent = PrimaryAgent(settings, None)
+    ctx1 = agent._context(state)
+    ctx2 = agent._context(state)
+
+    # Evidence is sorted deterministically by passage_id
+    assert [e["passage_id"] for e in ctx1["evidence"] if e.get("passage_id")] == ["a-pass", "b-pass"]
+
+    # Byte-identical serialization
+    str1 = json.dumps(ctx1, ensure_ascii=False)
+    str2 = json.dumps(ctx2, ensure_ascii=False)
+    assert str1 == str2
+
+    # Instructions are also constant
+    assert agent.prompt is not None and len(agent.prompt) > 0
+
