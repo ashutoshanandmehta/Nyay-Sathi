@@ -65,14 +65,16 @@ CONCEPT_EXPANSIONS = (
             r"\b(?:complaint|fir|thana|police\s+station|report\s+to\s+police)\b|शिकायत|shikayat",
             re.I,
         ),
-        "information cognizable offence police station complaint superintendent",
+        "information cognizable offence first information report fir police station written complaint superintendent of police",
     ),
     (
         re.compile(
-            r"\b(?:police\s+refused|not\s+registering|complaint\s+not\s+taken)\b|fir\s+nah[ií]\s+likh\w*|शिकायत\s+न(?:हीं|ही)\s+लिख\w*",
+            r"\b(?:police\s+refus\w*|refus\w*\s+(?:to\s+)?(?:register|file|write|take|lodge)\w*|"
+            r"not\s+register\w*|complaint\s+not\s+taken)\b|fir\s+nah[ií]\s+likh\w*|"
+            r"शिकायत\s+न(?:हीं|ही)\s+लिख\w*",
             re.I,
         ),
-        "non-cognizable information superintendent magistrate investigate",
+        "non-cognizable police refused FIR not registered superintendent magistrate order investigation",
     ),
     (
         re.compile(
@@ -132,9 +134,19 @@ CERTIFIED_CONCEPTS = (
             r"settle\w*)\b|रिश्वत|घूस|पैसे\s+दिए))",
             re.I | re.S,
         ),
-        "already paid bribe under compulsion forced to pay police seven days report",
+        "already paid bribe under compulsion forced to pay police seven days report "
+        "bribe demand cash extortion",
     ),
 )
+
+
+
+def _source_room(hit: dict, taken: list[dict]) -> bool:
+    """One source can't take every slot: up to 3 sections of an Act, 2 paragraphs of a judgment
+    (its paragraphs largely restate one holding)."""
+    source = hit.get("source_id") or hit["passage_id"]
+    limit = 2 if "-para" in hit["passage_id"] else 3
+    return sum(1 for h in taken if (h.get("source_id") or h["passage_id"]) == source) < limit
 
 
 def matched_concepts(message: str) -> list[str]:
@@ -197,19 +209,44 @@ class PrimaryAgent:
         trusted = [h for h in hits if h.get("certified_proposition")]
         for pattern, concept in CERTIFIED_CONCEPTS:
             if pattern.search(state["current_message"]):
+                # Both sides of it: the officer's demand (s.7) and the payer's 7-day report (s.8).
                 extra, _ = self.research.retrieve_certified(
-                    concept, jurisdiction="India", limit=1, exclude_origin="official_pack"
+                    concept, jurisdiction="India", limit=2, exclude_origin="official_pack"
                 )
                 trusted = [h for h in extra if h.get("certified_proposition")] + trusted
         # Verbatim official sections go straight into the first call, so common questions need no
-        # live search round. Their own floor keeps loosely related sections out.
-        pack_hits, _ = self.research.retrieve_certified(
-            query_text,
-            jurisdiction="India",
-            limit=12,
-            min_relative_score=0.65,
-            origin="official_pack",
+        # live search round. The latest message leads; earlier turns only add what it lacks, so
+        # an old topic (say, a hotel stay) can't fill the slots a new problem needs.
+        current_query = _public_prequery_terms(
+            state["current_message"],
+            state.get("memory", {}).get("domain", "unknown"),
+            bool(state.get("urgent_continuation")),
+            emergency=bool(state.get("safety_messages")),
         )
+        pack_hits = []
+        if not earlier:
+            lookups = [(query_text, 8)]
+        elif len(re.findall(r"[A-Za-z\u0900-\u097f]{3,}", state["current_message"])) < 10:
+            # A short follow-up ("is that okay?") gets its topic from the earlier turns.
+            lookups = [(query_text, 8), (current_query, 4)]
+        else:
+            lookups = [(current_query, 6), (query_text, 4)]
+        for text, limit in lookups:
+            if len(text.split()) < 2:
+                continue
+            found, _ = self.research.retrieve_certified(
+                text,
+                jurisdiction="India",
+                limit=limit * 2,
+                min_relative_score=0.65,
+                origin="official_pack",
+            )
+            have = {h["passage_id"] for h in pack_hits}
+            added = 0
+            for h in found:
+                if added < limit and h["passage_id"] not in have and _source_room(h, pack_hits):
+                    pack_hits.append(h)
+                    added += 1
         # Each everyday concept gets its own small lookup, so a strong topic (say, Bihar liquor
         # law) cannot crowd out a needed one (free legal aid for someone in custody).
         concept_guaranteed = []
@@ -239,7 +276,8 @@ class PrimaryAgent:
         for h in candidates:
             if len(selected) >= cap:
                 break
-            selected.append(h)
+            if _source_room(h, selected):
+                selected.append(h)
 
         trusted = selected
         if trusted:

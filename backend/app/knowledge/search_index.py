@@ -55,6 +55,43 @@ GENERIC_INDEX_PATTERNS = re.compile(
 )
 
 
+# Pack keywords too common to say what a problem is about ("police", "payment"). A pack section
+# is offered only when the question names one of its other keywords.
+GENERIC_PACK_KEYWORDS = frozenset(
+    {
+        "police",
+        "officer",
+        "officers",
+        "bnss",
+        "bns",
+        "criminal procedure",
+        "criminal law",
+        "offence",
+        "penalty",
+        "payment",
+        "case",
+        "law",
+        "complaint",
+    }
+)
+
+
+def topic_patterns(keywords: list[str], state_terms: set[str]) -> list[re.Pattern]:
+    """Phrase patterns for a section's distinctive keywords; short ones must match a whole word,
+    longer ones may start a word ("threat" matches "threatening")."""
+    patterns = []
+    for keyword in keywords:
+        k = keyword.casefold().strip()
+        if not k or k in GENERIC_PACK_KEYWORDS or k in state_terms:
+            continue
+        if re.fullmatch(r"[a-z0-9 .'-]+", k):
+            tail = r"\b" if len(k) < 4 else ""
+            patterns.append(re.compile(r"\b" + re.escape(k).replace(r"\ ", r"\s+") + tail))
+        else:
+            patterns.append(re.compile(re.escape(k)))
+    return patterns
+
+
 def tokenize(text: str) -> list[str]:
     return [
         w
@@ -140,6 +177,7 @@ class OpenSearchLegalIndex:
             entry["_trigrams"] = char_trigrams(
                 prop.proposition_text + " " + scenario_blob + " " + " ".join(prop.keywords)
             )
+            entry["_topic_patterns"] = topic_patterns([*prop.keywords, *prop.scenario_tags], set())
             self.documents.append(entry)
             seen.add(entry["passage_id"])
 
@@ -155,6 +193,11 @@ class OpenSearchLegalIndex:
             entry["_scenario_tokens"] = set(tokenize(f"{tags} {raw['locator']}"))
             entry["_trigrams"] = char_trigrams(f"{raw['locator']} {tags}")
             entry["_state_terms"] = {t.casefold() for t in raw.get("state_terms", [])}
+            # The section's own heading counts too ("Section 351: Criminal intimidation").
+            heading = raw["locator"].split(":", 1)[1].strip() if ":" in raw["locator"] else ""
+            entry["_topic_patterns"] = topic_patterns(
+                [*raw.get("keywords", []), heading], entry["_state_terms"]
+            )
             self.documents.append(entry)
             seen.add(raw["passage_id"])
 
@@ -340,6 +383,7 @@ class OpenSearchLegalIndex:
         if not q_tokens:
             return []
         q_set = set(q_tokens)
+        q_text = query.casefold()
         q_trigrams = char_trigrams(query)
         bm25_scores = self._bm25.get_scores(q_tokens)
         max_bm25 = max(bm25_scores) if len(bm25_scores) and max(bm25_scores) > 0 else 1.0
@@ -364,6 +408,11 @@ class OpenSearchLegalIndex:
                 doc_j = (doc.get("jurisdiction") or "india").casefold()
                 if doc_j not in wanted_jurisdictions:
                     continue
+            topics = doc.get("_topic_patterns")
+            matches = sum(1 for t in topics if t.search(q_text)) if topics else None
+            if matches == 0:
+                # Sharing only "police" or "payment" with the question isn't enough.
+                continue
             if domain and doc.get("domain") and doc["domain"] not in {
                 domain,
                 "constitutional_urgent",
@@ -395,8 +444,22 @@ class OpenSearchLegalIndex:
                 + hierarchy_bonus
                 + certified_bonus
             )
-            scored.append((total, doc))
+            scored.append((total, doc, matches))
 
+        # A proposition matching a single keyword ("paid", "refund") stays only if a stronger
+        # match shares its area of law: "paid" in a salary question doesn't bring bribery law,
+        # but "refund" in an Amazon question keeps the consumer forum rule.
+        strong = {
+            doc.get("domain")
+            for _, doc, matches in scored
+            if doc.get("certified_proposition") and (matches or 0) >= 2
+        }
+        scored = [
+            (total, doc)
+            for total, doc, matches in scored
+            if not (doc.get("certified_proposition") and matches == 1 and strong)
+            or doc.get("domain") in strong
+        ]
         scored.sort(key=lambda item: item[0], reverse=True)
         # Drop the weak tail so loosely related items do not crowd out relevant law.
         floor = scored[0][0] * min_relative_score if scored else 0.0

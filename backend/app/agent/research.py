@@ -14,7 +14,11 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from rank_bm25 import BM25Okapi
 
 from app.agent.contracts import ResearchRequest
-from app.knowledge.search_index import OpenSearchLegalIndex, is_generic_index_or_snippet
+from app.knowledge.search_index import (
+    GENERIC_PACK_KEYWORDS,
+    OpenSearchLegalIndex,
+    is_generic_index_or_snippet,
+)
 from app.routing.policy import PublicQueryPolicy
 from app.routing.research import public_https_url
 from app.services.model_calls import normalize_usage
@@ -329,7 +333,9 @@ class ResearchService:
                             ).days
                         except (KeyError, ValueError):
                             continue
-                        if 0 <= age <= 365 and len(terms(query) & terms(p["text"])) >= 2:
+                        # Two shared words that say what the problem is, not just "police".
+                        shared = (terms(query) & terms(p["text"])) - GENERIC_PACK_KEYWORDS
+                        if 0 <= age <= 365 and len(shared) >= 2:
                             passages.append(
                                 {
                                     **p,

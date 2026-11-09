@@ -77,7 +77,8 @@ SOURCES = [
             "48": ARREST + ["relative", "friend", "family", "informed", "where held"],
             "57": ARREST + ["magistrate"],
             "58": ARREST + ["twenty-four hours", "24 hours", "magistrate", "detention"],
-            "144": ["maintenance", "wife", "children", "parents", "guzara", "kharcha"],
+            # "parents" alone also matches "threatened to call our parents"; keep it as a phrase.
+            "144": ["maintenance", "wife", "children", "maintenance for parents", "guzara", "kharcha"],
             "164": [
                 "land",
                 "zameen",
