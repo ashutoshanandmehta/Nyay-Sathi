@@ -89,6 +89,16 @@ BLOCK_TITLES: dict[BlockType, dict[str, str]] = {
     },
 }
 
+# Shown when a requested draft is held back because one of its parts failed verification.
+DRAFT_WITHHELD_NOTE: dict[str, str] = {
+    "en": "I couldn't check every line of the draft, so I've left it out rather than give you an "
+    "incomplete one. Ask me again and I'll write it, or tell me the exact words you want included.",
+    "hi": "मैं मसौदे की हर पंक्ति की जाँच नहीं कर पाया, इसलिए अधूरा मसौदा देने के बजाय उसे अभी छोड़ दिया है। "
+    "मुझसे दोबारा कहिए, मैं लिख दूँगा, या बताइए कि उसमें कौन-सी बातें ज़रूर हों।",
+    "hinglish": "Main draft ki har line check nahi kar paya, isliye adhoora draft dene ke bajay abhi "
+    "chhod diya hai. Mujhse dobara kahiye, main likh dunga, ya bataiye ki usmein kaun si baatein zaroor hon.",
+}
+
 # Model-written "[2]"-style numbers would read as citations the runtime never assigned.
 MODEL_CITATION_NUMBER_RE = re.compile(r"[ \t]?\[\d{1,2}\](?![(\[:])")
 

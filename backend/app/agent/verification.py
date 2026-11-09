@@ -299,7 +299,16 @@ def mechanical_checks(answer, registry):
         ):
             reason = "missing_claim_evidence"
 
-        if reason:
+        if (
+            reason == "missing_claim_evidence"
+            and claim.in_document
+            and claim.kind in {"document", "practical"}
+            and claim.grounding == "practical_precaution"
+        ):
+            # A requested draft with [placeholders] often cites no fact; the reviewer judges it
+            # (and repair can add the user's segment IDs) instead of it vanishing unseen.
+            pending.append_reason(claim.claim_id, "draft without cited facts")
+        elif reason:
             blocked[claim.claim_id] = reason
         elif claim.kind == "template":
             if claim.template_id in TEMPLATES and not claim.text and not claim.in_document:

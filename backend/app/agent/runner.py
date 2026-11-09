@@ -8,6 +8,7 @@ from pathlib import Path
 
 from app.agent.blocks import (
     BLOCK_TITLES,
+    DRAFT_WITHHELD_NOTE,
     append_citation_markers,
     assemble_resolution_blocks,
     claim_uses_legal_source,
@@ -394,7 +395,10 @@ class PrimaryAgent:
                                 original_patches = list(answer.case_patches)
                                 prior_accepted = dict(accepted)
                                 try:
-                                    repaired = self._repair(answer, review, state, registry, budget)
+                                    before = {c.claim_id: c for c in answer.claims}
+                                    repaired = self._repair(
+                                        answer, review, state, registry, budget, accepted, blocked
+                                    )
                                     if isinstance(repaired, RepairPatch):
                                         existing_ids = {c.claim_id for c in answer.claims}
                                         for cid in repaired.removals:
@@ -432,10 +436,39 @@ class PrimaryAgent:
                                         answer = AgentAnswer.model_validate(repaired.model_dump())
                                     else:
                                         raise ValueError("Unknown repair response type")
-                                    blocked, mechanical, pending = mechanical_checks(
+                                    changed = {
+                                        c.claim_id
+                                        for c in answer.claims
+                                        if before.get(c.claim_id) != c
+                                    }
+                                    removed = set(before) - {c.claim_id for c in answer.claims}
+                                    if not changed and not removed:
+                                        # Nothing changed, so another review would repeat the last one.
+                                        event(
+                                            "revision",
+                                            "complete",
+                                            agent="Feedback Repair Loop",
+                                            tool="self_healing_repair",
+                                            result="Repair found nothing it could fix safely",
+                                            detail="Repair made no changes · keeping verified parts",
+                                        )
+                                        self._preserve_safe_practical(
+                                            answer, accepted, blocked, registry
+                                        )
+                                        break
+                                    blocked, mechanical, all_pending = mechanical_checks(
                                         answer, registry
                                     )
-                                    accepted = {**prior_accepted, **mechanical}
+                                    # Unchanged claims keep their verdicts; only edits are re-reviewed.
+                                    pending = [k for k in all_pending if k in changed]
+                                    accepted = {
+                                        **{
+                                            k: v
+                                            for k, v in prior_accepted.items()
+                                            if k not in changed and k not in removed
+                                        },
+                                        **mechanical,
+                                    }
                                     event(
                                         "review",
                                         "running",
@@ -445,16 +478,24 @@ class PrimaryAgent:
                                         action="Re-auditing repaired claims against statutory sources",
                                         detail="Re-verifying repaired draft against statutes",
                                     )
-                                    re_review = self._review(
-                                        answer, state, registry, budget, pending
+                                    whole_answer_ok = (
+                                        review.primary_question_answered
+                                        and review.next_action_useful
+                                        and review.cross_block_coherent
                                     )
-                                    review = re_review
-                                    for key in pending:
-                                        accepted.pop(key, None)
-                                    accepted.update(
-                                        self._reviewed(re_review, pending, answer, registry)
-                                    )
-                                    patch_verdicts = re_review.patch_verdicts
+                                    # With no edits left to judge and the whole answer already
+                                    # passing, the last verdicts still hold and no review is needed.
+                                    if pending or not whole_answer_ok:
+                                        re_review = self._review(
+                                            answer, state, registry, budget, pending
+                                        )
+                                        review = re_review
+                                        for key in pending:
+                                            accepted.pop(key, None)
+                                        accepted.update(
+                                            self._reviewed(re_review, pending, answer, registry)
+                                        )
+                                        patch_verdicts = re_review.patch_verdicts
                                     event(
                                         "revision",
                                         "complete",
@@ -806,9 +847,8 @@ class PrimaryAgent:
             if entry.get("evidence_id") in needed_evidence_ids
         ]
         payload = {
-            "context": self._context(state),
+            "context": self._verification_context(state),
             "claims": compact_claims,
-            "draft": {"claims": compact_claims},
             "pending_claim_ids": pending_list,
             "evidence": review_evidence,
         }
@@ -846,48 +886,81 @@ class PrimaryAgent:
             )
         }
 
-    def _repair(self, answer, review, state, registry, budget):
-        rejected_or_uncertain_ids = {
-            v.claim_id
-            for v in review.claims
-            if v.support in {"unsupported", "uncertain"}
-        }
+    def _verification_context(self, state):
+        """Context for the reviewer and repair; they get only the evidence they need, separately."""
+        context = self._context(state)
+        context.pop("evidence", None)
+        context.pop("templates", None)
+        return context
+
+    def _repair(self, answer, review, state, registry, budget, accepted=None, blocked=None):
+        accepted, blocked = accepted or {}, blocked or {}
+        verdicts = {v.claim_id: v for v in review.claims}
+        # Everything that kept the loop going: reviewer rejections and claims the mechanical
+        # checks blocked or left unapproved (those never reach the reviewer).
         claims_to_repair = [
-            c for c in answer.claims if c.claim_id in rejected_or_uncertain_ids
-        ]
-        other_claims_compact = [
-            {"claim_id": c.claim_id, "block_type": c.block_type or infer_block_type(c), "text": c.text}
+            c
             for c in answer.claims
-            if c.claim_id not in rejected_or_uncertain_ids
+            if c.claim_id not in accepted
+            and (
+                (not c.optional and infer_block_type(c) != "human_handoff")
+                or getattr(verdicts.get(c.claim_id), "support", None) in {"unsupported", "uncertain"}
+            )
         ]
-        needed_evidence_ids = {
-            eid for c in claims_to_repair for eid in c.evidence_ids
-        }
-        cited_evidence = [
-            entry
-            for entry in registry.payload()
-            if entry.get("evidence_id") in needed_evidence_ids
-        ]
+        repair_ids = {c.claim_id for c in claims_to_repair}
+        problems = []
+        for c in claims_to_repair:
+            verdict = verdicts.get(c.claim_id)
+            problems.append(
+                {
+                    "claim": c.model_dump(mode="json"),
+                    "problem": blocked.get(c.claim_id)
+                    or (verdict.reason if verdict else "not verified"),
+                    "reviewer_support": verdict.support if verdict else None,
+                }
+            )
+        needed_evidence_ids = {eid for c in claims_to_repair for eid in c.evidence_ids}
+        cited_evidence, evidence_index = [], []
+        for entry in registry.payload():
+            if entry.get("evidence_id") in needed_evidence_ids or entry["kind"] != "public_passage":
+                cited_evidence.append(entry)
+            else:
+                evidence_index.append(
+                    {
+                        "evidence_id": entry.get("evidence_id"),
+                        "title": entry.get("title"),
+                        "locator": entry.get("locator"),
+                        "excerpt": (entry.get("text") or "")[:200],
+                    }
+                )
         payload = {
-            "current_message": state.get("current_message", ""),
-            "rejected_or_uncertain_claims": [c.model_dump(mode="json") for c in claims_to_repair],
+            "task": (
+                "Repair this answer. Return a RepairPatch: `replacements` (same claim_id, fixed), "
+                "`removals` (claim IDs that cannot be fixed) and `additions` (new claims, only for "
+                "something the answer checks say is missing). Fix each problem: cite the exact "
+                "evidence that supports the claim, or narrow the claim to what the evidence says, "
+                "or turn it into practical guidance. A requested draft must cite the user's "
+                "`segment:` or `message:` IDs its facts come from. Never rewrite a claim that is not listed."
+            ),
+            "claims_to_repair": problems,
             "repair_instructions": review.repair_instructions,
-            "cited_evidence": cited_evidence,
-            "other_claims": other_claims_compact,
-            "prior_assistant_coverage": state.get("context", {}).get("prior_assistant_coverage", {}),
-            "instruction": "Repair only specific rejected or uncertain claims. Propose replacements, removals or additions in a RepairPatch. Do not rewrite supported claims.",
-            "context": self._context(state),
-            "previous_answer": answer.model_dump(mode="json"),
-            "review": review.model_dump(mode="json"),
+            "answer_checks": {
+                "primary_question_answered": review.primary_question_answered,
+                "next_action_useful": review.next_action_useful,
+                "cross_block_coherent": review.cross_block_coherent,
+            },
+            "other_claims": [
+                {"claim_id": c.claim_id, "block_type": c.block_type or infer_block_type(c), "text": c.text}
+                for c in answer.claims
+                if c.claim_id not in repair_ids
+            ],
+            "evidence": cited_evidence,
+            "other_evidence_index": evidence_index,
+            "context": self._verification_context(state),
         }
-        repair_instructions = (
-            "You are repairing specific rejected or uncertain claims. "
-            "Return a RepairPatch with replacements, removals, or additions. "
-            "Preserve verified statutory references and ensure claims end with terminal punctuation."
-        )
         _, calls, repaired = self.provider.complete(
             [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
-            repair_instructions,
+            self.prompt,
             budget,
             allow_tools=False,
             stage="repair",
@@ -1003,14 +1076,22 @@ class PrimaryAgent:
         pieces, documents, published, outcomes = [], [], set(), []
         # Passage ID -> in-text citation number, assigned in on-screen order across all tasks.
         citation_numbers: dict[str, int] = {}
-        for task in answer.tasks:
+        # Every task's claims share one set of headings, so a two-issue answer doesn't repeat
+        # "What I'd suggest" after the first issue's question; within a heading, task order holds.
+        visible_ranked = []
+        dropped_drafts = False
+        for task_idx, task in enumerate(answer.tasks):
             claims = [c for c in answer.claims if c.task_id == task.task_id]
             core_claims = [
                 c for c in claims if not c.optional and infer_block_type(c) != "human_handoff"
             ]
-            visible_ranked, document = [], []
+            document_ready = all(c.claim_id in accepted for c in claims if c.in_document)
+            task_visible, document = 0, []
             for idx, claim in enumerate(claims):
                 if claim.claim_id not in accepted:
+                    continue
+                if claim.in_document and not document_ready:
+                    # Never show part of a draft; the note below says why it is missing.
                     continue
                 btype = infer_block_type(claim)
                 text = format_claim_text(claim, language)
@@ -1020,68 +1101,13 @@ class PrimaryAgent:
                     else []
                 )
                 visible_ranked.append(
-                    (
-                        order_rank.get(btype, len(block_order)),
-                        idx,
-                        btype,
-                        text,
-                        cited_ids,
-                    )
+                    (order_rank.get(btype, len(block_order)), task_idx, idx, btype, text, cited_ids)
                 )
+                task_visible += 1
                 published.update(set(claim.evidence_ids) & registry.public_ids())
                 if claim.in_document:
                     document.append(text)
-            visible_ranked.sort(key=lambda item: (item[0], item[1]))
-
-            section_groups: list[tuple[str, list[str]]] = []
-            for item in visible_ranked:
-                _, _, btype, text, cited_ids = item
-                for passage_id in cited_ids:
-                    citation_numbers.setdefault(passage_id, len(citation_numbers) + 1)
-                claim_rendered = append_citation_markers(
-                    text, sorted(citation_numbers[p] for p in cited_ids)
-                )
-                if not section_groups or section_groups[-1][0] != btype:
-                    section_groups.append((btype, [claim_rendered]))
-                else:
-                    section_groups[-1][1].append(claim_rendered)
-
-            lang_key = language if language in {"en", "hi", "hinglish"} else "en"
-            formatted_sections: list[str] = []
-            for btype, items in section_groups:
-                if btype in {"immediate_actions", "alternatives", "recommended_route"} and len(items) > 1:
-                    formatted_items = []
-                    for idx, it in enumerate(items):
-                        stripped = it.strip()
-                        if not re.match(r"^(?:\d+[\.\)]|[-*•])\s+", stripped):
-                            formatted_items.append(f"{idx + 1}. {stripped}")
-                        else:
-                            formatted_items.append(stripped)
-                    joined = "\n\n".join(formatted_items)
-                elif btype in {"evidence_checklist", "question", "limitation", "human_handoff"} and len(items) > 1:
-                    formatted_items = []
-                    for it in items:
-                        stripped = it.strip()
-                        if not re.match(r"^(?:\d+[\.\)]|[-*•])\s+", stripped):
-                            formatted_items.append(f"- {stripped}")
-                        else:
-                            formatted_items.append(stripped)
-                    joined = "\n\n".join(formatted_items)
-                else:
-                    joined = "\n\n".join(items)
-
-                already_has_header = any(
-                    ln.lstrip().startswith("#") for it in items for ln in it.splitlines()
-                )
-                if btype != "direct_answer" and not already_has_header and btype in BLOCK_TITLES:
-                    header_title = BLOCK_TITLES[btype].get(lang_key, BLOCK_TITLES[btype]["en"])
-                    formatted_sections.append(f"### {header_title}\n\n{joined}")
-                else:
-                    formatted_sections.append(joined)
-
-            if formatted_sections:
-                pieces.append("\n\n---\n\n".join(formatted_sections))
-            if document and all(c.claim_id in accepted for c in claims if c.in_document):
+            if document:
                 documents.append(
                     {
                         "task_id": task.task_id,
@@ -1090,15 +1116,67 @@ class PrimaryAgent:
                         "content": "\n\n".join(document),
                     }
                 )
+            elif any(c.in_document for c in claims):
+                dropped_drafts = True
             task_supported = (
-                all(c.claim_id in accepted for c in core_claims) and bool(core_claims or visible_ranked)
+                all(c.claim_id in accepted for c in core_claims) and bool(core_claims or task_visible)
             )
             outcomes.append(
                 {
                     "task_id": task.task_id,
-                    "status": "supported" if task_supported else "partial" if visible_ranked else "deferred",
+                    "status": "supported" if task_supported else "partial" if task_visible else "deferred",
                 }
             )
+        visible_ranked.sort(key=lambda item: item[:3])
+
+        section_groups: list[tuple[str, list[str]]] = []
+        for _, _, _, btype, text, cited_ids in visible_ranked:
+            for passage_id in cited_ids:
+                citation_numbers.setdefault(passage_id, len(citation_numbers) + 1)
+            claim_rendered = append_citation_markers(
+                text, sorted(citation_numbers[p] for p in cited_ids)
+            )
+            if not section_groups or section_groups[-1][0] != btype:
+                section_groups.append((btype, [claim_rendered]))
+            else:
+                section_groups[-1][1].append(claim_rendered)
+
+        lang_key = language if language in {"en", "hi", "hinglish"} else "en"
+        formatted_sections: list[str] = []
+        for btype, items in section_groups:
+            if btype in {"immediate_actions", "alternatives", "recommended_route"} and len(items) > 1:
+                formatted_items = []
+                for idx, it in enumerate(items):
+                    stripped = it.strip()
+                    if not re.match(r"^(?:\d+[\.\)]|[-*•])\s+", stripped):
+                        formatted_items.append(f"{idx + 1}. {stripped}")
+                    else:
+                        formatted_items.append(stripped)
+                joined = "\n\n".join(formatted_items)
+            elif btype in {"evidence_checklist", "question", "limitation", "human_handoff"} and len(items) > 1:
+                formatted_items = []
+                for it in items:
+                    stripped = it.strip()
+                    if not re.match(r"^(?:\d+[\.\)]|[-*•])\s+", stripped):
+                        formatted_items.append(f"- {stripped}")
+                    else:
+                        formatted_items.append(stripped)
+                joined = "\n\n".join(formatted_items)
+            else:
+                joined = "\n\n".join(items)
+
+            already_has_header = any(
+                ln.lstrip().startswith("#") for it in items for ln in it.splitlines()
+            )
+            if btype != "direct_answer" and not already_has_header and btype in BLOCK_TITLES:
+                header_title = BLOCK_TITLES[btype].get(lang_key, BLOCK_TITLES[btype]["en"])
+                formatted_sections.append(f"### {header_title}\n\n{joined}")
+            else:
+                formatted_sections.append(joined)
+        if dropped_drafts and formatted_sections:
+            formatted_sections.append(DRAFT_WITHHELD_NOTE.get(lang_key, DRAFT_WITHHELD_NOTE["en"]))
+        if formatted_sections:
+            pieces.append("\n\n---\n\n".join(formatted_sections))
 
         core_all = [  # noqa: F841
             c for c in answer.claims if not c.optional and infer_block_type(c) != "human_handoff"
