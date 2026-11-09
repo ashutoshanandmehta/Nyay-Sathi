@@ -251,12 +251,19 @@ describe('sidebar case actions',()=>{
       {stage:'review',status:'running'},
       {stage:'revision',status:'running',attempt:1}
     ]
-    render(<AgentFlowWidget isStreaming={true} events={repairEvents}/>)
-    // Only the current stage, in plain words, with a timer
-    expect(screen.getByRole('status',{name:'Fixing a detail'})).toHaveTextContent(/Fixing a detail…\s*0s/)
+    const {rerender}=render(<AgentFlowWidget isStreaming={true} events={repairEvents}/>)
+    // Only the current stage, in plain words, with its step, timer and what is running
+    expect(screen.getByRole('status',{name:'Fixing a detail'})).toHaveTextContent(/Fixing a detail…\s*5\/6 · 0s/)
+    expect(screen.getByText('Correcting what the verifier flagged')).toBeInTheDocument()
     expect(screen.queryByText(/Reading your case|Thinking it through/)).toBeNull()
-    // No developer detail in the sidebar
-    expect(screen.queryByText(/Trace|Workflow|\d\/6|Working/)).toBeNull()
+    expect(screen.queryByText(/Trace/)).toBeNull()
+    // The running tool and its action are shown; a warning replaces them
+    rerender(<AgentFlowWidget isStreaming={true} events={[{stage:'web_research',tool:'research_legal_issue',action:'Searching BNSS s.173'}]}/>)
+    expect(screen.getByText('research_legal_issue')).toBeInTheDocument()
+    expect(screen.getByText('Searching BNSS s.173')).toBeInTheDocument()
+    rerender(<AgentFlowWidget isStreaming={true} events={[{stage:'web_research',tool:'research_legal_issue',warning:'Search timed out'}]}/>)
+    expect(screen.getByText('Search timed out')).toBeInTheDocument()
+    expect(screen.queryByText('research_legal_issue')).toBeNull()
 
     cleanup()
     render(<AgentFlowWidget isStreaming={false} events={[]}/>)
