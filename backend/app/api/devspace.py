@@ -335,7 +335,12 @@ def save_devspace(
             else _format_env(getattr(candidate, name.lower()))
             for name in changed
         }
-        write_env(_env_path(request), env_values)
+        try:
+            write_env(_env_path(request), env_values)
+        except OSError:
+            # On serverless platforms with read-only filesystems (e.g. Vercel),
+            # persist changes to in-memory state and environment variables.
+            pass
         # Environment variables outrank .env, so set them too for later get_settings() calls.
         for name in changed:
             os.environ[name] = _plain(getattr(candidate, name.lower()))
