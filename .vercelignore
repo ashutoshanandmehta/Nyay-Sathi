@@ -8,6 +8,5 @@ tests/
 backend/tests/
 frontend/test-results/
 frontend/playwright-report/
-*.md
-!frontend/dist/
+docs/
 nyay_saathi_database_export.*
