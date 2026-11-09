@@ -2,7 +2,7 @@
 
 import json
 
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 from openai.lib._pydantic import to_strict_json_schema
 
 from app.agent.contracts import ActionPlan, AgentAnswer, AgentReview, RepairPatch, ResearchRequest
@@ -51,6 +51,8 @@ def safety_tool():
 
 
 class ResponsesProvider:
+    no_reasoning_models: set[str] = set()
+
     def __init__(self, settings, factory=OpenAI):
         self.settings, self.factory = settings, factory
 
@@ -168,11 +170,19 @@ class ResponsesProvider:
             kwargs["prompt_cache_key"] = prompt_cache_key
         if allow_tools and not review:
             kwargs.update(tools=[research_tool(), safety_tool()], parallel_tool_calls=False)
-        if settings.agent_reasoning_effort:
+        if settings.agent_reasoning_effort and model not in self.no_reasoning_models:
             kwargs["reasoning"] = {"effort": settings.agent_reasoning_effort}
         try:
             with model_calls.sdk(settings, stage, model, factory=self.factory) as client:
-                response = client.responses.create(**kwargs)
+                try:
+                    response = client.responses.create(**kwargs)
+                except BadRequestError as exc:
+                    if "reasoning" in kwargs and "reasoning" in str(exc).lower():
+                        self.no_reasoning_models.add(model)
+                        kwargs.pop("reasoning", None)
+                        response = client.responses.create(**kwargs)
+                    else:
+                        raise
             # The SDK exposes reserved API names such as ``async`` as Python-safe
             # attributes (``async_``). Stateless continuation replays these items
             # to the API, so serialize with wire aliases rather than attribute names.

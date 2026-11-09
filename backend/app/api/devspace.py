@@ -102,8 +102,8 @@ RESTART_REQUIRED = {"APP_ORIGIN"}
 
 # Presets for the model pickers; the current value is always included and any name can be typed.
 MODEL_OPTIONS = {
-    "OPENAI_CHAT_MODEL": ["gpt-6-luna", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4-turbo"],
-    "OPENAI_REVIEW_MODEL": ["gpt-6.1-sol", "gpt-4o", "gpt-4o-mini", "gpt-4.1"],
+    "OPENAI_CHAT_MODEL": ["gpt-4o", "gpt-4o-mini", "gpt-6-luna", "gpt-4.1", "gpt-4-turbo"],
+    "OPENAI_REVIEW_MODEL": ["gpt-4o", "gpt-4o-mini", "gpt-6.1-sol", "gpt-4.1"],
     "OPENAI_EMBEDDING_MODEL": [
         "text-embedding-3-small",
         "text-embedding-3-large",

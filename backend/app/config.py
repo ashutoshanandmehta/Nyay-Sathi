@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     upload_path: Path = DEFAULT_RUNTIME_DIR / "uploads"
     export_path: Path = DEFAULT_RUNTIME_DIR / "exports"
     openai_api_key: str | None = None
-    openai_chat_model: str = "gpt-6-luna"
-    openai_review_model: str = "gpt-6.1-sol"
+    openai_chat_model: str = "gpt-4o"
+    openai_review_model: str = "gpt-4o"
     openai_planner_model: str | None = None
     openai_embedding_model: str = "text-embedding-3-small"
     openai_transcription_model: str = "gpt-transcribe"
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     agent_search_concurrency: int = Field(default=2, ge=1, le=2)
     agent_max_passages: int = Field(default=8, ge=1, le=16)
     agent_passages_per_source: int = Field(default=4, ge=1, le=8)
-    agent_reasoning_effort: str | None = None
+    agent_reasoning_effort: str | None = "low"
     # Roleplay replies are short and in character: favour speed. Unset to use the model default.
     openai_roleplay_model: str | None = None
     practice_reasoning_effort: str | None = "low"
