@@ -125,6 +125,25 @@ class ContextBuilder:
         return context
 
     @staticmethod
+    def prior_web_sources(recent_messages: list[dict[str, Any]], limit: int = 6) -> list[dict[str, Any]]:
+        """Official web passages earlier answers in this conversation cited, newest first, so a
+        follow-up can cite them again instead of paying to search for them."""
+        found: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for msg in reversed(recent_messages):
+            if msg.get("role") != "assistant":
+                continue
+            for src in (msg.get("metadata") or {}).get("sources") or []:
+                pid = src.get("passage_id")
+                if src.get("origin") != "web" or not pid or pid in seen or not src.get("text"):
+                    continue
+                seen.add(pid)
+                found.append({k: v for k, v in src.items() if k != "citation_number"})
+                if len(found) >= limit:
+                    return found
+        return found
+
+    @staticmethod
     def rolling_summary(memory: CaseMemory) -> str:
         items = [f"Domain: {memory.domain}."]
         if memory.requested_remedy:

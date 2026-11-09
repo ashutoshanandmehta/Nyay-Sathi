@@ -112,7 +112,8 @@ MODEL_OPTIONS = {
     "OPENAI_TRANSCRIPTION_MODEL": ["gpt-transcribe", "whisper-1"],
     "OPENAI_LIVE_TRANSCRIPTION_MODEL": ["gpt-realtime-whisper", "gpt-live-transcribe"],
     "OPENAI_TTS_MODEL": ["gpt-realtime-2.1-mini", "tts-1", "tts-1-hd"],
-    "OPENAI_WEB_SEARCH_MODEL": ["gpt-6.1-sol", "gpt-6-astra", "gpt-4o"],
+    # Search only finds links (we fetch and read pages ourselves), so a small model is enough.
+    "OPENAI_WEB_SEARCH_MODEL": ["gpt-6.1-sol", "gpt-6-astra", "gpt-4o", "gpt-4o-mini"],
     # Empty means "same as the chat model".
     "OPENAI_ROLEPLAY_MODEL": ["", "gpt-6-luna", "gpt-4o", "gpt-4o-mini", "gpt-4.1"],
 }

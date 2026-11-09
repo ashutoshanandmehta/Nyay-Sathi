@@ -362,6 +362,11 @@ class PrimaryAgent:
             detail="Loading facts & certified knowledge pack",
         )
         self._pre_retrieve_certified(state)
+        # Official pages an earlier answer here already cited stay citable without a new search.
+        have = {p["passage_id"] for p in state["passages"]}
+        state["passages"].extend(
+            p for p in state.get("prior_web_sources") or [] if p["passage_id"] not in have
+        )
         event(
             "context",
             "complete",

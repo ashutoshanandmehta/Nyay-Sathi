@@ -1067,6 +1067,7 @@ async def _run_turn(
             "memory": memory.model_dump(mode="json"),
             "summary": summary,
             "passages": [],
+            "prior_web_sources": ContextBuilder.prior_web_sources(recent),
             "research_plan": {},
             "research_status": "not_required",
             "web_sources": [],
