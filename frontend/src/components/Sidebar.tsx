@@ -190,6 +190,7 @@ export default function Sidebar({
       <AgentFlowWidget
         isStreaming={isStreaming}
         events={streamEvents}
+        onOpenWorkflow={onWorkflow}
       />
 
       {/* Full-width Settings Button & Quick Access Links */}
