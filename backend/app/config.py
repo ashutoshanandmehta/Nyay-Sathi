@@ -11,6 +11,11 @@ from app.security.user_key import current_user_key
 ROOT = Path(__file__).resolve().parents[2]
 IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 DEFAULT_RUNTIME_DIR = (Path("/tmp") / "nyay_saathi") if IS_SERVERLESS else (ROOT / "runtime")
+DEFAULT_AGENT_DEADLINE = 50.0 if IS_SERVERLESS else 180.0
+DEFAULT_AGENT_RESEARCH = 18.0 if IS_SERVERLESS else 45.0
+DEFAULT_REPAIR_MIN_REMAINING = 12.0 if IS_SERVERLESS else 25.0
+DEFAULT_WEB_RESEARCH_TIMEOUT = 10.0 if IS_SERVERLESS else 40.0
+DEFAULT_MODEL_TIMEOUT = 45.0 if IS_SERVERLESS else 120.0
 
 
 class Settings(BaseSettings):
@@ -44,12 +49,12 @@ class Settings(BaseSettings):
     agent_max_tokens: int = Field(default=400000, ge=2000, le=1000000)
     agent_max_output_tokens: int = Field(default=6000, ge=1000, le=16000)
     agent_context_chars: int = Field(default=36000, ge=8000, le=100000)
-    agent_deadline_seconds: float = Field(default=180, ge=5, le=300)
-    agent_repair_min_remaining_seconds: float = Field(default=25.0, ge=0.0, le=180.0)
+    agent_deadline_seconds: float = Field(default=DEFAULT_AGENT_DEADLINE, ge=5, le=300)
+    agent_repair_min_remaining_seconds: float = Field(default=DEFAULT_REPAIR_MIN_REMAINING, ge=0.0, le=180.0)
     # Requests research may never consume: one repair plus its mandatory re-review.
     agent_repair_reserve: int = Field(default=2, ge=0, le=6)
     agent_max_repairs: int = Field(default=2, ge=0, le=3)
-    agent_research_seconds: float = Field(default=45, ge=1, le=120)
+    agent_research_seconds: float = Field(default=DEFAULT_AGENT_RESEARCH, ge=1, le=120)
     # Share of the research window searches may use; fetching keeps the rest.
     agent_search_share: float = Field(default=0.5, ge=0.1, le=0.9)
     agent_max_batches: int = Field(default=3, ge=0, le=4)
@@ -101,7 +106,7 @@ class Settings(BaseSettings):
     web_research_enabled: bool = True
     web_max_queries: int = Field(default=2, ge=1, le=2)
     web_max_documents: int = Field(default=3, ge=1, le=3)
-    web_research_timeout_seconds: float = Field(default=40, ge=5, le=90)
+    web_research_timeout_seconds: float = Field(default=DEFAULT_WEB_RESEARCH_TIMEOUT, ge=5, le=90)
     web_max_download_bytes: int = Field(default=5 * 1024 * 1024, ge=1024, le=10 * 1024 * 1024)
     web_max_pdf_pages: int = Field(default=60, ge=1, le=100)
     web_cache_ttl_seconds: float = Field(default=3600, ge=0, le=86400)
@@ -109,7 +114,7 @@ class Settings(BaseSettings):
     live_eval_max_model_calls: int = Field(default=0, ge=0, le=100)
     max_upload_bytes: int = 10 * 1024 * 1024
     max_pdf_pages: int = 50
-    model_timeout_seconds: float = 120.0
+    model_timeout_seconds: float = DEFAULT_MODEL_TIMEOUT
     requests_per_minute: int = Field(default=120, ge=10, le=6000)
     device_requests_per_minute: int = Field(default=90, ge=5, le=6000)
     turn_requests_per_minute: int = Field(default=30, ge=2, le=1000)
