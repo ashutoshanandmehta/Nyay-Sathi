@@ -1,15 +1,18 @@
 import {
   AlertTriangle,
+  ArrowRight,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Cpu,
+  Inbox,
   Layers,
   RotateCw,
   Scale,
   Search,
   Sparkles,
   Terminal,
+  Timer,
   Wrench,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -177,34 +180,15 @@ export default function AgentFlowWidget({
         <div className="flowing-brand">
           <span className="flowing-pulse-dot" />
           <span className="flowing-title">Flowinggg</span>
-          {isStreaming && (
-            <span className="flowing-timer-pill" title="Elapsed execution time">
-              ⏱️ {elapsed}s
-            </span>
-          )}
         </div>
         <div className="flowing-meta">
-          <button
-            type="button"
-            className="flowing-trace-toggle-btn"
-            onClick={() => setShowTrace(prev => !prev)}
-            title="Toggle live execution trace"
-          >
-            <Terminal size={10} />
-            <span>Trace ({events.length})</span>
-            {showTrace ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-          </button>
-          <span className="flowing-step-pill">{stageIndex + 1}/6</span>
-          {onOpenWorkflow && (
-            <button
-              type="button"
-              className="flowing-workflow-link"
-              onClick={onOpenWorkflow}
-              title="Inspect complete Agent Workflow"
-            >
-              Workflow
-            </button>
+          {isStreaming && (
+            <span className="flowing-timer-pill" title="Elapsed execution time">
+              <Timer size={11} aria-hidden="true" />
+              {elapsed}s
+            </span>
           )}
+          <span className="flowing-step-pill" title="Current step">{stageIndex + 1}/6</span>
         </div>
       </div>
 
@@ -217,7 +201,7 @@ export default function AgentFlowWidget({
             color: activeStage.color,
           }}
         >
-          <Icon size={15} className={isLoop ? 'spin-loop' : 'flowing-icon-breathing'} />
+          <Icon size={16} className={isLoop ? 'spin-loop' : 'flowing-icon-breathing'} />
         </div>
 
         <div className="flowing-info">
@@ -238,7 +222,7 @@ export default function AgentFlowWidget({
           {/* Tool Pill if tool was called */}
           {activeTool && (
             <div className="flowing-tool-pill" title={`Tool: ${activeTool}`}>
-              <Wrench size={10} />
+              <Wrench size={11} aria-hidden="true" />
               <span>{activeTool}</span>
             </div>
           )}
@@ -249,53 +233,20 @@ export default function AgentFlowWidget({
           {/* Fetched Result Banner */}
           {fetchedResult && (
             <div className="flowing-result-pill" title={fetchedResult}>
-              <span>📥 {fetchedResult}</span>
+              <Inbox size={11} aria-hidden="true" />
+              <span>{fetchedResult}</span>
             </div>
           )}
 
           {/* What Went Wrong / Warning Banner */}
           {whatWentWrong && (
             <div className="flowing-warning-pill" title={whatWentWrong}>
-              <AlertTriangle size={10} />
+              <AlertTriangle size={11} aria-hidden="true" />
               <span>{whatWentWrong}</span>
             </div>
           )}
         </div>
       </div>
-
-      {/* Expandable Live Execution Trace Feed */}
-      {showTrace && (
-        <div className="flowing-trace-container">
-          <div className="flowing-trace-header">
-            <span>Live Agent & Tool Calls Trace</span>
-            <small>{events.length} events logged</small>
-          </div>
-          <div className="flowing-trace-feed">
-            {events.map((ev, i) => (
-              <div
-                key={i}
-                className={`flowing-trace-item ${ev.warning || ev.error ? 'item-warning' : ev.status === 'complete' || ev.status === 'passed' ? 'item-complete' : ''}`}
-              >
-                <div className="trace-item-meta">
-                  <span className="trace-time">{ev.timestamp || 'now'}</span>
-                  {ev.agent && <span className="trace-agent-badge">{ev.agent.replace(' Agent', '')}</span>}
-                  {ev.tool && <span className="trace-tool-badge">🛠️ {ev.tool}</span>}
-                </div>
-                <p className="trace-item-msg">
-                  {ev.warning ? (
-                    <span className="trace-warning-msg">⚠️ {ev.warning}</span>
-                  ) : ev.result ? (
-                    <span className="trace-result-msg">📥 {ev.result}</span>
-                  ) : (
-                    ev.action || ev.detail || ev.stage
-                  )}
-                </p>
-              </div>
-            ))}
-            <div ref={traceEndRef} />
-          </div>
-        </div>
-      )}
 
       {/* Micro Progress Bar */}
       <div className="flowing-progress-track">
@@ -307,6 +258,67 @@ export default function AgentFlowWidget({
           }}
         />
       </div>
+
+      {/* Trace and Workflow actions */}
+      <div className="flowing-actions">
+        <button
+          type="button"
+          className="flowing-trace-toggle-btn"
+          onClick={() => setShowTrace(prev => !prev)}
+          aria-expanded={showTrace}
+          title="Toggle live execution trace"
+        >
+          <Terminal size={11} aria-hidden="true" />
+          <span>Trace ({events.length})</span>
+          {showTrace ? <ChevronUp size={11} aria-hidden="true" /> : <ChevronDown size={11} aria-hidden="true" />}
+        </button>
+        {onOpenWorkflow && (
+          <button
+            type="button"
+            className="flowing-workflow-link"
+            onClick={onOpenWorkflow}
+            title="Inspect complete Agent Workflow"
+          >
+            Workflow
+            <ArrowRight size={11} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+
+      {/* Expandable Live Execution Trace Feed */}
+      {showTrace && (
+        <div className="flowing-trace-container">
+          <div className="flowing-trace-header">
+            <span>Live trace</span>
+            <small>{events.length} event{events.length === 1 ? '' : 's'}</small>
+          </div>
+          <div className="flowing-trace-feed">
+            {events.map((ev, i) => (
+              <div
+                key={i}
+                className={`flowing-trace-item ${ev.warning || ev.error ? 'item-warning' : ev.status === 'complete' || ev.status === 'passed' ? 'item-complete' : ''}`}
+              >
+                <div className="trace-item-meta">
+                  <span className="trace-time">{ev.timestamp || 'now'}</span>
+                  {ev.agent && <span className="trace-agent-badge">{ev.agent.replace(' Agent', '')}</span>}
+                  {ev.tool && <span className="trace-tool-badge">{ev.tool}</span>}
+                </div>
+                <p className="trace-item-msg">
+                  {ev.warning ? (
+                    <span className="trace-warning-msg">{ev.warning}</span>
+                  ) : ev.result ? (
+                    <span className="trace-result-msg">{ev.result}</span>
+                  ) : (
+                    ev.action || ev.detail || ev.stage
+                  )}
+                </p>
+              </div>
+            ))}
+            <div ref={traceEndRef} />
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
