@@ -104,6 +104,21 @@ EMERGENCY_COERCION_RE = re.compile(
     re.I | re.S,
 )
 
+# The user says the confrontation is over ("we paid them to escape", "they let us go"). The
+# immediate-danger banner is skipped; the model can still raise safety if anything is ongoing.
+COERCION_ENDED_RE = re.compile(
+    r"\b(?:escaped|got\s+away|let\s+us\s+go|let\s+me\s+go|(?:they|we|i)\s+left|"
+    r"(?:we(?:'re|\s+are)|i(?:'m|\s+am))\s+(?:safe|home|back\s+home)\s+now|"
+    r"to\s+(?:escape|get\s+away))\b",
+    re.I,
+)
+# Anything still happening keeps the banner, whatever else the message says.
+COERCION_ONGOING_RE = re.compile(
+    r"\b(?:still|right\s+now|now|currently|won.t\s+(?:let|release)|not\s+(?:letting|releasing)|"
+    r"detained|in\s+custody|locked|outside\s+(?:our|my|the)\s+(?:room|door|house)|keep\s+(?:calling|threatening))\b",
+    re.I,
+)
+
 CYBER_FINANCIAL_FRAUD_RE = re.compile(
     r"(?:(?:debited|withdrawn|deducted|drained|stolen|transferred\s+without|unauthorized\s+transaction|unauthorised\s+transaction)"
     r".{0,160}(?:scam|fraud|phishing|fake|link|whatsapp|otp|pin|password|wallet|upi|blocked\s+my\s+number|customer\s+care|anydesk|apk))|"
@@ -154,7 +169,9 @@ def detect_urgent_category(message: str) -> str | None:
         return "self_harm"
     if DOMESTIC_VIOLENCE_RE.search(lower):
         return "domestic_violence"
-    if EMERGENCY_COERCION_RE.search(lower):
+    if EMERGENCY_COERCION_RE.search(lower) and (
+        COERCION_ONGOING_RE.search(lower) or not COERCION_ENDED_RE.search(lower)
+    ):
         return "physical_safety"
     if CYBER_FINANCIAL_FRAUD_RE.search(lower):
         return "financial_cyber_fraud"

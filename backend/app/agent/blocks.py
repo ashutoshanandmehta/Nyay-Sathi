@@ -99,8 +99,26 @@ DRAFT_WITHHELD_NOTE: dict[str, str] = {
     "chhod diya hai. Mujhse dobara kahiye, main likh dunga, ya bataiye ki usmein kaun si baatein zaroor hon.",
 }
 
-# Model-written "[2]"-style numbers would read as citations the runtime never assigned.
-MODEL_CITATION_NUMBER_RE = re.compile(r"[ \t]?\[\d{1,2}\](?![(\[:])")
+# Model-written "[2]"-style numbers (also runs like "[1][2]") would read as citations the runtime
+# never assigned.
+MODEL_CITATION_NUMBER_RE = re.compile(r"[ \t]?(?:\[\d{1,2}\])+(?![(\[:])")
+# Evidence IDs the model echoes into prose ("[segment:seg-1]", "[prop-…]", "[web-…]"); the runtime
+# adds numbered citations itself. Placeholders like "[Date]" don't match.
+EVIDENCE_ID_MARKER_RE = re.compile(
+    r"[ \t]?\[(?:(?:segment|message|fact|document|attachment):[^\]\s]+|"
+    r"(?:prop|pack|web|cert|corpus|official)-[\w.:-]+)\]",
+    re.I,
+)
+# A "lawyer" section must actually be about a lawyer or legal aid; an offer of more help is not.
+LAWYER_CUE_RE = re.compile(
+    r"\b(?:lawyers?|advocates?|counsel|legal\s+aid|legal\s+services|dlsa|slsa|nalsa|vakil|"
+    r"wakeel)\b|वकील|अधिवक्ता|विधिक\s+सेवा",
+    re.I,
+)
+
+
+def is_lawyer_handoff(text: str) -> bool:
+    return bool(LAWYER_CUE_RE.search(text or ""))
 
 BLANKET_DISCLAIMER_RE = re.compile(
     r"(?:i am not a lawyer|not legal advice|i (?:could not|have not) verif\w+ (?:the )?(?:current )?(?:legal|statutory) (?:details|procedure)|the incident and your state or city are not known)",
@@ -181,8 +199,8 @@ def format_claim_text(claim: AnswerClaim, language: str) -> str:
     if claim.kind == "quote":
         return f"You report: “{claim.text}”"
     if claim.in_document:
-        return claim.text
-    return MODEL_CITATION_NUMBER_RE.sub("", claim.text)
+        return EVIDENCE_ID_MARKER_RE.sub("", claim.text)
+    return MODEL_CITATION_NUMBER_RE.sub("", EVIDENCE_ID_MARKER_RE.sub("", claim.text))
 
 
 def append_citation_markers(text: str, numbers: list[int]) -> str:

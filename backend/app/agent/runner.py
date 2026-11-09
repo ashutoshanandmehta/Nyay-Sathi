@@ -16,6 +16,7 @@ from app.agent.blocks import (
     format_claim_text,
     handoff_template_id,
     infer_block_type,
+    is_lawyer_handoff,
 )
 from app.agent.budget import TurnBudget
 from app.agent.contracts import (
@@ -121,6 +122,20 @@ CONCEPT_EXPANSIONS = (
     ),
 )
 
+# Situations whose key rule is a certified proposition rather than an official pack section. Each
+# gets its own lookup so a louder topic in the same conversation (say, hotel stays) can't push it out.
+CERTIFIED_CONCEPTS = (
+    (
+        re.compile(
+            r"(?=.*(?:\b(?:police|officers?|constables?|cops?|daroga|inspector|sho)\b|पुलिस))"
+            r"(?=.*(?:\b(?:paid|paying|gave|handed\s+over|transferred|bribe\w*|rishwat|ghoos|"
+            r"settle\w*)\b|रिश्वत|घूस|पैसे\s+दिए))",
+            re.I | re.S,
+        ),
+        "already paid bribe under compulsion forced to pay police seven days report",
+    ),
+)
+
 
 def matched_concepts(message: str) -> list[str]:
     return [concepts for pattern, concepts in CONCEPT_EXPANSIONS if pattern.search(message)]
@@ -180,6 +195,12 @@ class PrimaryAgent:
             query_text, jurisdiction="India", limit=4, exclude_origin="official_pack"
         )
         trusted = [h for h in hits if h.get("certified_proposition")]
+        for pattern, concept in CERTIFIED_CONCEPTS:
+            if pattern.search(state["current_message"]):
+                extra, _ = self.research.retrieve_certified(
+                    concept, jurisdiction="India", limit=1, exclude_origin="official_pack"
+                )
+                trusted = [h for h in extra if h.get("certified_proposition")] + trusted
         # Verbatim official sections go straight into the first call, so common questions need no
         # live search round. Their own floor keeps loosely related sections out.
         pack_hits, _ = self.research.retrieve_certified(
@@ -1003,6 +1024,20 @@ class PrimaryAgent:
         )
 
     def _compose(self, answer, state, registry, accepted, patch_verdicts, review_fresh):
+        # An offer of more help filed as the lawyer section reads as pushing a lawyer; it joins
+        # today's steps instead, so the lawyer section (and its bundle button) means a lawyer.
+        answer = answer.model_copy(
+            update={
+                "claims": [
+                    c.model_copy(update={"block_type": "immediate_actions"})
+                    if infer_block_type(c) == "human_handoff"
+                    and c.kind != "template"
+                    and not is_lawyer_handoff(c.text)
+                    else c
+                    for c in answer.claims
+                ]
+            }
+        )
         if not any(
             c.claim_id in accepted and infer_block_type(c) == "human_handoff" for c in answer.claims
         ) and (template_id := handoff_template_id(answer, state)):
@@ -1176,7 +1211,7 @@ class PrimaryAgent:
         if dropped_drafts and formatted_sections:
             formatted_sections.append(DRAFT_WITHHELD_NOTE.get(lang_key, DRAFT_WITHHELD_NOTE["en"]))
         if formatted_sections:
-            pieces.append("\n\n---\n\n".join(formatted_sections))
+            pieces.append("\n\n".join(formatted_sections))
 
         core_all = [  # noqa: F841
             c for c in answer.claims if not c.optional and infer_block_type(c) != "human_handoff"
