@@ -264,7 +264,11 @@ def test_second_repair_runs_when_the_first_is_still_rejected(client, isolated_ap
     meta = _post(client, cid, "Why was my brother arrested?").json()["assistant_message"]
     assert "Draft three." in meta["content"]
     assert meta["metadata"]["publication_status"] == "supported"
-    attempts = [e.get("attempt") for e in meta["metadata"]["events"] if e["stage"] == "revision"]
+    attempts = [
+        e.get("attempt")
+        for e in meta["metadata"]["events"]
+        if e["stage"] == "revision" and e.get("attempt") is not None
+    ]
     assert attempts == [1, 2]
 
 
@@ -524,3 +528,40 @@ def test_completeness_check_sends_unfinished_sentence_to_repair():
     _, approved5, pending5 = mechanical_checks(ans5, reg)
     assert approved5 == {"c5": "approved_template"}
     assert not pending5
+
+
+def test_multitask_recommended_route_preserves_labeled_claim_order():
+    from app.agent.blocks import assemble_resolution_blocks
+
+    state = {"current_message": "Uncle land harassment.", "memory": {"facts": {}}, "passages": []}
+    reg = EvidenceRegistry(state)
+
+    c1 = AnswerClaim(
+        claim_id="c1",
+        task_id="task-1",
+        kind="practical",
+        grounding="practical_precaution",
+        block_type="recommended_route",
+        text="For the harassment: Have your father submit a written complaint under BNSS Section 173 to the local police station.",
+    )
+    c2 = AnswerClaim(
+        claim_id="c2",
+        task_id="task-1",
+        kind="practical",
+        grounding="practical_precaution",
+        block_type="recommended_route",
+        text="For the land records: Apply for mutation (dakhil kharij) based on inheritance at the local Circle Office.",
+    )
+    ans = AgentAnswer(
+        central_question="q",
+        tasks=[_task()],
+        claims=[c1, c2],
+    )
+    accepted = {"c1": "verified", "c2": "verified"}
+    blocks = assemble_resolution_blocks(ans, accepted, reg, state, [])
+    rr_block = next(b for b in blocks if b["block_type"] == "recommended_route")
+    content = rr_block["content"]
+
+    assert "For the harassment:" in content
+    assert "For the land records:" in content
+    assert content.index("For the harassment:") < content.index("For the land records:")

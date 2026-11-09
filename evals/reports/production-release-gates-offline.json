@@ -14,7 +14,7 @@
     {
       "scenario_id": "gate-consumer-amazon-refund",
       "turn_index": 1,
-      "elapsed_ms": 42.71,
+      "elapsed_ms": 42.32,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -32,13 +32,16 @@
         "no_generic_boilerplate_when_supported": true,
         "draft_preserved_cleanly": true,
         "urgent_followup_inherited_not_practice": true,
-        "expected_helpline_present": true
+        "expected_helpline_present": true,
+        "recommended_route_labels_present": true,
+        "alternatives_mention_present": true,
+        "all_claims_terminal_punctuation": true
       }
     },
     {
       "scenario_id": "gate-consumer-hotel-draft",
       "turn_index": 1,
-      "elapsed_ms": 43.53,
+      "elapsed_ms": 44.5,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -54,13 +57,16 @@
         "no_generic_boilerplate_when_supported": true,
         "draft_preserved_cleanly": true,
         "urgent_followup_inherited_not_practice": true,
-        "expected_helpline_present": true
+        "expected_helpline_present": true,
+        "recommended_route_labels_present": true,
+        "alternatives_mention_present": true,
+        "all_claims_terminal_punctuation": true
       }
     },
     {
       "scenario_id": "gate-urgent-police-followup-continuity",
       "turn_index": 1,
-      "elapsed_ms": 34.72,
+      "elapsed_ms": 38.06,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -76,13 +82,16 @@
         "no_generic_boilerplate_when_supported": true,
         "draft_preserved_cleanly": true,
         "urgent_followup_inherited_not_practice": true,
-        "expected_helpline_present": true
+        "expected_helpline_present": true,
+        "recommended_route_labels_present": true,
+        "alternatives_mention_present": true,
+        "all_claims_terminal_punctuation": true
       }
     },
     {
       "scenario_id": "gate-urgent-police-followup-continuity",
       "turn_index": 2,
-      "elapsed_ms": 39.89,
+      "elapsed_ms": 38.26,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -99,13 +108,16 @@
         "no_generic_boilerplate_when_supported": true,
         "draft_preserved_cleanly": true,
         "urgent_followup_inherited_not_practice": true,
-        "expected_helpline_present": true
+        "expected_helpline_present": true,
+        "recommended_route_labels_present": true,
+        "alternatives_mention_present": true,
+        "all_claims_terminal_punctuation": true
       }
     },
     {
       "scenario_id": "gate-urgent-adult-autonomy-interfaith",
       "turn_index": 1,
-      "elapsed_ms": 43.24,
+      "elapsed_ms": 42.29,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -121,13 +133,16 @@
         "no_generic_boilerplate_when_supported": true,
         "draft_preserved_cleanly": true,
         "urgent_followup_inherited_not_practice": true,
-        "expected_helpline_present": true
+        "expected_helpline_present": true,
+        "recommended_route_labels_present": true,
+        "alternatives_mention_present": true,
+        "all_claims_terminal_punctuation": true
       }
     },
     {
       "scenario_id": "gate-crisis-self-harm-helpline",
       "turn_index": 1,
-      "elapsed_ms": 35.45,
+      "elapsed_ms": 36.5,
       "publication_status": "supported",
       "blocks_rendered": [
         "direct_answer",
@@ -143,7 +158,36 @@
         "no_generic_boilerplate_when_supported": true,
         "draft_preserved_cleanly": true,
         "urgent_followup_inherited_not_practice": true,
-        "expected_helpline_present": true
+        "expected_helpline_present": true,
+        "recommended_route_labels_present": true,
+        "alternatives_mention_present": true,
+        "all_claims_terminal_punctuation": true
+      }
+    },
+    {
+      "scenario_id": "gate-land-uncle-harassment-bihar",
+      "turn_index": 1,
+      "elapsed_ms": 53.33,
+      "publication_status": "supported",
+      "blocks_rendered": [
+        "direct_answer",
+        "recommended_route",
+        "immediate_actions",
+        "alternatives"
+      ],
+      "checks": {
+        "publication_status_matches": true,
+        "expected_blocks_present": true,
+        "certified_propositions_retrieved": true,
+        "safety_emitted_correctly": true,
+        "safety_latency_under_500ms": true,
+        "no_generic_boilerplate_when_supported": true,
+        "draft_preserved_cleanly": true,
+        "urgent_followup_inherited_not_practice": true,
+        "expected_helpline_present": true,
+        "recommended_route_labels_present": true,
+        "alternatives_mention_present": true,
+        "all_claims_terminal_punctuation": true
       }
     }
   ]

@@ -24,6 +24,7 @@ from app.agent.contracts import (
     ClaimVerdict,
 )
 from app.agent.runner import PrimaryAgent
+from app.agent.verification import is_sentence_complete
 from app.config import Settings
 from app.db import Database
 from app.rag.retrieval import HybridRetriever
@@ -70,7 +71,9 @@ class GateScriptedProvider:
                                 claim_id=cid,
                                 support="supported",
                                 reason="Entailed by certified proposition or reported facts.",
-                                requires_public_evidence=cid.startswith("claim-legal"),
+                                requires_public_evidence=cid.startswith("claim-legal")
+                                or "harassment" in cid
+                                or cid == "claim-alt",
                             )
                         )
                 return (
@@ -99,88 +102,140 @@ class GateScriptedProvider:
                 if self.spec.get("expect_urgent_continuation")
                 else ("draft" if self.spec.get("include_draft") else "legal_options")
             )
-            claims = [
-                AnswerClaim(
-                    claim_id="claim-direct",
-                    task_id="task-1",
-                    kind="legal" if pub_ids else "factual",
-                    block_type="direct_answer",
-                    grounding="verified_legal_source" if pub_ids else "reported_by_user",
-                    text="Based on verified Indian legal authority and your account, you have a clear non-confrontational escalation path.",
-                    evidence_ids=[pub_ids[0]] if pub_ids else [seg_ev],
-                ),
-                AnswerClaim(
-                    claim_id="claim-actions",
-                    task_id="task-1",
-                    kind="practical",
-                    block_type="immediate_actions",
-                    grounding="practical_precaution",
-                    text="1. Preserve timestamps, messages, and transaction records.\n2. Record exact reference details before escalating.",
-                    evidence_ids=[seg_ev],
-                ),
-            ]
-            if pub_ids and "recommended_route" in self.spec.get("expect_blocks", []):
-                claims.append(
+            if self.spec.get("expect_recommended_route_labels"):
+                harassment_ev = [
+                    pid for pid in pub_ids if "bnss-2023-s173" in pid or "bns-2023-s351" in pid
+                ]
+                claims = [
                     AnswerClaim(
-                        claim_id="claim-legal-route",
+                        claim_id="claim-direct",
+                        task_id="task-1",
+                        kind="practical",
+                        block_type="direct_answer",
+                        grounding="practical_precaution",
+                        text="Your father can submit a formal written complaint regarding the harassment to the local police station, while initiating mutation of the land records at the Circle Office.",
+                        evidence_ids=[seg_ev],
+                    ),
+                    AnswerClaim(
+                        claim_id="claim-route-harassment",
                         task_id="task-1",
                         kind="procedure",
                         block_type="recommended_route",
                         grounding="verified_legal_source",
-                        text="Escalate formally to the designated Grievance Officer and National Consumer Helpline / District Commission with your pickup proof.",
-                        evidence_ids=pub_ids[:2],
-                    )
-                )
-            if "alternatives" in self.spec.get("expect_blocks", []):
-                claims.append(
+                        text="For the harassment: Have your father submit a written complaint under BNSS Section 173 to the local police station for criminal intimidation under BNS Section 351.",
+                        evidence_ids=harassment_ev if harassment_ev else pub_ids[:2],
+                    ),
+                    AnswerClaim(
+                        claim_id="claim-route-land",
+                        task_id="task-1",
+                        kind="practical",
+                        block_type="recommended_route",
+                        grounding="practical_precaution",
+                        text="For the land records: Apply for mutation (dakhil kharij) based on inheritance at the local Circle Office.",
+                        evidence_ids=[seg_ev],
+                    ),
+                    AnswerClaim(
+                        claim_id="claim-actions",
+                        task_id="task-1",
+                        kind="practical",
+                        block_type="immediate_actions",
+                        grounding="practical_precaution",
+                        text="1. Write down dates, specific threats, and witness names.\n2. Collect grandfather's death certificate and land documents.",
+                        evidence_ids=[seg_ev],
+                    ),
                     AnswerClaim(
                         claim_id="claim-alt",
                         task_id="task-1",
-                        kind="practical",
-                        block_type="alternatives",
-                        grounding="practical_precaution",
-                        text="- Payment issuer dispute / chargeback enquiry with transaction log.\n- Written formal notice before filing.",
-                        evidence_ids=[seg_ev],
-                    )
-                )
-            if "evidence_checklist" in self.spec.get("expect_blocks", []):
-                claims.append(
-                    AnswerClaim(
-                        claim_id="claim-ev",
-                        task_id="task-1",
-                        kind="practical",
-                        block_type="evidence_checklist",
-                        grounding="practical_precaution",
-                        text="- Original booking/order confirmation and payment receipt.\n- CCTV / pickup SMS / ticket closure screenshots.",
-                        evidence_ids=[seg_ev],
-                    )
-                )
-            if self.spec.get("include_draft"):
-                claims.append(
-                    AnswerClaim(
-                        claim_id="claim-doc",
-                        task_id="task-1",
-                        kind="document",
-                        block_type="document",
-                        grounding="practical_precaution",
-                        in_document=True,
-                        text="Subject: Formal Grievance — Denied Check-In for Confirmed Prepaid Booking [Booking ID]\n\nDear Grievance Officer,\nI am writing regarding my confirmed prepaid hotel booking in Jaipur for ₹8,400 on [Date], where check-in was denied upon arrival. Please process a full refund and compensation details within [Number] days.",
-                        evidence_ids=[seg_ev],
-                    )
-                )
-            if self.spec.get("reject_optional_claim") and pub_ids:
-                claims.append(
-                    AnswerClaim(
-                        claim_id="claim-optional-unsupported",
-                        task_id="task-1",
-                        kind="legal",
+                        kind="procedure",
                         block_type="alternatives",
                         grounding="verified_legal_source",
-                        optional=True,
-                        text="Optional supplementary legal note that reviewer rejects.",
-                        evidence_ids=[pub_ids[0]],
+                        text="If the police station refuses to act, send the substance of the complaint in writing to the Superintendent of Police (SP) by post under Section 173.",
+                        evidence_ids=[p for p in pub_ids if "bnss-2023-s173" in p] or pub_ids[:1],
+                    ),
+                ]
+            else:
+                claims = [
+                    AnswerClaim(
+                        claim_id="claim-direct",
+                        task_id="task-1",
+                        kind="legal" if pub_ids else "factual",
+                        block_type="direct_answer",
+                        grounding="verified_legal_source" if pub_ids else "reported_by_user",
+                        text="Based on verified Indian legal authority and your account, you have a clear non-confrontational escalation path.",
+                        evidence_ids=[pub_ids[0]] if pub_ids else [seg_ev],
+                    ),
+                    AnswerClaim(
+                        claim_id="claim-actions",
+                        task_id="task-1",
+                        kind="practical",
+                        block_type="immediate_actions",
+                        grounding="practical_precaution",
+                        text="1. Preserve timestamps, messages, and transaction records.\n2. Record exact reference details before escalating.",
+                        evidence_ids=[seg_ev],
+                    ),
+                ]
+                if pub_ids and "recommended_route" in self.spec.get("expect_blocks", []):
+                    claims.append(
+                        AnswerClaim(
+                            claim_id="claim-legal-route",
+                            task_id="task-1",
+                            kind="procedure",
+                            block_type="recommended_route",
+                            grounding="verified_legal_source",
+                            text="Escalate formally to the designated Grievance Officer and National Consumer Helpline / District Commission with your pickup proof.",
+                            evidence_ids=pub_ids[:2],
+                        )
                     )
-                )
+                if "alternatives" in self.spec.get("expect_blocks", []):
+                    claims.append(
+                        AnswerClaim(
+                            claim_id="claim-alt",
+                            task_id="task-1",
+                            kind="practical",
+                            block_type="alternatives",
+                            grounding="practical_precaution",
+                            text="- Payment issuer dispute / chargeback enquiry with transaction log.\n- Written formal notice before filing.",
+                            evidence_ids=[seg_ev],
+                        )
+                    )
+                if "evidence_checklist" in self.spec.get("expect_blocks", []):
+                    claims.append(
+                        AnswerClaim(
+                            claim_id="claim-ev",
+                            task_id="task-1",
+                            kind="practical",
+                            block_type="evidence_checklist",
+                            grounding="practical_precaution",
+                            text="- Original booking/order confirmation and payment receipt.\n- CCTV / pickup SMS / ticket closure screenshots.",
+                            evidence_ids=[seg_ev],
+                        )
+                    )
+                if self.spec.get("include_draft"):
+                    claims.append(
+                        AnswerClaim(
+                            claim_id="claim-doc",
+                            task_id="task-1",
+                            kind="document",
+                            block_type="document",
+                            grounding="practical_precaution",
+                            in_document=True,
+                            text="Subject: Formal Grievance — Denied Check-In for Confirmed Prepaid Booking [Booking ID]\n\nDear Grievance Officer,\nI am writing regarding my confirmed prepaid hotel booking in Jaipur for ₹8,400 on [Date], where check-in was denied upon arrival. Please process a full refund and compensation details within [Number] days.",
+                            evidence_ids=[seg_ev],
+                        )
+                    )
+                if self.spec.get("reject_optional_claim") and pub_ids:
+                    claims.append(
+                        AnswerClaim(
+                            claim_id="claim-optional-unsupported",
+                            task_id="task-1",
+                            kind="legal",
+                            block_type="alternatives",
+                            grounding="verified_legal_source",
+                            optional=True,
+                            text="Optional supplementary legal note that reviewer rejects.",
+                            evidence_ids=[pub_ids[0]],
+                        )
+                    )
 
             return (
                 [],
@@ -356,6 +411,22 @@ def main() -> int:
                         turn["expect_helpline"] in result["safety_messages"][0]["text"]
                         if turn.get("expect_helpline")
                         else True
+                    ),
+                    "recommended_route_labels_present": (
+                        all(
+                            label in next((b["content"] for b in result["resolution_blocks"] if b["block_type"] == "recommended_route"), "")
+                            for label in turn["expect_recommended_route_labels"]
+                        )
+                        if turn.get("expect_recommended_route_labels")
+                        else True
+                    ),
+                    "alternatives_mention_present": (
+                        turn["expect_alternatives_mention"] in next((b["content"] for b in result["resolution_blocks"] if b["block_type"] == "alternatives"), "")
+                        if turn.get("expect_alternatives_mention")
+                        else True
+                    ),
+                    "all_claims_terminal_punctuation": all(
+                        is_sentence_complete(b["content"]) for b in result["resolution_blocks"]
                     ),
                 }
                 report_records.append(

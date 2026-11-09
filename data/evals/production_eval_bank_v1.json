@@ -78,5 +78,32 @@
         "expect_status": "supported"
       }
     ]
+  },
+  {
+    "id": "gate-land-uncle-harassment-bihar",
+    "domain": "other_legal",
+    "language": "en",
+    "turns": [
+      {
+        "message": "How to file complaint against my uncle who has harassed my father for some land disputes in my village Chorsua, Bihar; the land was owned by my grandfather who died 1 month back.",
+        "expect_safety": false,
+        "expect_certified_ids": [
+          "pack-bnss-2023-s173",
+          "pack-bns-2023-s351"
+        ],
+        "expect_blocks": [
+          "direct_answer",
+          "recommended_route",
+          "immediate_actions",
+          "alternatives"
+        ],
+        "expect_recommended_route_labels": [
+          "For the harassment:",
+          "For the land records:"
+        ],
+        "expect_alternatives_mention": "Superintendent of Police",
+        "expect_status": "supported"
+      }
+    ]
   }
 ]
