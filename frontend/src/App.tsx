@@ -19,6 +19,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { api } from './api'
+import { apiFetch } from './byok'
 import Composer from './components/Composer'
 import { AgentWorkflowPanel, CasePanel, Drawer, KnowledgeBasePanel, Sources } from './components/Drawer'
 import MessageView from './components/MessageView'
@@ -137,7 +138,7 @@ export default function App(){
   async function showWorkflow(){showSettings('workflow');try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}
   function showDevspace(){showSettings('devspace')}
   async function retry(){const p=pending.current;if(!p||p.caseId!==active||sending)return;thinkingStartRef.current=Date.now();setElapsedThinking(0);setSending(true);setError('');try{await api.streamTurn(p.caseId,p.text,p.language,p.id,p.attachments,onProgress);const result=await api.detail(p.caseId);setDetail(d=>d?.conversation.id===p.caseId?result:d);pending.current=null;await refresh()}catch(e){setError((e as Error).message)}finally{if(thinkingStartRef.current){setLastDuration(Math.max(1,Math.round((Date.now()-thinkingStartRef.current)/100)/10))};thinkingStartRef.current=null;setSending(false)}}
-  async function speech(m:Message){const response=await fetch(`/api/conversations/${active}/messages/${m.id}/speech`,{method:'POST',credentials:'include',headers:{'X-CSRF-Token':decodeURIComponent(document.cookie.split('; ').find(x=>x.startsWith('nyay_csrf='))?.split('=')[1]||'')}});if(!response.ok){setError('Audio could not be created. The text answer is still available.');return}new Audio(URL.createObjectURL(await response.blob())).play()}
+  async function speech(m:Message){const response=await apiFetch(`/api/conversations/${active}/messages/${m.id}/speech`,{method:'POST',credentials:'include',headers:{'X-CSRF-Token':decodeURIComponent(document.cookie.split('; ').find(x=>x.startsWith('nyay_csrf='))?.split('=')[1]||'')}});if(!response.ok){setError('Audio could not be created. The text answer is still available.');return}new Audio(URL.createObjectURL(await response.blob())).play()}
   const messages=detail?.messages.length?detail.messages:[welcome]
   const hasSufficientContext = Boolean(
     detail &&
@@ -164,7 +165,7 @@ export default function App(){
               )
             })()}
           </div>
-          {configured||!devspace?<span>{configured?'AI legal information assistant':'AI setup required'}</span>:<button className="setup-link" onClick={showDevspace}>AI setup required · add your key</button>}
+          {configured?<span>AI legal information assistant</span>:<button className="setup-link" onClick={()=>showSettings('key')}>Add your OpenAI key to start</button>}
         </div>
         <div className="top-actions">
           <div className="language-pill" title="Response language">
@@ -202,7 +203,7 @@ export default function App(){
       {!configured&&(
         <div className="config-banner" role="alert">
           <KeyRound size={17} aria-hidden="true" color="var(--warning)"/>
-          <span>OpenAI is not configured. Your chats and case organisation work, but live AI answers and voice need the backend API key.{devspace&&<> <button className="setup-link config-add-key-btn" onClick={showDevspace}>Add it in DevSpace</button></>}</span>
+          <span>Add your own OpenAI API key to get answers and voice. Your chats and case notes work without it. <button className="setup-link config-add-key-btn" onClick={()=>showSettings('key')}>Add your key</button></span>
         </div>
       )}
       <section className="messages" aria-live="polite"><div className="message-column">
@@ -275,6 +276,6 @@ export default function App(){
       </div></section>
       <Composer key={active} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}/>
     </main>
-    {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='settings'?(settingsTab==='knowledge'?'Knowledge Base':settingsTab==='workflow'?'Agent Workflow':'Settings'):panel==='roleplay'?'Roleplay':'Drafts'} hideHeader={panel==='roleplay'} onClose={()=>setPanel(null)}>{panel==='settings'?<SettingsPanel initialTab={settingsTab} onTabChange={setSettingsTab} knowledge={knowledge} workflow={workflow} devspaceEnabled={devspace} onLoadKnowledge={async()=>{try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}} onLoadWorkflow={async()=>{try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}} onDevspaceSaved={result=>setConfigured(result.configured)}/>:panel==='roleplay'&&detail?<PracticePanel caseId={active} language={language} onClose={()=>setPanel(null)}/>:panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
+    {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='settings'?(settingsTab==='knowledge'?'Knowledge Base':settingsTab==='workflow'?'Agent Workflow':settingsTab==='key'?'Your OpenAI key':'Settings'):panel==='roleplay'?'Roleplay':'Drafts'} hideHeader={panel==='roleplay'} onClose={()=>setPanel(null)}>{panel==='settings'?<SettingsPanel initialTab={settingsTab} onTabChange={setSettingsTab} knowledge={knowledge} workflow={workflow} devspaceEnabled={devspace} onLoadKnowledge={async()=>{try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}} onLoadWorkflow={async()=>{try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}} onDevspaceSaved={result=>setConfigured(result.configured)} onKeyChange={setConfigured}/>:panel==='roleplay'&&detail?<PracticePanel caseId={active} language={language} onClose={()=>setPanel(null)}/>:panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
   </div>
 }

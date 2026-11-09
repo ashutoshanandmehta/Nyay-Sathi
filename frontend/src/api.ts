@@ -1,4 +1,7 @@
 import type { AgentWorkflow, Conversation, Detail, DevspaceData, DevspaceSaveResult, DevspaceValue, EscalationBundle, KnowledgeBase, Language, PracticeScenario, PracticeSession, PracticeTurn, RoleplayChatResponse, RoleplaySetup, RoleplayStartResponse, StreamEvent, SubmissionAuditStep, UserActionItem } from './types'
+import { apiFetch } from './byok'
+
+export interface UserKeyStatus { stored: boolean; unlocked: boolean; hint: string | null; server_key: boolean }
 
 const csrf = () => document.cookie.split('; ').find(x => x.startsWith('nyay_csrf='))?.split('=').slice(1).join('=') ?? ''
 
@@ -6,7 +9,7 @@ async function call<T>(url: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (init.method && init.method !== 'GET') headers.set('X-CSRF-Token', decodeURIComponent(csrf()))
-  const response = await fetch(url, { ...init, headers, credentials: 'include' })
+  const response = await apiFetch(url, { ...init, headers, credentials: 'include' })
   if (!response.ok) {
     const payload = await response.json().catch(() => ({detail: response.statusText}))
     throw new Error(typeof payload.detail === 'string' ? payload.detail : payload.detail?.code ?? 'Request failed')
@@ -17,9 +20,12 @@ async function call<T>(url: string, init: RequestInit = {}): Promise<T> {
 export const api = {
   bootstrap: () => call<{ai_configured:boolean;devspace_enabled?:boolean;privacy_notice:string;disclaimer:string}>('/api/bootstrap'),
   devspace: () => call<DevspaceData>('/api/system/devspace'),
+  userKey: () => call<UserKeyStatus>('/api/me/openai-key'),
+  saveUserKey: (apiKey: string) => call<UserKeyStatus>('/api/me/openai-key', {method:'PUT', body:JSON.stringify({api_key:apiKey})}),
+  removeUserKey: () => call<UserKeyStatus>('/api/me/openai-key', {method:'DELETE'}),
   // Field errors come back as {detail:{errors:{NAME:message}}}; they ride on the thrown error.
   saveDevspace: async (updates:Record<string,DevspaceValue>, clearApiKey=false):Promise<DevspaceSaveResult> => {
-    const response = await fetch('/api/system/devspace',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({updates,clear_api_key:clearApiKey})})
+    const response = await apiFetch('/api/system/devspace',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({updates,clear_api_key:clearApiKey})})
     const payload = await response.json().catch(()=>({}))
     if(!response.ok){const errors=payload.detail?.errors||{};throw Object.assign(new Error(Object.keys(errors).length?'Some settings were not saved.':typeof payload.detail==='string'?payload.detail:'Could not save settings.'),{errors})}
     return payload
@@ -34,7 +40,7 @@ export const api = {
   turn: (id: string, content: string, language: Language, requestId: string, attachmentIds: string[]) =>
     call<{assistant_message: Detail['messages'][number]}>(`/api/conversations/${id}/turns`, {method:'POST', body:JSON.stringify({content,language,request_id:requestId,attachment_ids:attachmentIds})}),
   streamTurn: async (id:string, content:string, language:Language, requestId:string, attachmentIds:string[], progress:(event:StreamEvent)=>void) => {
-    const response = await fetch(`/api/conversations/${id}/turns/stream`, {method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({content,language,request_id:requestId,attachment_ids:attachmentIds})})
+    const response = await apiFetch(`/api/conversations/${id}/turns/stream`, {method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({content,language,request_id:requestId,attachment_ids:attachmentIds})})
     if(!response.ok || !response.body) throw new Error('Could not start this turn. Please retry.')
     const reader=response.body.getReader(), decoder=new TextDecoder();let buffer='',completed=false
     while(true){const {done,value}=await reader.read();buffer+=decoder.decode(value,{stream:!done});let index:number
@@ -53,7 +59,7 @@ export const api = {
   // Fetched in the page and saved from a blob, so it behaves the same in every browser and
   // failures are reported instead of silently opening nothing.
   downloadEscalationBundle: async (cid:string, format:'pdf'|'docx') => {
-    const response = await fetch(`/api/conversations/${cid}/escalation-bundle/export/${format}`,{credentials:'include'})
+    const response = await apiFetch(`/api/conversations/${cid}/escalation-bundle/export/${format}`,{credentials:'include'})
     if(!response.ok)throw new Error(response.status===503?'Busy right now. Please try again shortly.':'The file could not be prepared. Please try again.')
     const filename = /filename="([^"]+)"/.exec(response.headers.get('content-disposition')||'')?.[1] || `nyay-saathi-lawyer-bundle.${format}`
     const url = URL.createObjectURL(await response.blob())
@@ -63,7 +69,7 @@ export const api = {
     return filename
   },
   downloadCaseExport: async (cid:string, format:'json'|'docx'|'pdf') => {
-    const response = await fetch(`/api/conversations/${cid}/export/${format}`,{credentials:'include'})
+    const response = await apiFetch(`/api/conversations/${cid}/export/${format}`,{credentials:'include'})
     if(!response.ok)throw new Error(response.status===503?'Busy right now. Please try again shortly.':'The export could not be prepared. Please try again.')
     const filename = /filename="([^"]+)"/.exec(response.headers.get('content-disposition')||'')?.[1] || `nyay-saathi-case-pack.${format}`
     const url = URL.createObjectURL(await response.blob())
@@ -73,7 +79,7 @@ export const api = {
     return filename
   },
   downloadDraftExport: async (cid:string, draftId:string, format:'pdf'|'docx') => {
-    const response = await fetch(`/api/conversations/${cid}/drafts/${draftId}/export/${format}`,{credentials:'include'})
+    const response = await apiFetch(`/api/conversations/${cid}/drafts/${draftId}/export/${format}`,{credentials:'include'})
     if(!response.ok)throw new Error(response.status===503?'Busy right now. Please try again shortly.':'The draft could not be prepared. Please try again.')
     const filename = /filename="([^"]+)"/.exec(response.headers.get('content-disposition')||'')?.[1] || `prepared-correspondence.${format}`
     const url = URL.createObjectURL(await response.blob())
@@ -100,7 +106,7 @@ export const api = {
   roleplayChat:(cid:string,sessionId:string,message:string,language?:Language)=>call<RoleplayChatResponse>(`/api/conversations/${cid}/roleplay/chat?session_id=${sessionId}`,{method:'POST',body:JSON.stringify({message,language})}),
   // Streams the character's reply: onDelta gets text as it is written, the promise the final result.
   roleplayChatStream: async (cid:string,sessionId:string,message:string,language:Language,onDelta:(text:string)=>void):Promise<RoleplayChatResponse> => {
-    const response = await fetch(`/api/conversations/${cid}/roleplay/chat/stream?session_id=${sessionId}`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({message,language})})
+    const response = await apiFetch(`/api/conversations/${cid}/roleplay/chat/stream?session_id=${sessionId}`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({message,language})})
     if(!response.ok || !response.body) throw new Error(response.status===503?'Practice is busy right now. Please try again shortly.':'Could not get a reply. Please retry.')
     const reader=response.body.getReader(), decoder=new TextDecoder();let buffer='',result:RoleplayChatResponse|null=null
     while(true){const {done,value}=await reader.read();buffer+=decoder.decode(value,{stream:!done});let index:number

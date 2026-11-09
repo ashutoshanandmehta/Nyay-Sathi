@@ -648,7 +648,7 @@ class PracticeEngine:
             stage, kwargs["model"], settings={"timeout": timeout, "max_retries": 0, "stream": True}
         ) as event:
             with self.client_factory(
-                api_key=self.settings.openai_api_key, timeout=timeout, max_retries=0
+                api_key=self.settings.effective_openai_key, timeout=timeout, max_retries=0
             ) as client:
                 for chunk in self._create(client, kwargs):
                     kind = getattr(chunk, "type", "")

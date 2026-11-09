@@ -1545,7 +1545,7 @@ async def transcribe(
         raise HTTPException(status_code=413, detail="Audio exceeds 25 MB")
     try:
         client = OpenAI(
-            api_key=cfg.openai_api_key, timeout=cfg.model_timeout_seconds, max_retries=2
+            api_key=cfg.effective_openai_key, timeout=cfg.model_timeout_seconds, max_retries=2
         )
         result = await asyncio.to_thread(
             client.audio.transcriptions.create,
@@ -1602,7 +1602,7 @@ async def speech(
     try:
         chunks: list[bytes] = []
         async with asyncio.timeout(cfg.model_timeout_seconds):
-            async with AsyncOpenAI(api_key=cfg.openai_api_key) as client:
+            async with AsyncOpenAI(api_key=cfg.effective_openai_key) as client:
                 async with client.realtime.connect(
                     model=cfg.openai_tts_model, max_retries=2
                 ) as connection:

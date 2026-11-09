@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -5,7 +6,11 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.security.user_key import current_user_key
+
 ROOT = Path(__file__).resolve().parents[2]
+IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+DEFAULT_RUNTIME_DIR = (Path("/tmp") / "nyay_saathi") if IS_SERVERLESS else (ROOT / "runtime")
 
 
 class Settings(BaseSettings):
@@ -13,11 +18,11 @@ class Settings(BaseSettings):
 
     app_name: str = "Nyay Saathi"
     app_origin: str = "http://localhost:5173"
-    database_path: Path = ROOT / "runtime" / "nyay_saathi.sqlite3"
-    checkpoint_path: Path = ROOT / "runtime" / "checkpoints.sqlite3"
-    chroma_path: Path = ROOT / "runtime" / "chroma"
-    upload_path: Path = ROOT / "runtime" / "uploads"
-    export_path: Path = ROOT / "runtime" / "exports"
+    database_path: Path = DEFAULT_RUNTIME_DIR / "nyay_saathi.sqlite3"
+    checkpoint_path: Path = DEFAULT_RUNTIME_DIR / "checkpoints.sqlite3"
+    chroma_path: Path = DEFAULT_RUNTIME_DIR / "chroma"
+    upload_path: Path = DEFAULT_RUNTIME_DIR / "uploads"
+    export_path: Path = DEFAULT_RUNTIME_DIR / "exports"
     openai_api_key: str | None = None
     openai_chat_model: str = "gpt-6-luna"
     openai_review_model: str = "gpt-6.1-sol"
@@ -110,8 +115,13 @@ class Settings(BaseSettings):
     turn_requests_per_minute: int = Field(default=30, ge=2, le=1000)
 
     @property
+    def effective_openai_key(self) -> str | None:
+        """The requesting user's own key when their browser unlocked it, else the server's."""
+        return current_user_key() or self.openai_api_key
+
+    @property
     def ai_configured(self) -> bool:
-        return bool(self.openai_api_key)
+        return bool(self.effective_openai_key)
 
     def ensure_dirs(self) -> None:
         for path in (

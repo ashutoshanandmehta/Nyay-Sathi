@@ -2,6 +2,7 @@
 // our backend (the API key never reaches the browser). A local MediaRecorder runs alongside
 // so the existing /api/audio/transcribe can still produce text if the live path fails.
 import { api } from './api'
+import { apiFetch } from './byok'
 
 export type VoiceState = 'connecting' | 'listening' | 'finishing'
 interface LiveSecret { client_secret: string; expires_at: number; model: string; max_seconds: number }
@@ -23,7 +24,7 @@ export function prewarm(): Promise<LiveSecret | null> {
   const now = Date.now() / 1000
   if (secret && now < secretUntil - 15) return secret
   secretUntil = now + 60
-  secret = fetch('/api/audio/live-session', { credentials: 'include' })
+  secret = apiFetch('/api/audio/live-session', { credentials: 'include' })
     .then(async r => {
       if (!r.ok) return null
       const value = (await r.json()) as LiveSecret

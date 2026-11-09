@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from app.agent.runner import PrimaryAgent
 from app.api.devspace import router as devspace_router
 from app.api.routes import router
+from app.api.user_key import router as user_key_router
 from app.api.voice import router as voice_router
 from app.config import get_settings
 from app.db import Database
@@ -26,6 +27,7 @@ from app.platform.adapters import generate_trace_id, platform_readiness_report
 from app.runtime import build_runtime
 from app.security.abuse import AbuseController
 from app.security.ownership import OWNER_COOKIE, csrf_guard
+from app.security.user_key import UserKeyMiddleware
 from app.services.knowledge import SharedKnowledgeService
 
 
@@ -59,9 +61,10 @@ app.state.abuse = AbuseController()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.app_origin],
+    allow_origin_regex=r"^https?://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["Content-Type", "X-CSRF-Token", "X-Trace-Id", "traceparent"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "X-Trace-Id", "traceparent", "X-Nyay-Key-Unlock"],
     expose_headers=["X-Trace-Id"],
 )
 
@@ -374,6 +377,9 @@ def agent_workflow():
     }
 
 
+# Added last, so it runs first: the user's own key is open for everything the request does.
+app.add_middleware(UserKeyMiddleware)
 app.include_router(router)
 app.include_router(devspace_router)
 app.include_router(voice_router)
+app.include_router(user_key_router)

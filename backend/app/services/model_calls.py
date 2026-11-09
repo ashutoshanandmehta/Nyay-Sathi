@@ -196,7 +196,7 @@ class ModelCalls:
                 result = (
                     factory(
                         model=model,
-                        api_key=settings.openai_api_key,
+                        api_key=settings.effective_openai_key,
                         timeout=settings.model_timeout_seconds,
                         max_retries=0,
                         http_client=client,
@@ -217,7 +217,7 @@ class ModelCalls:
         ) as event:
             with self.transport(event) as transport:
                 with factory(
-                    api_key=settings.openai_api_key,
+                    api_key=settings.effective_openai_key,
                     timeout=settings.model_timeout_seconds,
                     max_retries=0,
                     http_client=transport,

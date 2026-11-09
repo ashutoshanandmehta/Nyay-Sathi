@@ -961,7 +961,7 @@ class AssistantGraph:
         )
         model = ChatOpenAI(
             model=self.settings.openai_chat_model,
-            api_key=self.settings.openai_api_key,
+            api_key=self.settings.effective_openai_key,
             timeout=self.settings.model_timeout_seconds,
             max_retries=0,
         ).with_structured_output(ResponseEnvelope, method="json_schema", include_raw=True)
@@ -1107,7 +1107,7 @@ class AssistantGraph:
             }
         reviewer = ChatOpenAI(
             model=self.settings.openai_review_model,
-            api_key=self.settings.openai_api_key,
+            api_key=self.settings.effective_openai_key,
             timeout=self.settings.model_timeout_seconds,
             max_retries=0,
         ).with_structured_output(ResponseReview, method="json_schema", include_raw=True)
@@ -1238,7 +1238,7 @@ class AssistantGraph:
         review = ResponseReview.model_validate(state["feedback_review"])
         reviser = ChatOpenAI(
             model=self.settings.openai_review_model,
-            api_key=self.settings.openai_api_key,
+            api_key=self.settings.effective_openai_key,
             timeout=self.settings.model_timeout_seconds,
             max_retries=0,
         ).with_structured_output(ResponseEnvelope, method="json_schema", include_raw=True)

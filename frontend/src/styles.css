@@ -1956,3 +1956,11 @@ a:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* Your own OpenAI key (Settings) */
+.user-key-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+.user-key-privacy ul { margin: 6px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.55; color: var(--muted); }
+.user-key-privacy li + li { margin-top: 4px; }
+/* Four tabs fit the 460px drawer on one line; narrower screens scroll them sideways. */
+.settings-tab-bar { overflow-x: auto; gap: 2px; padding-left: 12px; padding-right: 12px; }
+.settings-tab-btn { white-space: nowrap; padding: 7px 8px; gap: 5px; font-size: 12px; }

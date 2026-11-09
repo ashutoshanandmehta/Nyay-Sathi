@@ -36,7 +36,7 @@ class HybridRetriever:
 
                 client = chromadb.PersistentClient(path=str(settings.chroma_path))
                 ef = OpenAIEmbeddingFunction(
-                    api_key=settings.openai_api_key, model_name=settings.openai_embedding_model
+                    api_key=settings.effective_openai_key, model_name=settings.openai_embedding_model
                 )
                 self.collection = client.get_or_create_collection(
                     "official_consumer_law_v1",

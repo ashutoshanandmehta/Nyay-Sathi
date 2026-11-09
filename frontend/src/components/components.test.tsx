@@ -283,7 +283,7 @@ describe('sidebar case actions',()=>{
       />
     )
     const tabs = screen.getAllByRole('tab').map(t => t.textContent)
-    expect(tabs).toEqual(['DevSpace', 'Agent Workflow', 'Knowledge Base'])
+    expect(tabs).toEqual(['Your key', 'DevSpace', 'Agent Workflow', 'Knowledge Base'])
     expect(onLoadKnowledge).toHaveBeenCalled()
     const workflowTab = screen.getByRole('tab', {name: 'Agent Workflow'})
     fireEvent.click(workflowTab)

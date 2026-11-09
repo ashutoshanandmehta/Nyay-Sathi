@@ -234,7 +234,8 @@ def get_devspace(request: Request, _: Annotated[OwnerContext, Depends(owner_cont
     primary = (PROMPTS / "primary.md").read_text()
     return {
         "api_key": {
-            "configured": settings.ai_configured,
+            # DevSpace manages the server's key only, never a user's own.
+            "configured": bool(settings.openai_api_key),
             "masked": mask_key(settings.openai_api_key),
         },
         "groups": [

@@ -193,6 +193,11 @@ CREATE TABLE IF NOT EXISTS practice_turns (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_practice_turns_session ON practice_turns(session_id, turn_index ASC);
+-- A user's own OpenAI key, sealed with a secret only their browser holds; never readable here.
+CREATE TABLE IF NOT EXISTS owner_api_keys (
+  owner_id TEXT PRIMARY KEY REFERENCES owners(id) ON DELETE CASCADE,
+  sealed_key TEXT NOT NULL, key_hint TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
 """
 
 
@@ -374,6 +379,30 @@ class Database:
         with self.connect() as c:
             row = c.execute("SELECT id FROM owners WHERE token_hash=?", (token_hash,)).fetchone()
         return row["id"] if row else None
+
+    def sealed_api_key(self, owner_id: str) -> dict[str, str] | None:
+        with self.connect() as c:
+            row = c.execute(
+                "SELECT sealed_key, key_hint FROM owner_api_keys WHERE owner_id=?", (owner_id,)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def save_sealed_api_key(self, owner_id: str, sealed_key: str, key_hint: str) -> None:
+        stamp = now()
+        with self.connect() as c:
+            c.execute(
+                "INSERT INTO owner_api_keys VALUES (?, ?, ?, ?, ?) ON CONFLICT(owner_id) DO UPDATE "
+                "SET sealed_key=excluded.sealed_key, key_hint=excluded.key_hint, updated_at=excluded.updated_at",
+                (owner_id, sealed_key, key_hint, stamp, stamp),
+            )
+        self.record_security_audit("user_api_key_saved", owner_id=owner_id)
+
+    def delete_sealed_api_key(self, owner_id: str) -> bool:
+        with self.connect() as c:
+            removed = c.execute("DELETE FROM owner_api_keys WHERE owner_id=?", (owner_id,)).rowcount
+        if removed:
+            self.record_security_audit("user_api_key_deleted", owner_id=owner_id)
+        return bool(removed)
 
     def record_model_call(self, owner_id, cid, request_id, event):
         self.get_conversation(owner_id, cid)

@@ -51,7 +51,7 @@ def discover(settings: Settings, topic: str) -> list[dict[str, str]]:
     if not settings.ai_configured:
         raise RuntimeError("OPENAI_API_KEY is required for official-source discovery")
     response = OpenAI(
-        api_key=settings.openai_api_key,
+        api_key=settings.effective_openai_key,
         timeout=settings.model_timeout_seconds,
         max_retries=2,
     ).responses.create(

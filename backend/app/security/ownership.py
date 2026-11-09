@@ -24,23 +24,27 @@ class OwnerContext:
     new_csrf_token: str | None = None
 
 
+def existing_owner_id(db: Database, settings: Settings, owner_cookie: str | None) -> str | None:
+    """The owner a device cookie belongs to, or None (never creates one)."""
+    if not owner_cookie:
+        return None
+    raw_verified = verify_device_token(
+        owner_cookie,
+        settings.credential_signing_secret,
+        allow_unsigned=settings.allow_legacy_unsigned_cookie,
+    )
+    if not raw_verified:
+        return None
+    return db.owner_for_hash(token_hash(owner_cookie)) or db.owner_for_hash(token_hash(raw_verified))
+
+
 def owner_context(
     request: Request, owner_cookie: str | None = Cookie(default=None, alias=OWNER_COOKIE)
 ) -> OwnerContext:
     db: Database = request.app.state.db
     settings: Settings = getattr(request.app.state, "settings", None) or get_settings()
-    if owner_cookie:
-        raw_verified = verify_device_token(
-            owner_cookie,
-            settings.credential_signing_secret,
-            allow_unsigned=settings.allow_legacy_unsigned_cookie,
-        )
-        if raw_verified:
-            owner_id = db.owner_for_hash(token_hash(owner_cookie)) or db.owner_for_hash(
-                token_hash(raw_verified)
-            )
-            if owner_id:
-                return OwnerContext(owner_id)
+    if owner_id := existing_owner_id(db, settings, owner_cookie):
+        return OwnerContext(owner_id)
     raw = secrets.token_urlsafe(32)
     signed = sign_device_token(raw, settings.credential_signing_secret)
     return OwnerContext(db.create_owner(token_hash(signed)), signed, secrets.token_urlsafe(24))

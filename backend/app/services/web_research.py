@@ -92,7 +92,7 @@ class ResearchPlanner:
     def assess(self, state):
         model = ChatOpenAI(
             model=self.settings.openai_chat_model,
-            api_key=self.settings.openai_api_key,
+            api_key=self.settings.effective_openai_key,
             timeout=self.settings.model_timeout_seconds,
             max_retries=0,
         )

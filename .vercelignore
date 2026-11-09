@@ -1,0 +1,13 @@
+.venv/
+backend/.venv/
+node_modules/
+frontend/node_modules/
+runtime/
+evals/
+tests/
+backend/tests/
+frontend/test-results/
+frontend/playwright-report/
+*.md
+!frontend/dist/
+nyay_saathi_database_export.*

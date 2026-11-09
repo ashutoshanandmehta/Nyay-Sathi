@@ -1,10 +1,11 @@
-import { BookOpenText, GitBranch, Settings, Terminal } from 'lucide-react'
+import { BookOpenText, GitBranch, KeyRound, Terminal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AgentWorkflow, DevspaceSaveResult, KnowledgeBase } from '../types'
 import DevSpacePanel from './DevSpacePanel'
+import UserKeyCard from './UserKeyCard'
 import { AgentWorkflowPanel, KnowledgeBasePanel } from './Drawer'
 
-export type SettingsTab = 'knowledge' | 'workflow' | 'devspace'
+export type SettingsTab = 'key' | 'knowledge' | 'workflow' | 'devspace'
 
 export interface SettingsPanelProps {
   initialTab?: SettingsTab
@@ -15,6 +16,7 @@ export interface SettingsPanelProps {
   onLoadWorkflow: () => Promise<void>
   onDevspaceSaved: (result: DevspaceSaveResult) => void
   onTabChange?: (tab: SettingsTab) => void
+  onKeyChange?: (configured: boolean) => void
 }
 
 export default function SettingsPanel({
@@ -26,12 +28,14 @@ export default function SettingsPanel({
   onLoadWorkflow,
   onDevspaceSaved,
   onTabChange,
+  onKeyChange,
 }: SettingsPanelProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>(devspaceEnabled ? initialTab : 'workflow')
+  // Without DevSpace (public deployments) Settings opens on the user's own key.
+  const [activeTab, setActiveTab] = useState<SettingsTab>(devspaceEnabled || initialTab !== 'devspace' ? initialTab : 'key')
 
   useEffect(() => {
     if (initialTab) {
-      setActiveTab(devspaceEnabled ? initialTab : (initialTab === 'devspace' ? 'workflow' : initialTab))
+      setActiveTab(devspaceEnabled ? initialTab : (initialTab === 'devspace' ? 'key' : initialTab))
     }
   }, [initialTab, devspaceEnabled])
 
@@ -52,6 +56,16 @@ export default function SettingsPanel({
     <div className="settings-panel">
       {/* Segmented Tab Bar: DevSpace -> Workflow -> Knowledge Base */}
       <div className="settings-tab-bar" role="tablist" aria-label="Settings navigation">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'key'}
+          className={`settings-tab-btn ${activeTab === 'key' ? 'active' : ''}`}
+          onClick={() => selectTab('key')}
+        >
+          <KeyRound size={15} />
+          <span>Your key</span>
+        </button>
         {devspaceEnabled && (
           <button
             type="button"
@@ -88,6 +102,8 @@ export default function SettingsPanel({
 
       {/* Tab Contents */}
       <div className="settings-tab-body">
+        {activeTab === 'key' && <UserKeyCard onChange={onKeyChange} />}
+
         {activeTab === 'devspace' && devspaceEnabled && (
           <DevSpacePanel onSaved={onDevspaceSaved} />
         )}

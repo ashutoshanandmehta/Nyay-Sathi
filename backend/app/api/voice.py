@@ -78,7 +78,7 @@ def live_session(
     # Tests inject a fake client here; production uses the SDK.
     factory = getattr(request.app.state, "voice_client_factory", None) or OpenAI
     try:
-        with factory(api_key=cfg.openai_api_key, timeout=15, max_retries=1) as client:
+        with factory(api_key=cfg.effective_openai_key, timeout=15, max_retries=1) as client:
             secret = client.realtime.client_secrets.create(
                 expires_after={"anchor": "created_at", "seconds": SECRET_SECONDS},
                 session=transcription_session(cfg),
