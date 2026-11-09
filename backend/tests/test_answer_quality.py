@@ -565,3 +565,94 @@ def test_multitask_recommended_route_preserves_labeled_claim_order():
     assert "For the harassment:" in content
     assert "For the land records:" in content
     assert content.index("For the harassment:") < content.index("For the land records:")
+
+
+def test_reviewer_payload_contains_only_pending_claim_evidence_and_compact_claims():
+    captured_payloads = []
+
+    class InspectingProvider:
+        def complete(self, items, prompt, budget, **kwargs):
+            if kwargs.get("review"):
+                captured_payloads.append(json.loads(items[0]["content"]))
+                return (
+                    [],
+                    [],
+                    AgentReview(
+                        claims=[ClaimVerdict(claim_id="c_pending", support="supported", reason="ok")],
+                        patch_verdicts=[],
+                        primary_question_answered=True,
+                        next_action_useful=True,
+                    ),
+                )
+            return [], [], None
+
+    settings = Settings(openai_api_key=None)
+    runner = PrimaryAgent(settings, None, provider=InspectingProvider())
+
+    passage_cited = {
+        "passage_id": "cited_p1",
+        "title": "Cited Statute",
+        "locator": "Section 1",
+        "text": "This is cited legal provision text.",
+        "canonical_url": "https://example.gov.in",
+        "retrieved_at": "2026-11-09",
+        "origin": "official_pack",
+    }
+    passage_uncited = {
+        "passage_id": "uncited_p2",
+        "title": "Uncited Statute",
+        "locator": "Section 99",
+        "text": "This is uncited text that should NOT bloat reviewer payload.",
+        "canonical_url": "https://example.gov.in",
+        "retrieved_at": "2026-11-09",
+        "origin": "official_pack",
+    }
+    state = {
+        "current_message": "Legal question",
+        "memory": {"facts": {}},
+        "passages": [passage_cited, passage_uncited],
+    }
+    reg = EvidenceRegistry(state)
+
+    c_supported = AnswerClaim(
+        claim_id="c_supported",
+        task_id="task-1",
+        kind="practical",
+        block_type="immediate_actions",
+        grounding="practical_precaution",
+        text="Supported practical claim text.",
+    )
+    c_pending = AnswerClaim(
+        claim_id="c_pending",
+        task_id="task-1",
+        kind="legal",
+        block_type="recommended_route",
+        grounding="verified_legal_source",
+        text="Pending legal claim text.",
+        evidence_ids=["cited_p1"],
+    )
+    ans = AgentAnswer(
+        central_question="q",
+        tasks=[_task()],
+        claims=[c_supported, c_pending],
+    )
+
+    budget = TurnBudget(settings)
+    runner._review(ans, state, reg, budget, pending=["c_pending"])
+
+    assert len(captured_payloads) == 1
+    payload = captured_payloads[0]
+
+    # All claims are present for cross-block coherence
+    claim_texts = [c["text"] for c in payload["claims"]]
+    assert "Supported practical claim text." in claim_texts
+    assert "Pending legal claim text." in claim_texts
+
+    # Claims are compact (no extra unused model fields)
+    for c in payload["claims"]:
+        assert set(c.keys()) <= {"claim_id", "block_type", "grounding", "kind", "text", "evidence_ids"}
+
+    # Evidence only contains entries referenced by pending claims
+    evidence_ids = [e["evidence_id"] for e in payload["evidence"]]
+    assert "cited_p1" in evidence_ids
+    assert "uncited_p2" not in evidence_ids

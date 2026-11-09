@@ -725,12 +725,39 @@ class PrimaryAgent:
         raise ValueError("No final answer within primary-round allowance")
 
     def _review(self, answer, state, registry, budget, pending=None):
+        pending_list = list(pending) if pending is not None else [c.claim_id for c in answer.claims]
+        pending_ids = set(pending_list)
+        compact_claims = [
+            {
+                "claim_id": c.claim_id,
+                "block_type": c.block_type or infer_block_type(c),
+                "grounding": c.grounding,
+                "kind": c.kind,
+                "text": c.text,
+                "evidence_ids": c.evidence_ids,
+            }
+            for c in answer.claims
+        ]
+        needed_evidence_ids = {
+            eid
+            for c in answer.claims
+            if c.claim_id in pending_ids
+            for eid in c.evidence_ids
+        }
+        review_evidence = [
+            entry
+            for entry in registry.payload()
+            if entry.get("evidence_id") in needed_evidence_ids
+        ]
         payload = {
             "context": self._context(state),
-            "draft": answer.model_dump(mode="json"),
-            "pending_claim_ids": list(pending) if pending is not None else [c.claim_id for c in answer.claims],
-            "evidence": registry.payload(),
+            "claims": compact_claims,
+            "draft": {"claims": compact_claims},
+            "pending_claim_ids": pending_list,
+            "evidence": review_evidence,
         }
+        if answer.case_patches:
+            payload["case_patches"] = [p.model_dump(mode="json") for p in answer.case_patches]
         _, calls, review = self.provider.complete(
             [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
             self.review_prompt,
@@ -982,7 +1009,7 @@ class PrimaryAgent:
                 }
             )
 
-        core_all = [
+        core_all = [  # noqa: F841
             c for c in answer.claims if not c.optional and infer_block_type(c) != "human_handoff"
         ]
         task_all_supported = bool(outcomes) and all(o["status"] == "supported" for o in outcomes)
