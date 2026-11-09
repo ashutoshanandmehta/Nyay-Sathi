@@ -57,10 +57,11 @@ export function enhanceListReadability(text: string): string {
 
 export function formatInlineCitations(text: string): string {
   if (!text) return ''
-  // If text has (Title, Locator) right before [N](#cite-N), format as secondary bibliographic note
+  // Strip raw parenthetical source descriptions like "(Bihar government guidance on mutation, Page 2.)"
+  // that precede clickable citation chips [N](#cite-N)
   return text.replace(
-    /(?<!\])\(([^)\n]{3,100}?)\)\s*(?=\[\d+\]\(#cite-\d+\))/g,
-    '*($1)* '
+    /(?<!\])\s*\((?!\s*#cite-)([^)\n]{3,100}?)\)\s*(?=\[\d+\]\(#cite-\d+\))/g,
+    ' '
   )
 }
 
@@ -83,11 +84,12 @@ function citationComponents(sources:Source[]|undefined, onSources:(s:Source[], f
     h2: ({children}) => <h2 className="prose-h2">{children}</h2>,
     h3: ({children}) => {
       const text = String(children || '')
-      const isEscalation = /fails|escalat|court|police|lawyer|advocate|dispute/i.test(text)
-      const isAction = /action|step|do this|now|precaution/i.test(text)
-      const isRoute = /route|recommen|path|procedure/i.test(text)
-      const isEvidence = /evidence|checklist|document|proof|record/i.test(text)
-      const Icon = isEscalation ? GitFork : isAction ? ListChecks : isRoute ? Route : isEvidence ? ClipboardList : null
+      const isLawyer = /lawyer|advocate|vakil|वकील/i.test(text)
+      const isEscalation = /fails|escalat|court|police|dispute|doesn't work|agar isse baat na bane|बात न बने/i.test(text)
+      const isAction = /action|step|do this|now|precaution|today|aaj aap|आज आप/i.test(text)
+      const isRoute = /route|recommen|path|procedure|suggest|salah|सलाह/i.test(text)
+      const isEvidence = /evidence|checklist|document|proof|record|keep these ready|ready rakhein|तैयार रखें/i.test(text)
+      const Icon = isLawyer ? Scale : isEscalation ? GitFork : isAction ? ListChecks : isRoute ? Route : isEvidence ? ClipboardList : null
       return (
         <h3 className="prose-h3">
           {Icon && <Icon size={16} className="prose-heading-icon" aria-hidden="true" />}
