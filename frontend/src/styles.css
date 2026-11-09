@@ -674,10 +674,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Settings Modal / Panel Tab Bar */
+/* Fill the drawer below its header (not 100% of it, which pushed the bottom 62px out of view). */
 .settings-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 .settings-tab-bar {
   display: flex;
@@ -712,8 +714,12 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
+/* The tab's own .panel-content scrolls, so DevSpace's sticky Save bar stays in view. */
 .settings-tab-body {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
 }
 
