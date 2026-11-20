@@ -103,7 +103,7 @@ def test_bihar_land_passages_in_official_pack(official_pack_passages):
 def test_concept_mappings_match_positives_and_reject_negatives():
     test_cases = [
         (
-            ["complaint", "shikayat", "शिकायत", "FIR", "thana", "police station", "report to police"],
+            ["police complaint", "thana shikayat", "पुलिस शिकायत", "FIR", "thana", "police station", "report to police"],
             ["affirmative", "first"],
         ),
         (

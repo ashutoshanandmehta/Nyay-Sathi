@@ -71,7 +71,9 @@ CONCEPT_EXPANSIONS = (
     ),
     (
         re.compile(
-            r"\b(?:fir|thana|police\s+station|report\s+to\s+police)\b|पुलिस|थाना",
+            r"\b(?:fir|thana|police\s+(?:station|complaint)|report\s+to\s+police)\b|पुलिस|थाना|"
+            r"(?=[\s\S]*(?:complaint|shikayat|शिकायत))"
+            r"(?=[\s\S]*(?:harass|threat|violence|assault|धमकी|मारपीट))",
             re.I,
         ),
         "information cognizable offence first information report fir police station written complaint superintendent of police",
