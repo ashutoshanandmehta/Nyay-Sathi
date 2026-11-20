@@ -487,7 +487,21 @@ export function createNyayApiHandler(deps: {
     })
     const origin = req.headers.get('Origin')
     const allowed = cfg.allowedOrigins || ['https://localhost', 'capacitor://localhost', 'http://localhost:5173']
-    if (origin && allowed.includes(origin)) {
+    const isAllowedOrigin = (orig: string): boolean => {
+      if (allowed.includes(orig)) return true
+      try {
+        const u = new URL(orig)
+        return (
+          u.hostname === 'localhost' ||
+          u.hostname === '127.0.0.1' ||
+          u.hostname.endsWith('.vercel.app') ||
+          u.hostname === 'nyay-sathi-sage.vercel.app'
+        )
+      } catch {
+        return false
+      }
+    }
+    if (origin && isAllowedOrigin(origin)) {
       headers.set('Access-Control-Allow-Origin', origin)
       headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
       headers.set(

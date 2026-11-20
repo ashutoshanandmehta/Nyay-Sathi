@@ -990,6 +990,7 @@ if (typeof Deno !== 'undefined' && typeof Deno.serve === 'function') {
       serverOpenAiKey,
       byokMasterSecret,
       region: Deno.env.get('SB_REGION') || 'ap-northeast-1',
+      allowedOrigins: ['https://nyay-sathi-sage.vercel.app', 'https://localhost', 'http://localhost:5173'],
     },
   })
 

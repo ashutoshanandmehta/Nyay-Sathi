@@ -137,6 +137,26 @@ export function createResumableHandler(deps:Dependencies, fallback:(req:Request)
         })
         if(result.error) return json({detail:result.error},
           result.error==='not_found'?404:result.error==='budget'?429:409)
+        const triggerWorker = () => {
+          const runWorker = async () => {
+            try {
+              const store = turnWorkStore(deps.rpc)
+              let steps = 0
+              while (steps < 20 && await runOneTurnStep({ ...deps, store })) {
+                steps++
+              }
+            } catch (err) {
+              console.error('Turn worker error:', err)
+            }
+          }
+          const edgeRuntime = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime
+          if (edgeRuntime?.waitUntil) {
+            edgeRuntime.waitUntil(runWorker())
+          } else {
+            runWorker().catch(() => undefined)
+          }
+        }
+        triggerWorker()
         return json(result,202)
       }
       if(request.method==='POST' && operation==='cancel' && requestId.test(id)) {
@@ -152,7 +172,11 @@ export function createResumableHandler(deps:Dependencies, fallback:(req:Request)
         if(operation==='events') {
           const after=Number(url.searchParams.get('after_seq') || 0)
           if(!Number.isSafeInteger(after) || after<0) return json({detail:'Invalid event cursor'},422)
-          return json({turn,events:await deps.events(owner.id,turn.execution_id,after)})
+          if (['queued', 'running', 'preparing', 'submitting', 'collect'].includes(turn.status)) {
+            await runOneTurnStep({ ...deps, store: turnWorkStore(deps.rpc) }).catch(() => undefined)
+          }
+          const freshTurn = (await deps.read(owner.id,chat,action==='active'?undefined:id)) || turn
+          return json({turn:freshTurn,events:await deps.events(owner.id,freshTurn.execution_id,after)})
         }
         return json({turn})
       }
