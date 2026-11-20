@@ -2316,14 +2316,40 @@ export function createNyayApiHandler(deps: {
       })
     }
 
-    // Voice & Speech routes (explicitly gated by effective OpenAI key and verified assistant message state)
+    // Voice & Speech routes (backed by active OpenAI API key)
     if (req.method === 'GET' && path === '/api/audio/live-session') {
       const apiKey = await resolveEffectiveOpenAiKey(req, ownerId)
       if (!apiKey) {
         return json(req, traceId, { detail: 'OpenAI configuration required for voice' }, 503)
       }
+      try {
+        const sessionResp = await fetch('https://api.openai.com/v1/realtime/sessions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-realtime-preview',
+            modalities: ['audio', 'text'],
+            instructions: 'Transcribe Indian legal queries in Hindi or English.',
+          }),
+          signal: AbortSignal.timeout(10_000),
+        })
+        if (sessionResp.ok) {
+          const sessionData = await sessionResp.json()
+          return json(req, traceId, {
+            client_secret: sessionData.client_secret?.value || sessionData.id,
+            expires_at: sessionData.client_secret?.expires_at || (Math.floor(Date.now() / 1000) + 120),
+            model: 'gpt-4o-realtime-preview',
+            max_seconds: 60,
+          })
+        }
+      } catch (err) {
+        console.warn('Realtime live-session fallback to transcription:', err)
+      }
       return json(req, traceId, {
-        detail: 'Live WebRTC token minting requires active OpenAI Realtime session; deferred to Package 3 device voice validation.',
+        detail: 'Live WebRTC session unavailable; audio transcription will use recorded voice fallback.',
       }, 503)
     }
 
@@ -2332,9 +2358,43 @@ export function createNyayApiHandler(deps: {
       if (!apiKey) {
         return json(req, traceId, { detail: 'OpenAI configuration required for transcription' }, 503)
       }
-      return json(req, traceId, {
-        detail: 'Audio transcription requires live OpenAI audio endpoint; deferred to Package 3 voice validation.',
-      }, 503)
+      try {
+        const formData = await req.formData()
+        const file = formData.get('file')
+        if (!file || !(file instanceof File || file instanceof Blob)) {
+          return json(req, traceId, { detail: 'No audio file provided' }, 422)
+        }
+        const openAiForm = new FormData()
+        openAiForm.append('file', file, (file as File).name || 'recording.webm')
+        openAiForm.append('model', 'whisper-1')
+        openAiForm.append('prompt', 'Indian legal question or dispute. Preserve names, dates, rupee amounts, negation, Hindi-English code-switching and uncertainty.')
+        openAiForm.append('response_format', 'json')
+
+        const openAiResp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: openAiForm,
+          signal: AbortSignal.timeout(30_000),
+        })
+
+        if (!openAiResp.ok) {
+          const errPayload = await openAiResp.text().catch(() => '')
+          console.error('Transcription OpenAI error:', openAiResp.status, errPayload)
+          return json(req, traceId, { detail: 'Transcription service temporarily unavailable' }, 502)
+        }
+
+        const data = await openAiResp.json()
+        return json(req, traceId, {
+          transcript: data.text || '',
+          editable: true,
+          model: 'whisper-1',
+        })
+      } catch (err) {
+        console.error('Transcription exception:', err)
+        return json(req, traceId, { detail: 'Failed to transcribe audio' }, 502)
+      }
     }
 
     const speechMatch = path.match(/^\/api\/conversations\/([^/]+)\/messages\/([^/]+)\/speech$/)
@@ -2359,7 +2419,41 @@ export function createNyayApiHandler(deps: {
       if (!apiKey) {
         return json(req, traceId, { detail: 'OpenAI configuration required for speech' }, 503)
       }
-      return json(req, traceId, { detail: 'Speech synthesis requires live OpenAI TTS connection' }, 503)
+      try {
+        const textToSpeak = String(msg.content || '').slice(0, 1800)
+        const openAiResp = await fetch('https://api.openai.com/v1/audio/speech', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'tts-1',
+            input: textToSpeak,
+            voice: 'alloy',
+            response_format: 'mp3',
+          }),
+          signal: AbortSignal.timeout(30_000),
+        })
+
+        if (!openAiResp.ok) {
+          const errPayload = await openAiResp.text().catch(() => '')
+          console.error('Speech synthesis OpenAI error:', openAiResp.status, errPayload)
+          return json(req, traceId, { detail: 'Speech synthesis temporarily unavailable' }, 502)
+        }
+
+        const audioBytes = await openAiResp.arrayBuffer()
+        return new Response(audioBytes, {
+          status: 200,
+          headers: buildHeaders(req, traceId, {
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': String(audioBytes.byteLength),
+          }),
+        })
+      } catch (err) {
+        console.error('Speech synthesis exception:', err)
+        return json(req, traceId, { detail: 'Failed to synthesize speech' }, 502)
+      }
     }
 
     // Practice & Roleplay contracts (ownership-verified)
