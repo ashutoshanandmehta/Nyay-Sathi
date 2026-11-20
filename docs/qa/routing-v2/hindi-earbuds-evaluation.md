@@ -20,3 +20,11 @@ Initial remaining impact: **8/10, verified core-flow defect**. Keep new routing 
 Official verification: https://consumeraffairs.gov.in/pages/nch and https://consumerhelpline.gov.in/public/about . The latter describes pre-litigation assistance, not a guaranteed refund. Direct portal fetch was unavailable; the Department's page was successfully verified through official search results.
 
 Retest pending at the time of this commit. Do not infer success from offline checks or deployment readiness.
+
+## First focused retest and second fix
+
+The first fix was deployed to preview commit `a054a8f`. The exact Hindi scenario now loaded eight source passages, chose Verified, performed no web searches, and produced useful factual preparation. However, router + applicability + answer left only about 18 seconds for independent review, which timed out. Publication correctly withheld the official-route claims. Actual result: **partial assistance, core routing acceptance still failed**, HTTP 200, 69.44 seconds including bootstrap/network; 58.032 seconds inside the runner. Four reserved provider calls, 28,878 reported tokens; billed cost remains unknown. See `hindi-earbuds-fixed-preview-live.actual.json`.
+
+A second focused fix retains the same Sol/medium configuration and all publication checks: the router can return a complete applicability assessment with the route when evidence has not changed. Verified executes that assessment without a duplicate call; new research evidence still requires a fresh assessment. Router input omits irrelevant output templates. The answer is instructed to prioritize the user's immediate next step in 150–220 words rather than produce optional doctrine and redundant claims. Draft requests may be longer. This is LLM-generated guidance, not a scripted response.
+
+Second-fix targeted verification: 70 tests passed, including assessment reuse and mandatory reassessment after research. The first-fix full backend regression passed: 777 tests, 4 skipped. Final live result will be recorded separately; these checks alone do not establish acceptance.

@@ -1,0 +1,566 @@
+{
+  "test_type": "live preview retest after evidence/time-reserve fix",
+  "prompt": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+  "requested_language": "hi",
+  "deployment_url": "https://nyay-sathi-ffnecx2z9-anandmehtaashutosh-6445s-projects.vercel.app",
+  "implementation_commit": "a054a8f",
+  "paid_usage": "app provider calls; billed total unverified",
+  "health": {
+    "status": "ok",
+    "ai_configured": true,
+    "engine_version": "primary-agent-v2.1-routed"
+  },
+  "turn_status": 200,
+  "actual_response": {
+    "conversation_id": "e2dfa7c2-c208-4046-98a9-c63328063f5d",
+    "user_message": {
+      "id": "3c5fe3d3-d437-4094-ac9b-38788867e0fc",
+      "role": "user",
+      "content": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+      "created_at": "2026-11-20T16:14:33.637171+00:00",
+      "status": "complete",
+      "metadata": {
+        "attachment_ids": [],
+        "language": "hi"
+      }
+    },
+    "assistant_message": {
+      "id": "6cdf63aa-a316-4242-85c8-e1720ce5a653",
+      "role": "assistant",
+      "content": "### आज आप क्या कर सकते हैं\n\n1. शिकायत में खरीद और डिलीवरी की तारीख, ₹5,000 कीमत, ऑर्डर नंबर, एक सप्ताह में आई खराबी, कंपनी और दुकानदार के जवाब तथा अपनी मांग साफ लिखें। पहले रिफंड मांगें; अगर आपको मंजूर हो तो विकल्प के रूप में बिना अतिरिक्त खर्च नया पीस या मरम्मत भी लिख सकते हैं।\n\n2. आज ही विक्रेता, कंपनी और ऑनलाइन प्लेटफॉर्म के औपचारिक शिकायत अधिकारी को एक आखिरी लिखित संदेश भेजें: “ऑर्डर [नंबर] के ₹5,000 के ईयरबड्स खरीद के एक सप्ताह में खराब हो गए। कृपया [रिफंड/रिप्लेसमेंट] दें और लिखित जवाब दें।” उसी संदेश और उनके जवाब को NCH शिकायत में लगाएं।\n\n3. आप चाहें तो प्लेटफॉर्म, ऑर्डर की तारीख और खराबी का प्रकार बताकर मुझसे NCH में डालने लायक छोटा शिकायत-पत्र तैयार करा सकते हैं।\n\n### ये चीज़ें तैयार रखें\n\nये रिकॉर्ड सुरक्षित रखें: बिल या इनवॉइस, ऑर्डर और भुगतान प्रमाण, वारंटी या रिटर्न नीति, खराबी दिखाने वाला छोटा वीडियो, पैकेज व सीरियल नंबर, कंपनी और विक्रेता के ईमेल या चैट, और NCH शिकायत संख्या। मूल रिकॉर्ड न बदलें।\n\n### एक बात बताइए\n\nक्या ईयरबड्स की खरीद और डिलीवरी भारत में हुई थी?",
+      "created_at": "2026-11-20T16:15:31.703535+00:00",
+      "status": "complete",
+      "metadata": {
+        "verification": {
+          "passed": false,
+          "publication_safe": true,
+          "scope": "published_claims_only",
+          "claim_checks": {
+            "claim-3": "risk_calibrated_consistency",
+            "claim-4": "risk_calibrated_consistency",
+            "claim-7": "risk_calibrated_consistency",
+            "claim-8": "risk_calibrated_consistency",
+            "claim-9": "non_assertive_clarification"
+          },
+          "independent_review_performed": false,
+          "legal_certification": false
+        },
+        "token_usage": {
+          "input_tokens": 24485,
+          "output_tokens": 4393,
+          "total_tokens": 28878
+        },
+        "events": [
+          {
+            "stage": "context",
+            "status": "running",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "action": "Pre-fetching certified statutory provisions & intake facts",
+            "detail": "Loading facts & certified knowledge pack"
+          },
+          {
+            "stage": "context",
+            "status": "complete",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "result": "Loaded 8 retrieved source passages & facts",
+            "passages_count": 8,
+            "detail": "Context ready (8 legal provisions loaded)"
+          },
+          {
+            "stage": "routing",
+            "status": "running",
+            "agent": "Workflow Router",
+            "detail": "Choosing the appropriate level of help"
+          },
+          {
+            "stage": "routing",
+            "status": "complete",
+            "route": "verified",
+            "previous_route": null,
+            "detail": "उपलब्ध आधिकारिक जानकारी भारत की उपभोक्ता प्रक्रिया से जुड़ी है, लेकिन सुरक्षित सलाह देने से पहले यह पुष्टि जरूरी है कि खरीद भारत में हुई थी और कंपनी/प्लेटफ़ॉर्म की औपचारिक शिकायत व्यवस्था आज़माई गई है।",
+            "agent": "Workflow Router"
+          },
+          {
+            "stage": "applicability",
+            "status": "running",
+            "detail": "Checking jurisdiction, incident date and source currency"
+          },
+          {
+            "stage": "applicability",
+            "status": "complete",
+            "detail": "Applicability check completed; remaining uncertainties are retained"
+          },
+          {
+            "stage": "primary",
+            "status": "running",
+            "agent": "Primary Reasoning Agent",
+            "tool": "reasoning_engine",
+            "round": 1,
+            "action": "Synthesizing legal claims & response strategy (Round 1)",
+            "detail": "Synthesizing response & legal claims (Round 1)"
+          },
+          {
+            "stage": "review",
+            "status": "running",
+            "agent": "Verifier Agent",
+            "tool": "verifier_evaluator",
+            "action": "Auditing grounding and citation integrity for 9 claims",
+            "detail": "Verifier Agent auditing claims & legal citations"
+          },
+          {
+            "stage": "review",
+            "status": "limited",
+            "agent": "Verifier Agent",
+            "error_type": "APITimeoutError",
+            "warning": "Review limited by APITimeoutError"
+          },
+          {
+            "stage": "structuring",
+            "status": "running",
+            "agent": "Output Structuring Agent",
+            "tool": "format_composer",
+            "action": "Structuring response with numbered steps, checklists & citations",
+            "detail": "Structuring formatted response & citations"
+          },
+          {
+            "stage": "verify",
+            "status": "passed",
+            "agent": "Output Structuring Agent",
+            "result": "Publication checks completed; unsupported content withheld",
+            "detail": "Response prepared with publication safeguards"
+          },
+          {
+            "stage": "complete",
+            "status": "partial",
+            "duration_ms": 58032
+          }
+        ],
+        "request_coverage": [
+          {
+            "request_id": "task-1",
+            "status": "deferred",
+            "reason": "Some requested content could not be verified."
+          }
+        ],
+        "interpretation": {
+          "schema_version": "request-v2",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "source_text": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+              "intent": "legal_options",
+              "domain": "consumer",
+              "relationship": "ऑनलाइन खरीद से जुड़ा उपभोक्ता विवाद",
+              "entities": [],
+              "case_link": "new",
+              "requires_research": false,
+              "requires_case_update": true,
+              "risk_level": "ordinary",
+              "uncertainty": [],
+              "public_query": null,
+              "source_segment_ids": [],
+              "needs_early_extraction": false,
+              "extraction_reason": null
+            }
+          ],
+          "case_relevance": "new",
+          "clarification_needed": false,
+          "requested_deliverables": [],
+          "user_goal": null,
+          "suggested_remedy": null,
+          "required_answer_elements": [],
+          "missing_details": [],
+          "invalid_tasks": []
+        },
+        "task_plan": [
+          {
+            "task_id": "task-1",
+            "workflow": "consumer",
+            "status": "ready",
+            "research_status": "not_required",
+            "reason": "Interpretation selects assistance, never legal eligibility or permission to submit."
+          }
+        ],
+        "tool_records": [
+          {
+            "tool": "certified_knowledge_pack",
+            "status": "hit",
+            "query_hash": "86c5b063fa89fd4e",
+            "certified_hit_count": 3,
+            "official_pack_hit_count": 0
+          }
+        ],
+        "unit_outcomes": [
+          {
+            "task_id": "task-1",
+            "status": "partial"
+          }
+        ],
+        "resolution_plan": {},
+        "resolution_blocks": [
+          {
+            "block_id": "block-immediate_actions",
+            "block_type": "immediate_actions",
+            "title": "आज आप क्या कर सकते हैं",
+            "content": "शिकायत में खरीद और डिलीवरी की तारीख, ₹5,000 कीमत, ऑर्डर नंबर, एक सप्ताह में आई खराबी, कंपनी और दुकानदार के जवाब तथा अपनी मांग साफ लिखें। पहले रिफंड मांगें; अगर आपको मंजूर हो तो विकल्प के रूप में बिना अतिरिक्त खर्च नया पीस या मरम्मत भी लिख सकते हैं।\n\nआज ही विक्रेता, कंपनी और ऑनलाइन प्लेटफॉर्म के औपचारिक शिकायत अधिकारी को एक आखिरी लिखित संदेश भेजें: “ऑर्डर [नंबर] के ₹5,000 के ईयरबड्स खरीद के एक सप्ताह में खराब हो गए। कृपया [रिफंड/रिप्लेसमेंट] दें और लिखित जवाब दें।” उसी संदेश और उनके जवाब को NCH शिकायत में लगाएं।\n\nआप चाहें तो प्लेटफॉर्म, ऑर्डर की तारीख और खराबी का प्रकार बताकर मुझसे NCH में डालने लायक छोटा शिकायत-पत्र तैयार करा सकते हैं।",
+            "items": [
+              "शिकायत में खरीद और डिलीवरी की तारीख, ₹5,000 कीमत, ऑर्डर नंबर, एक सप्ताह में आई खराबी, कंपनी और दुकानदार के जवाब तथा अपनी मांग साफ लिखें। पहले रिफंड मांगें; अगर आपको मंजूर हो तो विकल्प के रूप में बिना अतिरिक्त खर्च नया पीस या मरम्मत भी लिख सकते हैं।",
+              "आज ही विक्रेता, कंपनी और ऑनलाइन प्लेटफॉर्म के औपचारिक शिकायत अधिकारी को एक आखिरी लिखित संदेश भेजें: “ऑर्डर [नंबर] के ₹5,000 के ईयरबड्स खरीद के एक सप्ताह में खराब हो गए। कृपया [रिफंड/रिप्लेसमेंट] दें और लिखित जवाब दें।” उसी संदेश और उनके जवाब को NCH शिकायत में लगाएं।",
+              "आप चाहें तो प्लेटफॉर्म, ऑर्डर की तारीख और खराबी का प्रकार बताकर मुझसे NCH में डालने लायक छोटा शिकायत-पत्र तैयार करा सकते हैं।"
+            ],
+            "claim_ids": [
+              "claim-3",
+              "claim-4",
+              "claim-8"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-evidence_checklist",
+            "block_type": "evidence_checklist",
+            "title": "ये चीज़ें तैयार रखें",
+            "content": "ये रिकॉर्ड सुरक्षित रखें: बिल या इनवॉइस, ऑर्डर और भुगतान प्रमाण, वारंटी या रिटर्न नीति, खराबी दिखाने वाला छोटा वीडियो, पैकेज व सीरियल नंबर, कंपनी और विक्रेता के ईमेल या चैट, और NCH शिकायत संख्या। मूल रिकॉर्ड न बदलें।",
+            "items": [
+              "ये रिकॉर्ड सुरक्षित रखें: बिल या इनवॉइस, ऑर्डर और भुगतान प्रमाण, वारंटी या रिटर्न नीति, खराबी दिखाने वाला छोटा वीडियो, पैकेज व सीरियल नंबर, कंपनी और विक्रेता के ईमेल या चैट, और NCH शिकायत संख्या। मूल रिकॉर्ड न बदलें।"
+            ],
+            "claim_ids": [
+              "claim-7"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-question",
+            "block_type": "question",
+            "title": "एक बात बताइए",
+            "content": "क्या ईयरबड्स की खरीद और डिलीवरी भारत में हुई थी?",
+            "items": [],
+            "claim_ids": [
+              "claim-9"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "requires_confirmation",
+            "document_title": null
+          }
+        ],
+        "factual_issues": [
+          "ईयरबड्स में क्या खराबी आई और उसका प्रमाण क्या है।",
+          "बिल, वारंटी और लागू रिटर्न नीति में क्या लिखा है।",
+          "कंपनी और विक्रेता ने लिखित रूप से क्या जवाब दिया।"
+        ],
+        "legal_issues": [
+          "क्या बताए गए तथ्यों में खराब सामान या सेवा की कमी के आधार पर उपभोक्ता राहत उपलब्ध है?",
+          "लागू वारंटी और बिक्री की शर्तों के अनुसार रिफंड, रिप्लेसमेंट या मरम्मत में से कौन-सी राहत मांगी जा सकती है?"
+        ],
+        "case_stage": "कंपनी और विक्रेता से सामान्य सहायता मांगी जा चुकी है; बाहरी प्री-लिटिगेशन शिकायत अभी दर्ज नहीं हुई है।",
+        "next_action": "खरीद के रिकॉर्ड जोड़कर National Consumer Helpline पर शिकायत दर्ज करें और शिकायत संख्या सुरक्षित रखें।",
+        "publication_status": "partial",
+        "assistance_status": null,
+        "document_status": null,
+        "legal_verification_status": null,
+        "call_telemetry": [
+          {
+            "call_id": "899326c4-2f31-419e-ade0-77a825b1d3a5",
+            "stage": "routing",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 55.0
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 8061,
+              "output_tokens": 201,
+              "total_tokens": 8262,
+              "attempt_details": [
+                {
+                  "input_tokens": 8061,
+                  "output_tokens": 201,
+                  "total_tokens": 8262,
+                  "input_details": {
+                    "cache_write_tokens": 8058,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8058
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 107
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 8061,
+                  "output_tokens": 201,
+                  "total_tokens": 8262,
+                  "input_details": {
+                    "cache_write_tokens": 8058,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8058
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 107
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_314142127ed5487e93c32e6beb9c223a"
+              }
+            ],
+            "elapsed_ms": 5110
+          },
+          {
+            "call_id": "724575d5-f519-4b29-b007-527e76b1d1e7",
+            "stage": "applicability",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 52.81895944699999
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 8055,
+              "output_tokens": 962,
+              "total_tokens": 9017,
+              "attempt_details": [
+                {
+                  "input_tokens": 8055,
+                  "output_tokens": 962,
+                  "total_tokens": 9017,
+                  "input_details": {
+                    "cache_write_tokens": 8052,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8052
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 516
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 8055,
+                  "output_tokens": 962,
+                  "total_tokens": 9017,
+                  "input_details": {
+                    "cache_write_tokens": 8052,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8052
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 516
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_264c5d4266aa4476a494e3d628084060"
+              }
+            ],
+            "elapsed_ms": 10757
+          },
+          {
+            "call_id": "a889a393-5453-4650-912b-2a6f337b8063",
+            "stage": "primary",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 42.053597681
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 8369,
+              "output_tokens": 3230,
+              "total_tokens": 11599,
+              "attempt_details": [
+                {
+                  "input_tokens": 8369,
+                  "output_tokens": 3230,
+                  "total_tokens": 11599,
+                  "input_details": {
+                    "cache_write_tokens": 8366,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8366
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 725
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 8369,
+                  "output_tokens": 3230,
+                  "total_tokens": 11599,
+                  "input_details": {
+                    "cache_write_tokens": 8366,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8366
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 725
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_d872dd3c89aa4e5cab9bde3971173e62"
+              }
+            ],
+            "elapsed_ms": 23844
+          },
+          {
+            "call_id": "846fc6a1-1c12-4854-8803-051ec9b65dfd",
+            "stage": "review",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 18.201465861999992
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 0,
+            "usage_reported": null,
+            "usage_completeness": "unknown",
+            "status": "failed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "sent",
+                "usage": null
+              }
+            ],
+            "error_type": "APITimeoutError",
+            "elapsed_ms": 18230
+          }
+        ],
+        "usage_completeness": "partial",
+        "case_update_allowed": true,
+        "engine_version": "primary-agent-v2.1-routed",
+        "metrics": {
+          "route": "verified",
+          "route_history": [
+            "verified"
+          ],
+          "provider_requests_reserved": 4,
+          "reported_tokens": 28878,
+          "conservative_tokens_reserved": 175534,
+          "outstanding_token_reservations": 37886,
+          "queries": 0,
+          "documents_attempted": 0,
+          "research_batches": 0,
+          "remaining_seconds": 0.0,
+          "projected_cost_usd": null,
+          "cost_status": "unknown",
+          "estimated_cost_usd": null,
+          "known_estimated_cost_usd": null,
+          "actual_billed_cost_usd": null,
+          "pricing_date": null,
+          "total_ms": 58032,
+          "timing_scope": "runner; excludes API authorization and final database commit",
+          "time_to_first_useful_guidance_ms": 58032,
+          "reasoning_ms": 23844,
+          "review_ms": 18230,
+          "retrieval_ms": 0
+        },
+        "safety_messages": [],
+        "sources": [],
+        "case_version": 0,
+        "commit_receipt": {
+          "status": "staged_only",
+          "case_version": 0,
+          "committed_patch_ids": [],
+          "staged_patch_ids": [
+            "patch-1",
+            "patch-2",
+            "patch-3",
+            "patch-4",
+            "patch-5",
+            "patch-6",
+            "patch-7"
+          ],
+          "artifact_ids": []
+        }
+      }
+    },
+    "case_version": 0,
+    "sources": [],
+    "verification": {
+      "passed": false,
+      "publication_safe": true,
+      "scope": "published_claims_only",
+      "claim_checks": {
+        "claim-3": "risk_calibrated_consistency",
+        "claim-4": "risk_calibrated_consistency",
+        "claim-7": "risk_calibrated_consistency",
+        "claim-8": "risk_calibrated_consistency",
+        "claim-9": "non_assertive_clarification"
+      },
+      "independent_review_performed": false,
+      "legal_certification": false
+    },
+    "token_usage": {
+      "input_tokens": 24485,
+      "output_tokens": 4393,
+      "total_tokens": 28878
+    },
+    "ai_configured": true
+  },
+  "elapsed_seconds": 69.44
+}

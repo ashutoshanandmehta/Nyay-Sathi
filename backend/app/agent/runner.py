@@ -792,6 +792,14 @@ class PrimaryAgent:
                 "research_already_attempted": bool(state.get("routing_research_attempted")),
             },
         }
+        payload["response_focus"] = (
+            "Keep this turn focused on the user's immediate goal. For an initial next-step "
+            "question, aim for 150-220 words and 4-6 useful claims, one essential question. "
+            "Prioritize the supported official next step, how to use it, essential evidence, "
+            "and an offer to draft. Avoid optional legal doctrine, repeated facts and repeated "
+            "offers. An explicitly requested complaint draft may be longer. Propose only "
+            "material new case facts; do not duplicate existing facts or add speculative issues."
+        )
         if state.get("urgent_continuation"):
             payload["urgent_case_continuity"] = {
                 "active_urgent_followup": True,

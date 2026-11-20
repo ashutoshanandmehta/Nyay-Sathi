@@ -204,3 +204,20 @@ def test_primary_preserves_publication_time_instead_of_repeating_research(isolat
     runner._reason(state, budget, lambda *a, **k: None, lambda *a, **k: None)
     assert provider.requests[0][1]["allow_tools"] is False
     assert budget.remaining_time() == 28.0
+
+
+def test_verified_reuses_router_assessment_but_research_requires_fresh_check():
+    a = assessment()
+    d = decision("verified").model_copy(update={"applicability": a})
+    agent, state, budget, emit, events, searches = setup([d])
+    prepare_route(agent, state, budget, emit)
+    assert budget.requests == 1
+    assert state["route_guidance"]["jurisdiction"] == a.jurisdiction
+    assert any(e["stage"] == "applicability" and e["status"] == "complete" for e in events)
+
+    d = decision("research", research=request()).model_copy(update={"applicability": a})
+    fresh = assessment().model_copy(update={"limitations": ["Fresh source assessment"]})
+    agent, state, budget, emit, events, searches = setup([d, fresh])
+    prepare_route(agent, state, budget, emit)
+    assert budget.requests == 2 and len(searches) == 1
+    assert state["route_guidance"]["limitations"] == ["Fresh source assessment"]

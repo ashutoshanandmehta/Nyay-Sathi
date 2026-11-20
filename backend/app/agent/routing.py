@@ -18,6 +18,10 @@ evidence is missing, stale, conflicting or a current rule is requested. Do not a
 is current because it was retrieved or cited before. Missing private facts require ONE useful
 essential question, never a web search for private information. Research requests contain
 only generic public legal questions, no names, order IDs, addresses or personal data.
+For Verified, include a concise applicability assessment from the existing evidence in the
+same response: jurisdiction, incident date, limitations, inapplicable evidence IDs and one
+essential question. Unknown dates remain unknown. This avoids repeating the same context
+in a separate call. New evidence gathered by Research must still get a fresh assessment.
 Urgent protection is handled separately; do not delay it. Never file or claim external action.
 """
 
@@ -64,6 +68,9 @@ def prepare_route(agent, state, budget, event):
         if not budget.available(1, reserve=4):
             raise ValueError("Insufficient allowance for routing and publication checks")
         context = agent._context(state)
+        context.pop(
+            "templates", None
+        )  # Output templates do not help route or check source applicability.
         if extra:
             context.update(extra)
         _, calls, result = agent.provider.complete(
@@ -138,12 +145,14 @@ def prepare_route(agent, state, budget, event):
         if state["route"] == "fast":
             change_route(state, event, "verified", "Applicability requires additional checks")
         event("applicability", detail="Checking jurisdiction, incident date and source currency")
-        assessment = call(
-            ApplicabilityAssessment,
-            APPLICABILITY_PROMPT,
-            "applicability",
-            {"research_already_attempted": graph.get("researched", False)},
-        )
+        assessment = graph["decision"].applicability if not graph.get("researched") else None
+        if assessment is None:
+            assessment = call(
+                ApplicabilityAssessment,
+                APPLICABILITY_PROMPT,
+                "applicability",
+                {"research_already_attempted": graph.get("researched", False)},
+            )
         excluded = set(state.get("excluded_evidence_ids", [])) | set(
             assessment.excluded_evidence_ids
         )
