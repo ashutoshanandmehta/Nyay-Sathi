@@ -3,7 +3,7 @@ export type BlockType = 'direct_answer' | 'immediate_actions' | 'recommended_rou
 export type GroundingLabel = 'reported_by_user' | 'practical_precaution' | 'verified_legal_source' | 'requires_confirmation'
 export interface ResolutionBlock { block_id: string; block_type: BlockType; title: string; content: string; items: string[]; claim_ids: string[]; source_ids: string[]; grounding: GroundingLabel; document_title?: string | null }
 export interface SafetyMessage { type:'safety'; content_id:string; text:string; request_id:string; sources:string[] }
-export interface StreamEvent { stage:string; route?:'fast'|'verified'|'research'; previous_route?:string; status?:string; type?:'safety'; content_id?:string; text?:string; request_id?:string; sources?:string[]; round?:number; attempt?:number; phase?:string; detail?:string; duration_ms?:number; passages_count?:number; timestamp?:string; agent?:string; tool?:string; action?:string; result?:string; warning?:string; error?:string; query?:string }
+export interface StreamEvent { stage:string; route?:'fast'|'verified'|'research'; previous_route?:string; status?:string; type?:'safety'|'answer_block'; content_id?:string; text?:string; request_id?:string; sources?:string[]; seq?:number; execution_id?:string; block?:ResolutionBlock; block_id?:string|null; block_revision?:number; round?:number; attempt?:number; phase?:string; detail?:string; duration_ms?:number; passages_count?:number; timestamp?:string; agent?:string; tool?:string; action?:string; result?:string; warning?:string; error?:string; query?:string }
 import type { Journey } from './resolution'
 export interface Conversation { id: string; title: string; language: Language; created_at: string; updated_at: string; last_message?: string; domain?: string }
 export interface Source { source_id: string; passage_id: string; title: string; locator: string; text: string; canonical_url: string; retrieved_at: string; limitations: string; origin?:string; content_hash?:string; verification_status?:string; source_type?:string; jurisdiction?:string|null; publication_date?:string|null; effective_date?:string|null; citation_number?:number }
@@ -54,5 +54,130 @@ export interface DevspaceSaveResult { saved: string[]; restart_required: string[
 export interface RoleplayChatResponse { reply: string; turn_index: number; in_character?: boolean; notice?: string | null }
 // A safety reply replaces the character's line; a notice is a short honesty note beside it.
 export interface RoleplayChatMessage { id: string; role: 'opponent' | 'user' | 'safety'; text: string; notice?: string | null }
+
+export interface CaseLifecycleState {
+  submissions: Array<Record<string, unknown>>
+  promises: Array<Record<string, unknown>>
+  processed_refunds: Array<Record<string, unknown>>
+  remedy_receipt: Record<string, unknown> | null
+  closure: 'open' | 'resolved_confirmed' | 'closed_unresolved' | 'pursuit_stopped' | string
+}
+
+export interface CaseRecord {
+  id: string
+  owner_id?: string
+  title: string
+  status: string
+  domain?: string
+  incident_date?: string | null
+  jurisdiction?: string
+  lifecycle_state?: CaseLifecycleState
+  created_at: string
+  updated_at: string
+}
+
+export interface VerifiedContact {
+  id: string
+  category: string
+  jurisdiction: string
+  label: string
+  channel_type: 'phone' | 'whatsapp' | 'email' | 'portal'
+  destination: string
+  official_source_url: string
+  checked_at: string
+  revalidate_after: string
+  retired: boolean
+}
+
+export interface GoogleProviderConnection {
+  id: string
+  provider: 'google_drive' | 'google_gmail'
+  provider_account_email: string
+  provider_user_id: string
+  granted_scopes: string[]
+  status: 'connected' | 'expired' | 'revoked' | 'error'
+  reply_monitoring_opted_in: boolean
+  last_verified_at: string
+  revoked_at?: string | null
+}
+
+export interface DriveFolderInfo {
+  id: string
+  case_id: string
+  provider_account_email: string
+  drive_folder_id: string
+  opaque_folder_name: string
+  sync_status: 'synced' | 'moved' | 'deleted' | 'revoked'
+}
+
+export interface DriveManifestRecord {
+  id: string
+  case_id: string
+  drive_file_id: string
+  filename: string
+  mime_type: string
+  byte_length: number
+  sha256: string
+  evidence_type: string
+  provenance: 'user_uploaded_original' | 'user_selected_drive_file' | 'local_v2_disclosed_explicit'
+  sync_status: 'synced' | 'moved' | 'deleted' | 'revoked' | 'local_only'
+  original_preserved: boolean
+  web_view_link?: string | null
+  status_explanation: string
+  last_reconciled_at: string
+}
+
+export interface GmailEvidenceMessage {
+  id: string
+  case_id: string
+  gmail_message_id: string
+  gmail_thread_id: string
+  provider_account_email: string
+  sender: string
+  recipient: string
+  subject: string
+  snippet: string
+  body_text: string
+  received_at?: string | null
+  untrusted_instruction_flags: string[]
+}
+
+export interface GmailApproval {
+  id: string
+  case_id: string
+  conversation_id: string
+  provider_account_email: string
+  sender_email: string
+  to_recipients: string[]
+  cc_recipients: string[]
+  bcc_recipients: string[]
+  subject: string
+  body: string
+  selected_attachment_ids: string[]
+  reply_thread_id?: string | null
+  payload_hash: string
+  version: number
+  status: 'approved' | 'invalidated' | 'dispatched' | 'expired'
+  expires_at: string
+}
+
+export interface GmailDispatch {
+  id: string
+  approval_id: string
+  case_id: string
+  payload_hash: string
+  provider_account_email: string
+  dispatch_status:
+    | 'dispatching'
+    | 'sent_confirmed'
+    | 'ambiguous_timeout_needs_reconciliation'
+    | 'reconciled_sent'
+    | 'reconciled_not_sent'
+    | 'failed'
+  gmail_message_id?: string | null
+  gmail_thread_id?: string | null
+  event_classification: string
+  reconciliation_notes: string
+}
 
 

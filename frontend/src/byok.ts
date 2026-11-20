@@ -1,6 +1,4 @@
-// Your own OpenAI key: the server stores it sealed with a secret that only this browser keeps.
-// Every request to our /api sends that secret so the server can open the key for that request;
-// requests to anyone else (e.g. OpenAI's WebRTC endpoint) never get it.
+import { backendConfig, applicationPath } from './backend'
 
 export const UNLOCK_HEADER = 'X-Nyay-Key-Unlock'
 const STORAGE_KEY = 'nyay.keyUnlock'
@@ -26,20 +24,27 @@ export function unlockSecret(): string {
   }
 }
 
-function sameOriginApi(input: RequestInfo | URL): boolean {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-  try {
-    const parsed = new URL(url, window.location.origin)
-    return parsed.origin === window.location.origin && parsed.pathname.startsWith('/api/')
-  } catch {
-    return false
-  }
-}
-
 /** fetch for our own API: adds the unlock secret; any other URL is fetched unchanged. */
-export function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
-  if (!sameOriginApi(input)) return fetch(input, init)
-  const headers = new Headers(init.headers)
+export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const path = applicationPath(input)
+  if (!path) return fetch(input, init)
+  const config = backendConfig()
+  const original = input instanceof Request ? input : undefined
+  const headers = new Headers(init.headers || original?.headers)
   headers.set(UNLOCK_HEADER, unlockSecret())
+  if (config.mode === 'supabase') {
+    const { supabaseAccessToken } = await import('./supabase-session')
+    headers.delete('X-CSRF-Token')
+    headers.set('Authorization', `Bearer ${await supabaseAccessToken(config.url!, config.key!)}`)
+    headers.set('apikey', config.key!)
+    const inherited: RequestInit = original ? {
+      method: original.method,
+      body: ['GET', 'HEAD'].includes(original.method) ? undefined : await original.clone().arrayBuffer(),
+      signal: original.signal, cache: original.cache, referrerPolicy: original.referrerPolicy,
+    } : {}
+    return fetch(new Request(`${config.url}/functions/v1/nyay-api${path}`, inherited), {
+      ...init, headers, credentials: 'omit', redirect: 'error',
+    })
+  }
   return fetch(input, { ...init, headers })
 }
