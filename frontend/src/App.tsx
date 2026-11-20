@@ -40,7 +40,7 @@ const starterCards = [
     icon: STARTER_ICONS.defective.icon,
   },
 ]
-const welcome:Message={id:'welcome',role:'assistant',status:'complete',created_at:'',metadata:{},content:'## नमस्ते! 😊\n\n### बताइए, क्या परेशानी है?\n\nआप आराम से अपनी बात बताइए। हम समझने और आगे क्या करना है, ये जानने में आपकी मदद करेंगे।'}
+
 
 export default function App(){
   const [items,setItems]=useState<Conversation[]>([]),[active,setActive]=useState(''),[detail,setDetail]=useState<Detail|null>(null)
@@ -65,7 +65,7 @@ export default function App(){
     }else if(event.status==='running'||event.stage==='saving')setProgress(stageLabels[event.stage]||'Preparing your response…')
   }
   const stageLabels:Record<string,string>={saving:'Saving your message…',triage:'Checking what help you need…',intake:'Organising the facts…',research:'Searching saved legal sources…',assess_information:'Checking whether the sources cover your question…',web_research:'Researching the missing information…',web_search:'Searching official websites…',web_fetch:'Reading official pages and documents…',respond:'Preparing your response…',review:'Checking facts and citations…',revise:'Refining the response after review…',verify:'Finalising the checked response…'}
-  useEffect(()=>{if(initialized.current)return;initialized.current=true;void initialise()},[]); useEffect(()=>{bottom.current?.scrollIntoView({behavior:'smooth'})},[detail?.messages,sending])
+  useEffect(()=>{if(initialized.current)return;initialized.current=true;void initialise()},[]); useEffect(()=>{if(detail?.messages.length)bottom.current?.scrollIntoView({behavior:'smooth'})},[detail?.messages,sending])
   useEffect(() => {
     if (!sending) return
     const timer = setInterval(() => {
@@ -128,7 +128,8 @@ export default function App(){
   function showDevspace(){showSettings('devspace')}
   async function retry(){const p=pending.current;if(!p||p.caseId!==active||sending)return;thinkingStartRef.current=Date.now();setElapsedThinking(0);setSending(true);setError('');try{await api.streamTurn(p.caseId,p.text,p.language,p.id,p.attachments,onProgress);const result=await api.detail(p.caseId);setDetail(d=>d?.conversation.id===p.caseId?result:d);pending.current=null;await refresh()}catch(e){setError((e as Error).message)}finally{if(thinkingStartRef.current){setLastDuration(Math.max(1,Math.round((Date.now()-thinkingStartRef.current)/100)/10))};thinkingStartRef.current=null;setSending(false)}}
   async function speech(m:Message){const response=await apiFetch(`/api/conversations/${active}/messages/${m.id}/speech`,{method:'POST',credentials:'include',headers:{'X-CSRF-Token':decodeURIComponent(document.cookie.split('; ').find(x=>x.startsWith('nyay_csrf='))?.split('=')[1]||'')}});if(!response.ok){setError('Audio could not be created. The text answer is still available.');return}new Audio(URL.createObjectURL(await response.blob())).play()}
-  const messages=detail?.messages.length?detail.messages:[welcome]
+  const isNewChat = !detail?.messages.length
+  const messages=detail?.messages || []
   const hasSufficientContext = Boolean(
     detail &&
     detail.messages.some(m => m.role === 'assistant' && m.status === 'complete') &&
@@ -136,7 +137,7 @@ export default function App(){
   )
   return <div className="app-shell">
     <Sidebar open={sidebar} items={items} active={active} onNew={makeNew} onSelect={select} onClose={()=>setSidebar(false)} onKnowledge={showKnowledge} onWorkflow={showWorkflow} onRename={renameCase} onDelete={deleteCase} onDevspace={devspace?showDevspace:undefined} onSettings={showSettings} isStreaming={sending} streamEvents={streamEvents}/>{sidebar&&<div className="scrim" onClick={()=>setSidebar(false)}/>}
-    <main className="chat-shell">
+    <main className={`chat-shell ${isNewChat ? 'welcome-mode' : ''}`}>
       <header className="topbar">
         <button className="menu-button" onClick={()=>setSidebar(true)} aria-label="Open chat history"><Menu/></button>
         <button className="mobile-new" onClick={makeNew} aria-label="New chat"><Plus/></button>
@@ -190,6 +191,7 @@ export default function App(){
         </div>
       </header>
       <section className="messages" aria-live="polite"><div className="message-column">
+        {isNewChat&&<div className="welcome-copy" lang="hi"><h1>नमस्ते! 😊</h1><h2>बताइए, क्या परेशानी है?</h2><p>आप आराम से अपनी बात बताइए। हम समझने और आगे क्या करना है, ये जानने में आपकी मदद करेंगे।</p></div>}
         {messages.map((m, idx) => {
           const isLatestAssistant = m.role === 'assistant' && idx === messages.length - 1
           return (
@@ -215,25 +217,6 @@ export default function App(){
             </div>
           </div>
         ))}
-        {messages.length===1&&messages[0].id==='welcome'&&(
-          <div className="starters">
-            {starterCards.map(s=>{
-              const Icon = s.icon
-              return (
-                <button key={s.text} onClick={()=>send(s.text)}>
-                  <div className="starter-content">
-                    <div className="starter-title-row">
-                      <Icon size={16} className="starter-icon" aria-hidden="true" />
-                      <span className="starter-title">{s.text}</span>
-                    </div>
-                    {s.hint&&<small className="starter-hint">{s.hint}</small>}
-                  </div>
-                  <ChevronDown size={15} className="starter-chevron" aria-hidden="true" />
-                </button>
-              )
-            })}
-          </div>
-        )}
         {sending&&(
           <div className="thinking" role="status">
             <span className="thinking-pulse-track" aria-hidden="true">
@@ -257,7 +240,27 @@ export default function App(){
           </div>
         )}{error&&<div className="inline-error" role="alert">{error}</div>}<div ref={bottom}/>
       </div></section>
-      <Composer key={active} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}/>
+      <Composer key={active} welcome={isNewChat} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}>
+        {isNewChat&&(
+          <section className="common-problems" lang="hi" aria-labelledby="common-problems-title"><h2 id="common-problems-title">कुछ आम परेशानियाँ</h2><p>जैसे आप कह सकते हैं...</p><div className="starters">
+            {starterCards.map(s=>{
+              const Icon = s.icon
+              return (
+                <button key={s.text} onClick={()=>send(s.text)}>
+                  <div className="starter-content">
+                    <div className="starter-title-row">
+                      <Icon size={16} className="starter-icon" aria-hidden="true" />
+                      <span className="starter-title">{s.text}</span>
+                    </div>
+                    {s.hint&&<small className="starter-hint">{s.hint}</small>}
+                  </div>
+                  <ChevronDown size={15} className="starter-chevron" aria-hidden="true" />
+                </button>
+              )
+            })}
+          </div></section>
+        )}
+      </Composer>
     </main>
     {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='settings'?(settingsTab==='knowledge'?'Knowledge Base':settingsTab==='workflow'?'Agent Workflow':settingsTab==='key'?'Your OpenAI key':'Settings'):panel==='roleplay'?'Roleplay':'Drafts'} hideHeader={panel==='roleplay'} onClose={()=>setPanel(null)}>{panel==='settings'?<SettingsPanel initialTab={settingsTab} onTabChange={setSettingsTab} knowledge={knowledge} workflow={workflow} devspaceEnabled={devspace} onLoadKnowledge={async()=>{try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}} onLoadWorkflow={async()=>{try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}} onDevspaceSaved={()=>{}}/>:panel==='roleplay'&&detail?<PracticePanel caseId={active} language={language} onClose={()=>setPanel(null)}/>:panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
   </div>

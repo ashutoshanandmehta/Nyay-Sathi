@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowUp, Mic, Paperclip, X } from 'lucide-react'
 import { api } from '../api'
 import { prewarm, startLiveTranscription, type LiveRecording, type VoiceState } from '../voice'
@@ -10,7 +10,7 @@ export const HOLD_MS = 250
 // pressing Space on other buttons keep working as usual.
 const spaceTalks = (el: Element | null) => !el || el === document.body || el.classList.contains('mic-button')
 
-export default function Composer({disabled, initial='', onSend, onUpload, onRemove}:{disabled:boolean;initial?:string;onSend:(text:string)=>Promise<boolean>;onUpload:(id:string,name:string)=>void;onRemove?:(id:string)=>void}) {
+export default function Composer({disabled, initial='', onSend, onUpload, onRemove, welcome=false, children}:{welcome?:boolean;children?:ReactNode;disabled:boolean;initial?:string;onSend:(text:string)=>Promise<boolean>;onUpload:(id:string,name:string)=>void;onRemove?:(id:string)=>void}) {
   const [text,setText]=useState(initial), [uploading,setUploading]=useState(false)
   const [attachments,setAttachments]=useState<{id:string;name:string;status:string}[]>([]), [error,setError]=useState('')
   const [voice,setVoice]=useState<VoiceState|'idle'>('idle'), [live,setLive]=useState({final:'',partial:''})
@@ -81,24 +81,30 @@ export default function Composer({disabled, initial='', onSend, onUpload, onRemo
 
   const busy=voice!=='idle'
   const status=uploading?'Uploading and extracting…':voice==='connecting'?'Connecting…':voice==='listening'?`Listening ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')} · release to finish, Esc to cancel`:voice==='finishing'?'Finishing transcript…':error||hint
-  return <div className="composer-wrap">
-    {attachments.length>0&&<div className="attachment-row">{attachments.map(a=><span className="chip" key={a.id}>{a.name} · {a.status==='complete'?'Ready':a.status.replaceAll('_',' ')}<button aria-label={`Remove ${a.name}`} onClick={()=>{setAttachments(x=>x.filter(v=>v.id!==a.id));onRemove?.(a.id)}}><X size={13}/></button></span>)}</div>}
-    {busy&&<div className="voice-live" aria-live="polite">{live.final}{live.partial&&<em> {live.partial}</em>}{!live.final&&!live.partial&&<span className="voice-placeholder">{voice==='finishing'?'Finishing…':'Speak now…'}</span>}</div>}
-    <div className={`composer ${busy?'recording':''}`}>
-      <label className="icon-button" aria-label="Attach PDF, image, or text"><Paperclip size={20}/><input type="file" disabled={disabled||uploading} accept=".pdf,.png,.jpg,.jpeg,.txt" hidden onChange={e=>{void upload(e.target.files?.[0]);e.target.value=''}}/></label>
-      <textarea ref={input} value={text} disabled={disabled} placeholder="Describe what happened…" aria-label="Message" rows={1}
-        onFocus={()=>{void prewarm()}}
-        onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit()}}}/>
+  const micButton = (
       <button type="button" className={`icon-button mic-button ${voice}`} disabled={disabled||voice==='finishing'}
         aria-label="Hold to talk, or hold Space" title="Hold to talk · or hold Space"
         style={{['--level' as string]:level}}
         onPointerEnter={()=>{void prewarm()}}
         onPointerDown={e=>{e.preventDefault();e.currentTarget.setPointerCapture?.(e.pointerId);press()}}
         onPointerUp={release} onPointerCancel={release}
-        onContextMenu={e=>e.preventDefault()}><Mic size={20}/></button>
+        onContextMenu={e=>e.preventDefault()} onKeyDown={e=>{if(e.key==='Enter'&&!e.repeat){e.preventDefault();press()}}}
+        onKeyUp={e=>{if(e.key==='Enter'){e.preventDefault();release()}}}><Mic size={welcome?36:20}/></button>
+  )
+  return <div className={`composer-wrap ${welcome?'welcome-composer':''}`}>
+    {welcome&&<div className="welcome-voice" lang="hi">{micButton}<h2>बोलकर बताइए</h2><p>माइक दबाकर रखें और अपनी बात कहें</p></div>}
+    {attachments.length>0&&<div className="attachment-row">{attachments.map(a=><span className="chip" key={a.id}>{a.name} · {a.status==='complete'?'Ready':a.status.replaceAll('_',' ')}<button aria-label={`Remove ${a.name}`} onClick={()=>{setAttachments(x=>x.filter(v=>v.id!==a.id));onRemove?.(a.id)}}><X size={13}/></button></span>)}</div>}
+    {busy&&<div className="voice-live" aria-live="polite">{live.final}{live.partial&&<em> {live.partial}</em>}{!live.final&&!live.partial&&<span className="voice-placeholder">{voice==='finishing'?'Finishing…':'Speak now…'}</span>}</div>}
+    <div className={`composer ${busy?'recording':''}`}>
+      <label className="icon-button" aria-label="Attach PDF, image, or text"><Paperclip size={20}/><input type="file" disabled={disabled||uploading} accept=".pdf,.png,.jpg,.jpeg,.txt" hidden onChange={e=>{void upload(e.target.files?.[0]);e.target.value=''}}/></label>
+      <textarea ref={input} value={text} disabled={disabled} placeholder="या यहाँ अपनी बात लिखें..." aria-label="Message" rows={1}
+        onFocus={()=>{void prewarm()}}
+        onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit()}}}/>
+      {!welcome&&micButton}
       <button className="send" disabled={disabled||uploading||busy||!text.trim()} aria-label="Send message" onClick={submit}><ArrowUp size={19}/></button>
     </div>
     {status&&<div className={`composer-status ${error&&!busy&&!uploading?'error':''}`} role="status">{status}</div>}
-    <div className="fine-print">Nyay Saathi provides legal information and preparation help, not legal representation.</div>
+    {children}
+    <div className="fine-print">कानूनी जानकारी और शिकायत की तैयारी में मदद।</div>
   </div>
 }
