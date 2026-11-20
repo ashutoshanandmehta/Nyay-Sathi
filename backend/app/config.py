@@ -123,7 +123,14 @@ class Settings(BaseSettings):
     @property
     def effective_openai_key(self) -> str | None:
         """The requesting user's own key when their browser unlocked it, else the server's."""
-        return current_user_key() or self.openai_api_key
+        return (
+            current_user_key()
+            or self.openai_api_key
+            or os.environ.get("OPENAI_API_KEY")
+            or os.environ.get("OPENAI_KEY")
+            or os.environ.get("OPEN_AI_KEY")
+            or os.environ.get("OPEN_AI_API_KEY")
+        )
 
     @property
     def ai_configured(self) -> bool:
