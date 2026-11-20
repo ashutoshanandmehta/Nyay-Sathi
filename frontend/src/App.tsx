@@ -30,12 +30,12 @@ import type { AgentWorkflow, Conversation, Detail, KnowledgeBase, Language, Mess
 
 const starterCards = [
   {
-    text: 'मेरे बैंक ने पैसे रोक दिए हैं',
+    text: 'बैंक ने मेरे पैसे रोक रखे हैं',
     hint: '',
     icon: STARTER_ICONS.refund.icon,
   },
   {
-    text: 'मुझे सामान का रिफंड नहीं मिला',
+    text: 'सामान लौटाया, पर पैसे वापस नहीं मिले',
     hint: '',
     icon: STARTER_ICONS.defective.icon,
   },
@@ -155,7 +155,7 @@ export default function App(){
               )
             })()}
           </div>
-          <span>कानूनी जानकारी और शिकायत की तैयारी में मदद।</span>
+          <span>अपने अधिकार समझें, अगला कदम तय करें।</span>
         </div>
         <div className="top-actions">
           <div className="language-pill" title="Response language">
@@ -191,7 +191,7 @@ export default function App(){
         </div>
       </header>
       <section className="messages" aria-live="polite"><div className="message-column">
-        {isNewChat&&<div className="welcome-copy" lang="hi"><h1>नमस्ते! 😊</h1><h2>बताइए, क्या परेशानी है?</h2><p>आप आराम से अपनी बात बताइए। हम समझने और आगे क्या करना है, ये जानने में आपकी मदद करेंगे।</p></div>}
+        {isNewChat&&<div className="welcome-copy" lang="hi"><h1>नमस्ते! 😊</h1><h2>बताइए, क्या हुआ?</h2><p>अपनी बात खुलकर बताइए। हम आपकी परेशानी समझकर आगे का रास्ता सुझाएँगे।</p></div>}
         {messages.map((m, idx) => {
           const isLatestAssistant = m.role === 'assistant' && idx === messages.length - 1
           return (
@@ -242,7 +242,7 @@ export default function App(){
       </div></section>
       <Composer key={active} welcome={isNewChat} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}>
         {isNewChat&&(
-          <section className="common-problems" lang="hi" aria-labelledby="common-problems-title"><h2 id="common-problems-title">कुछ आम परेशानियाँ</h2><p>जैसे आप कह सकते हैं...</p><div className="starters">
+          <section className="common-problems" lang="hi" aria-labelledby="common-problems-title"><h2 id="common-problems-title">कुछ आम परेशानियाँ</h2><p>क्या आपके साथ भी ऐसा हुआ है?</p><div className="starters">
             {starterCards.map(s=>{
               const Icon = s.icon
               return (

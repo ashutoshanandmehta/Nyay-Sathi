@@ -92,12 +92,12 @@ export default function Composer({disabled, initial='', onSend, onUpload, onRemo
         onKeyUp={e=>{if(e.key==='Enter'){e.preventDefault();release()}}}><Mic size={welcome?36:20}/></button>
   )
   return <div className={`composer-wrap ${welcome?'welcome-composer':''}`}>
-    {welcome&&<div className="welcome-voice" lang="hi">{micButton}<h2>बोलकर बताइए</h2><p>माइक दबाकर रखें और अपनी बात कहें</p></div>}
+    {welcome&&<div className="welcome-voice" lang="hi">{micButton}<h2>बोलकर अपनी बात बताइए</h2><p>माइक दबाए रखें, अपनी बात कहें और फिर छोड़ दें।</p></div>}
     {attachments.length>0&&<div className="attachment-row">{attachments.map(a=><span className="chip" key={a.id}>{a.name} · {a.status==='complete'?'Ready':a.status.replaceAll('_',' ')}<button aria-label={`Remove ${a.name}`} onClick={()=>{setAttachments(x=>x.filter(v=>v.id!==a.id));onRemove?.(a.id)}}><X size={13}/></button></span>)}</div>}
     {busy&&<div className="voice-live" aria-live="polite">{live.final}{live.partial&&<em> {live.partial}</em>}{!live.final&&!live.partial&&<span className="voice-placeholder">{voice==='finishing'?'Finishing…':'Speak now…'}</span>}</div>}
     <div className={`composer ${busy?'recording':''}`}>
       <label className="icon-button" aria-label="Attach PDF, image, or text"><Paperclip size={20}/><input type="file" disabled={disabled||uploading} accept=".pdf,.png,.jpg,.jpeg,.txt" hidden onChange={e=>{void upload(e.target.files?.[0]);e.target.value=''}}/></label>
-      <textarea ref={input} value={text} disabled={disabled} placeholder="या यहाँ अपनी बात लिखें..." aria-label="Message" rows={1}
+      <textarea ref={input} value={text} disabled={disabled} placeholder="चाहें तो यहाँ लिखें…" aria-label="Message" rows={1}
         onFocus={()=>{void prewarm()}}
         onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();submit()}}}/>
       {!welcome&&micButton}
@@ -105,6 +105,6 @@ export default function Composer({disabled, initial='', onSend, onUpload, onRemo
     </div>
     {status&&<div className={`composer-status ${error&&!busy&&!uploading?'error':''}`} role="status">{status}</div>}
     {children}
-    <div className="fine-print">कानूनी जानकारी और शिकायत की तैयारी में मदद।</div>
+    <div className="fine-print">अपने अधिकार समझें, अगला कदम तय करें।</div>
   </div>
 }

@@ -23,7 +23,7 @@ it('starts with a centered mic and common problems, then moves the mic into the 
   expect(view.container.querySelectorAll('.mic-button')).toHaveLength(1)
   expect(screen.getByRole('heading',{name:'कुछ आम परेशानियाँ'})).toBeInTheDocument()
   expect(screen.queryByText(/Add your own OpenAI/)).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button',{name:'मेरे बैंक ने पैसे रोक दिए हैं'}))
+  fireEvent.click(screen.getByRole('button',{name:'बैंक ने मेरे पैसे रोक रखे हैं'}))
   expect(mic().closest('.composer')).not.toBeNull()
   expect(screen.queryByRole('heading',{name:'कुछ आम परेशानियाँ'})).not.toBeInTheDocument()
   expect(view.container.querySelectorAll('.mic-button')).toHaveLength(1)
