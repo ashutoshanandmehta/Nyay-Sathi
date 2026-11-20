@@ -41,16 +41,33 @@ export const api = {
     call<{assistant_message: Detail['messages'][number]}>(`/api/conversations/${id}/turns`, {method:'POST', body:JSON.stringify({content,language,request_id:requestId,attachment_ids:attachmentIds})}),
   streamTurn: async (id:string, content:string, language:Language, requestId:string, attachmentIds:string[], progress:(event:StreamEvent)=>void) => {
     const token = decodeURIComponent(csrf())
-    const response = await apiFetch(`/api/conversations/${id}/turns/stream`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'X-CSRF-Token': token } : {}),
-      },
-      body: JSON.stringify({ content, language, request_id: requestId, attachment_ids: attachmentIds }),
-    })
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 62000)
+    let response: Response
+    try {
+      response = await apiFetch(`/api/conversations/${id}/turns/stream`, {
+        method: 'POST',
+        credentials: 'include',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-CSRF-Token': token } : {}),
+        },
+        body: JSON.stringify({ content, language, request_id: requestId, attachment_ids: attachmentIds }),
+      })
+    } catch (err: unknown) {
+      clearTimeout(timer)
+      if (controller.signal.aborted) {
+        throw new Error('Verification took longer than 60s on the server. Please retry; your message was saved.')
+      }
+      const raw = (err as Error).message || ''
+      if (raw.toLowerCase().includes('network') || raw.toLowerCase().includes('failed to fetch')) {
+        throw new Error('Connection interrupted while streaming the response. Please retry.')
+      }
+      throw err
+    }
     if (!response.ok || !response.body) {
+      clearTimeout(timer)
       const payload = await response.json().catch(() => ({ detail: response.statusText }))
       const detail = typeof payload.detail === 'string' ? payload.detail : payload.detail?.code || payload.detail?.message || ''
       if (response.status === 404 || detail === 'conversation_not_found') {
@@ -62,9 +79,23 @@ export const api = {
       throw new Error(detail || `Could not start this turn (${response.status}). Please retry.`)
     }
     const reader=response.body.getReader(), decoder=new TextDecoder();let buffer='',completed=false
-    while(true){const {done,value}=await reader.read();buffer+=decoder.decode(value,{stream:!done});let index:number
-      while((index=buffer.indexOf('\n\n'))>=0){const frame=buffer.slice(0,index);buffer=buffer.slice(index+2);const event=frame.split('\n').find(l=>l.startsWith('event: '))?.slice(7);const data=frame.split('\n').filter(l=>l.startsWith('data: ')).map(l=>l.slice(6)).join('\n');if(!data)continue;const payload=JSON.parse(data);if(event==='progress')progress(payload);if(event==='safety'&&payload.type==='safety'&&typeof payload.content_id==='string'&&typeof payload.text==='string'&&payload.text.length<=5000)progress({...payload,stage:'safety',request_id:requestId});if(event==='result')completed=true;if(event==='error')throw new Error(typeof payload.detail==='string'?payload.detail:payload.detail?.code||'Turn failed; your message is saved.')}
-      if(done)break
+    try {
+      while(true){const {done,value}=await reader.read();buffer+=decoder.decode(value,{stream:!done});let index:number
+        while((index=buffer.indexOf('\n\n'))>=0){const frame=buffer.slice(0,index);buffer=buffer.slice(index+2);const event=frame.split('\n').find(l=>l.startsWith('event: '))?.slice(7);const data=frame.split('\n').filter(l=>l.startsWith('data: ')).map(l=>l.slice(6)).join('\n');if(!data)continue;const payload=JSON.parse(data);if(event==='progress')progress(payload);if(event==='safety'&&payload.type==='safety'&&typeof payload.content_id==='string'&&typeof payload.text==='string'&&payload.text.length<=5000)progress({...payload,stage:'safety',request_id:requestId});if(event==='result')completed=true;if(event==='error')throw new Error(typeof payload.detail==='string'?payload.detail:payload.detail?.code||'Turn failed; your message is saved.')}
+        if(done)break
+      }
+    } catch (err: unknown) {
+      clearTimeout(timer)
+      if (controller.signal.aborted) {
+        throw new Error('Verification took longer than 60s on the server. Please retry; your message was saved.')
+      }
+      const raw = (err as Error).message || ''
+      if (raw.toLowerCase().includes('network') || raw.toLowerCase().includes('failed to fetch')) {
+        throw new Error('Connection interrupted while streaming the response. Please retry.')
+      }
+      throw err
+    } finally {
+      clearTimeout(timer)
     }
     if(!completed)throw new Error('Connection interrupted. Your message may still be processing; retry safely.')
   },

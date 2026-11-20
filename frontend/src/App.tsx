@@ -106,7 +106,15 @@ export default function App(){
       pending.current=null;attachments.current=[]
       const result=await api.detail(cid);setDetail(d=>d?.conversation.id===cid?result:d)
       await refresh();return true
-    }catch(e){setError((e as Error).message);setDetail(d=>d?{...d,messages:d.messages.map(m=>m.id===req?{...m,status:'failed'}:m)}:d);return false}
+    }catch(e){
+      const raw = (e as Error).message || ''
+      const msg = raw.toLowerCase().includes('network') || raw.toLowerCase().includes('failed to fetch')
+        ? 'Connection interrupted while streaming the response. Your message is saved; please retry.'
+        : raw
+      setError(msg)
+      setDetail(d=>d?{...d,messages:d.messages.map(m=>m.id===req?{...m,status:'failed'}:m)}:d)
+      return false
+    }
     finally{
       if (thinkingStartRef.current) {
         const secs = Math.max(1, Math.round((Date.now() - thinkingStartRef.current) / 100) / 10)
@@ -134,7 +142,7 @@ export default function App(){
   async function showKnowledge(){showSettings('knowledge');try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}
   async function showWorkflow(){showSettings('workflow');try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}
   function showDevspace(){showSettings('devspace')}
-  async function retry(){const p=pending.current;if(!p||p.caseId!==active||sending)return;thinkingStartRef.current=Date.now();setElapsedThinking(0);setSending(true);setError('');try{await api.streamTurn(p.caseId,p.text,p.language,p.id,p.attachments,onProgress);const result=await api.detail(p.caseId);setDetail(d=>d?.conversation.id===p.caseId?result:d);pending.current=null;await refresh()}catch(e){setError((e as Error).message)}finally{if(thinkingStartRef.current){setLastDuration(Math.max(1,Math.round((Date.now()-thinkingStartRef.current)/100)/10))};thinkingStartRef.current=null;setSending(false)}}
+  async function retry(){const p=pending.current;if(!p||p.caseId!==active||sending)return;thinkingStartRef.current=Date.now();setElapsedThinking(0);setSending(true);setError('');try{await api.streamTurn(p.caseId,p.text,p.language,p.id,p.attachments,onProgress);const result=await api.detail(p.caseId);setDetail(d=>d?.conversation.id===p.caseId?result:d);pending.current=null;await refresh()}catch(e){const raw=(e as Error).message||'';const msg=raw.toLowerCase().includes('network')||raw.toLowerCase().includes('failed to fetch')?'Connection interrupted while streaming the response. Your message is saved; please retry.':raw;setError(msg)}finally{if(thinkingStartRef.current){setLastDuration(Math.max(1,Math.round((Date.now()-thinkingStartRef.current)/100)/10))};thinkingStartRef.current=null;setSending(false)}}
   async function speech(m:Message){const response=await apiFetch(`/api/conversations/${active}/messages/${m.id}/speech`,{method:'POST',credentials:'include',headers:{'X-CSRF-Token':decodeURIComponent(document.cookie.split('; ').find(x=>x.startsWith('nyay_csrf='))?.split('=')[1]||'')}});if(!response.ok){setError('Audio could not be created. The text answer is still available.');return}new Audio(URL.createObjectURL(await response.blob())).play()}
   const isNewChat = !detail?.messages.length
   const messages=detail?.messages || []
