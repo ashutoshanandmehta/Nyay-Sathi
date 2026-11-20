@@ -40,8 +40,27 @@ export const api = {
   turn: (id: string, content: string, language: Language, requestId: string, attachmentIds: string[]) =>
     call<{assistant_message: Detail['messages'][number]}>(`/api/conversations/${id}/turns`, {method:'POST', body:JSON.stringify({content,language,request_id:requestId,attachment_ids:attachmentIds})}),
   streamTurn: async (id:string, content:string, language:Language, requestId:string, attachmentIds:string[], progress:(event:StreamEvent)=>void) => {
-    const response = await apiFetch(`/api/conversations/${id}/turns/stream`, {method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':decodeURIComponent(csrf())},body:JSON.stringify({content,language,request_id:requestId,attachment_ids:attachmentIds})})
-    if(!response.ok || !response.body) throw new Error('Could not start this turn. Please retry.')
+    const token = decodeURIComponent(csrf())
+    const response = await apiFetch(`/api/conversations/${id}/turns/stream`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'X-CSRF-Token': token } : {}),
+      },
+      body: JSON.stringify({ content, language, request_id: requestId, attachment_ids: attachmentIds }),
+    })
+    if (!response.ok || !response.body) {
+      const payload = await response.json().catch(() => ({ detail: response.statusText }))
+      const detail = typeof payload.detail === 'string' ? payload.detail : payload.detail?.code || payload.detail?.message || ''
+      if (response.status === 404 || detail === 'conversation_not_found') {
+        throw new Error('This chat session expired or was reset by a new deployment. Please click New Chat (+) to start.')
+      }
+      if (response.status === 403 || detail.toLowerCase().includes('csrf')) {
+        throw new Error('Security session expired. Please refresh the page and try again.')
+      }
+      throw new Error(detail || `Could not start this turn (${response.status}). Please retry.`)
+    }
     const reader=response.body.getReader(), decoder=new TextDecoder();let buffer='',completed=false
     while(true){const {done,value}=await reader.read();buffer+=decoder.decode(value,{stream:!done});let index:number
       while((index=buffer.indexOf('\n\n'))>=0){const frame=buffer.slice(0,index);buffer=buffer.slice(index+2);const event=frame.split('\n').find(l=>l.startsWith('event: '))?.slice(7);const data=frame.split('\n').filter(l=>l.startsWith('data: ')).map(l=>l.slice(6)).join('\n');if(!data)continue;const payload=JSON.parse(data);if(event==='progress')progress(payload);if(event==='safety'&&payload.type==='safety'&&typeof payload.content_id==='string'&&typeof payload.text==='string'&&payload.text.length<=5000)progress({...payload,stage:'safety',request_id:requestId});if(event==='result')completed=true;if(event==='error')throw new Error(typeof payload.detail==='string'?payload.detail:payload.detail?.code||'Turn failed; your message is saved.')}

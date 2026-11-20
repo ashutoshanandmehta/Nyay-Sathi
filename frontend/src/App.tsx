@@ -80,7 +80,7 @@ export default function App(){
   async function initialise(){try{const boot=await api.bootstrap();setDevspace(Boolean(boot.devspace_enabled));const list=await api.list();setItems(list);if(list[0])await select(list[0].id);else await makeNew()}catch(e){setError((e as Error).message)}}
   async function refresh(){const list=await api.list();setItems(list)}
   async function makeNew(){try{const c=await api.create(language);await refresh();await select(c.id);setSidebar(false)}catch(e){setError((e as Error).message)}}
-  async function select(id:string){try{const d=await api.detail(id);attachments.current=[];setSafety(d.safety_messages||[]);setActive(id);setDetail(d);setLanguage(d.conversation.language);setSidebar(false);history.replaceState({},'',`/chat/${id}`)}catch(e){setError((e as Error).message)}}
+  async function select(id:string){try{const d=await api.detail(id);attachments.current=[];setSafety(d.safety_messages||[]);setActive(id);setDetail(d);setLanguage(d.conversation.language);setSidebar(false);history.replaceState({},'',`/chat/${id}`)}catch(e){setError((e as Error).message);void makeNew()}}
   async function send(text:string){
     if(!active||sending)return false
     const detected = detectLanguage(text)
