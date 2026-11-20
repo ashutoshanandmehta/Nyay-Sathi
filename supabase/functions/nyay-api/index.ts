@@ -974,7 +974,7 @@ if (typeof Deno !== 'undefined' && typeof Deno.serve === 'function') {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
-  const serverOpenAiKey = Deno.env.get('OPENAI_API_KEY') || null
+  const serverOpenAiKey = Deno.env.get('OPENAI_API_KEY') || Deno.env.get('OPENAI_KEY') || null
   const byokMasterSecret = Deno.env.get('NYAY_BYOK_MASTER_SECRET') || serviceRoleKey || 'nyay-edge-byok-secret'
 
   const db = createSupabaseDatabaseAdapter(supabaseUrl, serviceRoleKey, anonKey)
@@ -999,7 +999,7 @@ if (typeof Deno !== 'undefined' && typeof Deno.serve === 'function') {
     reasoning:Deno.env.get('NYAY_AGENT_REASONING') || DEFAULT_RUNTIME.reasoning,
     maxOutputTokens:Number(Deno.env.get('NYAY_AGENT_MAX_OUTPUT_TOKENS') || DEFAULT_RUNTIME.maxOutputTokens),
   })
-  const resumeKey = enabled ? (Deno.env.get('NYAY_RESUMABLE_OPENAI_KEY') || '') : ''
+  const resumeKey = enabled ? (Deno.env.get('NYAY_RESUMABLE_OPENAI_KEY') || serverOpenAiKey || '') : ''
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: {persistSession:false, autoRefreshToken:false},
     global: {fetch: (input, init) => fetch(input, {

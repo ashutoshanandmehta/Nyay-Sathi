@@ -41,7 +41,11 @@ export class OpenAiBackgroundProvider implements BackgroundProvider {
       signal: AbortSignal.timeout(9_000),
       redirect: 'error',
     })
-    if (!response.ok) throw new ProviderHttpError(response.status)
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '')
+      console.error(JSON.stringify({ type: 'nyay.provider_error', status: response.status, body: errText }))
+      throw new ProviderHttpError(response.status)
+    }
     return await readBoundedJson(response,512_000) as WireResponse
   }
 
