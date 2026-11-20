@@ -105,6 +105,6 @@ export default function Composer({disabled, initial='', onSend, onUpload, onRemo
     </div>
     {status&&<div className={`composer-status ${error&&!busy&&!uploading?'error':''}`} role="status">{status}</div>}
     {children}
-    <div className="fine-print">अपने अधिकार समझें, अगला कदम तय करें।</div>
+    <div className="fine-print">Nyay Saathi एक AI सहायक है। यह कानूनी जानकारी समझने में मदद करता है, लेकिन वकील की सलाह का विकल्प नहीं है।</div>
   </div>
 }

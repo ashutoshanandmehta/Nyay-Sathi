@@ -155,7 +155,7 @@ export default function App(){
               )
             })()}
           </div>
-          <span>अपने अधिकार समझें, अगला कदम तय करें।</span>
+          <span>Nyay Saathi एक AI सहायक है।</span>
         </div>
         <div className="top-actions">
           <div className="language-pill" title="Response language">
