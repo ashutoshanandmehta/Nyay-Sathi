@@ -1,0 +1,752 @@
+{
+  "test_type": "live preview retest after combined applicability and focused-answer fix",
+  "prompt": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+  "requested_language": "hi",
+  "deployment_url": "https://nyay-sathi-q7smc8dmc-anandmehtaashutosh-6445s-projects.vercel.app",
+  "implementation_commit": "196d027",
+  "actual_billed_cost": "unknown",
+  "health": {
+    "status": "ok",
+    "ai_configured": true,
+    "engine_version": "primary-agent-v2.1-routed"
+  },
+  "turn_status": 200,
+  "actual_response": {
+    "conversation_id": "0bf54173-40b3-4f47-a94a-461b05897959",
+    "user_message": {
+      "id": "f317a259-0b38-408c-ab24-047f4fe0d5a6",
+      "role": "user",
+      "content": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+      "created_at": "2026-11-20T16:19:28.611549+00:00",
+      "status": "complete",
+      "metadata": {
+        "attachment_ids": [],
+        "language": "hi"
+      }
+    },
+    "assistant_message": {
+      "id": "d6c49981-deea-4168-b123-25a0e6771237",
+      "role": "assistant",
+      "content": "एक हफ्ते में ₹5,000 के ईयरबड्स खराब होना परेशान करने वाला है। **आपको अभी कोर्ट जाने की जरूरत नहीं है:** पहले ऑनलाइन प्लेटफॉर्म के औपचारिक Grievance Officer को लिखित शिकायत दें; अगर यह कदम हो चुका है, तो सीधे National Consumer Helpline पर जाएं। [1](#cite-1)[2](#cite-2)\n\n### मेरी सलाह\n\nप्लेटफॉर्म की वेबसाइट या ऐप में Grievance Officer का ईमेल खोजें। उसे ऑर्डर नंबर, खरीद और खराबी की तारीख, समस्या, कंपनी व दुकानदार का जवाब और अपनी मांग—रिफंड या बिना शुल्क बदलाव—लिखें। अधिकारी को शिकायत **48 घंटे में स्वीकार** करनी और **एक महीने के भीतर उसका निपटारा** करना होता है। [1](#cite-1)\n\n### अगर इससे बात न बने\n\n1. अगर औपचारिक Grievance Officer पहले ही मना कर चुका है, शिकायत बंद कर चुका है या जवाब नहीं दे रहा, तो **1915** पर या consumerhelpline.gov.in पर National Consumer Helpline में शिकायत दर्ज करें। वही रिकॉर्ड अपलोड करें और साफ लिखें कि आप ₹5,000 का रिफंड या बदलाव चाहते हैं; यह कोर्ट से पहले का रास्ता है, लेकिन समाधान की गारंटी नहीं देता। [2](#cite-2)[3](#cite-3)\n\n2. अगर NCH से भी समाधान न मिले, तो आखिरी विकल्प District Consumer Commission में e-Jagriti से ऑनलाइन शिकायत है। ऐसी शिकायत सामान्यतः कारण पैदा होने के **दो साल के भीतर** दाखिल करनी होती है; फिलहाल आप पहले गैर-अदालती रास्ते आजमा सकते हैं। [2](#cite-2)[4](#cite-4)\n\n### ये चीज़ें तैयार रखें\n\nआज ही इनवॉइस, वारंटी, भुगतान रिकॉर्ड, ईयरबड्स के सीरियल नंबर और खराबी का छोटा वीडियो संभालें। कंपनी व दुकानदार के मना करने वाले चैट या ईमेल के स्क्रीनशॉट भी रखें और शिकायत केवल लिखित रूप में भेजें। इन विवरणों से Grievance Officer के लिए छोटा शिकायत मसौदा तैयार किया जा सकता है।\n\n### एक बात बताइए\n\nक्या खरीद भारत में चलने वाले ऑनलाइन प्लेटफॉर्म से हुई थी, और क्या आपने उसकी सामान्य ग्राहक सेवा के बजाय औपचारिक Grievance Officer को लिखित शिकायत भेजी है?",
+      "created_at": "2026-11-20T16:20:18.434873+00:00",
+      "status": "complete",
+      "metadata": {
+        "verification": {
+          "passed": true,
+          "publication_safe": true,
+          "scope": "published_claims_only",
+          "claim_checks": {
+            "claim-3": "risk_calibrated_consistency",
+            "claim-6": "non_assertive_clarification",
+            "claim-1": "independent_semantic_review",
+            "claim-2": "independent_semantic_review",
+            "claim-4": "independent_semantic_review",
+            "claim-5": "independent_semantic_review"
+          },
+          "independent_review_performed": true,
+          "legal_certification": true
+        },
+        "token_usage": {
+          "input_tokens": 24618,
+          "output_tokens": 5372,
+          "total_tokens": 29990
+        },
+        "events": [
+          {
+            "stage": "context",
+            "status": "running",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "action": "Pre-fetching certified statutory provisions & intake facts",
+            "detail": "Loading facts & certified knowledge pack"
+          },
+          {
+            "stage": "context",
+            "status": "complete",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "result": "Loaded 8 retrieved source passages & facts",
+            "passages_count": 8,
+            "detail": "Context ready (8 legal provisions loaded)"
+          },
+          {
+            "stage": "routing",
+            "status": "running",
+            "agent": "Workflow Router",
+            "detail": "Choosing the appropriate level of help"
+          },
+          {
+            "stage": "routing",
+            "status": "complete",
+            "route": "verified",
+            "previous_route": null,
+            "detail": "भारत का उपभोक्ता कानून संभावित रूप से लागू है और मौजूदा आधिकारिक साक्ष्य NCH जैसे अदालत-पूर्व विकल्प का समर्थन करते हैं, लेकिन खरीद का अधिकार-क्षेत्र और शिकायत अधिकारी तक की गई कार्रवाई पहले स्पष्ट करनी होगी।",
+            "agent": "Workflow Router"
+          },
+          {
+            "stage": "applicability",
+            "status": "running",
+            "detail": "Checking jurisdiction, incident date and source currency"
+          },
+          {
+            "stage": "applicability",
+            "status": "complete",
+            "detail": "Applicability check completed; remaining uncertainties are retained"
+          },
+          {
+            "stage": "primary",
+            "status": "running",
+            "agent": "Primary Reasoning Agent",
+            "tool": "reasoning_engine",
+            "round": 1,
+            "action": "Synthesizing legal claims & response strategy (Round 1)",
+            "detail": "Synthesizing response & legal claims (Round 1)"
+          },
+          {
+            "stage": "review",
+            "status": "running",
+            "agent": "Verifier Agent",
+            "tool": "verifier_evaluator",
+            "action": "Auditing grounding and citation integrity for 6 claims",
+            "detail": "Verifier Agent auditing claims & legal citations"
+          },
+          {
+            "stage": "structuring",
+            "status": "running",
+            "agent": "Output Structuring Agent",
+            "tool": "format_composer",
+            "action": "Structuring response with numbered steps, checklists & citations",
+            "detail": "Structuring formatted response & citations"
+          },
+          {
+            "stage": "verify",
+            "status": "passed",
+            "agent": "Output Structuring Agent",
+            "result": "Publication checks completed; unsupported content withheld",
+            "detail": "Response prepared with publication safeguards"
+          },
+          {
+            "stage": "complete",
+            "status": "supported",
+            "duration_ms": 49773
+          }
+        ],
+        "request_coverage": [
+          {
+            "request_id": "task-1",
+            "status": "answered",
+            "reason": null
+          }
+        ],
+        "interpretation": {
+          "schema_version": "request-v2",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "source_text": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+              "intent": "legal_options",
+              "domain": "consumer",
+              "relationship": "ऑनलाइन खरीद विवाद",
+              "entities": [],
+              "case_link": "new",
+              "requires_research": false,
+              "requires_case_update": true,
+              "risk_level": "ordinary",
+              "uncertainty": [],
+              "public_query": null,
+              "source_segment_ids": [],
+              "needs_early_extraction": false,
+              "extraction_reason": null
+            }
+          ],
+          "case_relevance": "new",
+          "clarification_needed": false,
+          "requested_deliverables": [],
+          "user_goal": null,
+          "suggested_remedy": null,
+          "required_answer_elements": [],
+          "missing_details": [],
+          "invalid_tasks": []
+        },
+        "task_plan": [
+          {
+            "task_id": "task-1",
+            "workflow": "consumer",
+            "status": "ready",
+            "research_status": "not_required",
+            "reason": "Interpretation selects assistance, never legal eligibility or permission to submit."
+          }
+        ],
+        "tool_records": [
+          {
+            "tool": "certified_knowledge_pack",
+            "status": "hit",
+            "query_hash": "86c5b063fa89fd4e",
+            "certified_hit_count": 3,
+            "official_pack_hit_count": 0
+          }
+        ],
+        "unit_outcomes": [
+          {
+            "task_id": "task-1",
+            "status": "supported"
+          }
+        ],
+        "resolution_plan": {},
+        "resolution_blocks": [
+          {
+            "block_id": "block-direct_answer",
+            "block_type": "direct_answer",
+            "title": "संक्षेप में",
+            "content": "एक हफ्ते में ₹5,000 के ईयरबड्स खराब होना परेशान करने वाला है। **आपको अभी कोर्ट जाने की जरूरत नहीं है:** पहले ऑनलाइन प्लेटफॉर्म के औपचारिक Grievance Officer को लिखित शिकायत दें; अगर यह कदम हो चुका है, तो सीधे National Consumer Helpline पर जाएं।",
+            "items": [],
+            "claim_ids": [
+              "claim-1"
+            ],
+            "source_ids": [
+              "cpa-ecommerce-rules-2020",
+              "nch-about"
+            ],
+            "sources": [
+              {
+                "source_id": "cpa-ecommerce-rules-2020",
+                "title": "Consumer Protection (E-Commerce) Rules, 2020",
+                "locator": "Consumer Protection (E-Commerce) Rules, 2020, Rule 4(4)-(5), Gazette pages 3-4",
+                "canonical_url": "https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf"
+              },
+              {
+                "source_id": "nch-about",
+                "title": "National Consumer Helpline (1915 / consumerhelpline.gov.in) — Department of Consumer Affairs",
+                "locator": "About National Consumer Helpline — Portal questions 1, 8 and 9 (Toll-Free 1915)",
+                "canonical_url": "https://consumerhelpline.gov.in/public/index.php/about"
+              }
+            ],
+            "grounding": "verified_legal_source",
+            "document_title": null
+          },
+          {
+            "block_id": "block-recommended_route",
+            "block_type": "recommended_route",
+            "title": "मेरी सलाह",
+            "content": "प्लेटफॉर्म की वेबसाइट या ऐप में Grievance Officer का ईमेल खोजें। उसे ऑर्डर नंबर, खरीद और खराबी की तारीख, समस्या, कंपनी व दुकानदार का जवाब और अपनी मांग—रिफंड या बिना शुल्क बदलाव—लिखें। अधिकारी को शिकायत **48 घंटे में स्वीकार** करनी और **एक महीने के भीतर उसका निपटारा** करना होता है।",
+            "items": [],
+            "claim_ids": [
+              "claim-2"
+            ],
+            "source_ids": [
+              "cpa-ecommerce-rules-2020"
+            ],
+            "sources": [
+              {
+                "source_id": "cpa-ecommerce-rules-2020",
+                "title": "Consumer Protection (E-Commerce) Rules, 2020",
+                "locator": "Consumer Protection (E-Commerce) Rules, 2020, Rule 4(4)-(5), Gazette pages 3-4",
+                "canonical_url": "https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf"
+              }
+            ],
+            "grounding": "verified_legal_source",
+            "document_title": null
+          },
+          {
+            "block_id": "block-alternatives",
+            "block_type": "alternatives",
+            "title": "अगर इससे बात न बने",
+            "content": "अगर औपचारिक Grievance Officer पहले ही मना कर चुका है, शिकायत बंद कर चुका है या जवाब नहीं दे रहा, तो **1915** पर या consumerhelpline.gov.in पर National Consumer Helpline में शिकायत दर्ज करें। वही रिकॉर्ड अपलोड करें और साफ लिखें कि आप ₹5,000 का रिफंड या बदलाव चाहते हैं; यह कोर्ट से पहले का रास्ता है, लेकिन समाधान की गारंटी नहीं देता।\n\nअगर NCH से भी समाधान न मिले, तो आखिरी विकल्प District Consumer Commission में e-Jagriti से ऑनलाइन शिकायत है। ऐसी शिकायत सामान्यतः कारण पैदा होने के **दो साल के भीतर** दाखिल करनी होती है; फिलहाल आप पहले गैर-अदालती रास्ते आजमा सकते हैं।",
+            "items": [
+              "अगर औपचारिक Grievance Officer पहले ही मना कर चुका है, शिकायत बंद कर चुका है या जवाब नहीं दे रहा, तो **1915** पर या consumerhelpline.gov.in पर National Consumer Helpline में शिकायत दर्ज करें। वही रिकॉर्ड अपलोड करें और साफ लिखें कि आप ₹5,000 का रिफंड या बदलाव चाहते हैं; यह कोर्ट से पहले का रास्ता है, लेकिन समाधान की गारंटी नहीं देता।",
+              "अगर NCH से भी समाधान न मिले, तो आखिरी विकल्प District Consumer Commission में e-Jagriti से ऑनलाइन शिकायत है। ऐसी शिकायत सामान्यतः कारण पैदा होने के **दो साल के भीतर** दाखिल करनी होती है; फिलहाल आप पहले गैर-अदालती रास्ते आजमा सकते हैं।"
+            ],
+            "claim_ids": [
+              "claim-4",
+              "claim-5"
+            ],
+            "source_ids": [
+              "nch-about",
+              "india-code-cpa-2019"
+            ],
+            "sources": [
+              {
+                "source_id": "nch-about",
+                "title": "National Consumer Helpline (1915 / consumerhelpline.gov.in) — Department of Consumer Affairs",
+                "locator": "About National Consumer Helpline — Portal questions 1, 8 and 9 (Toll-Free 1915)",
+                "canonical_url": "https://consumerhelpline.gov.in/public/index.php/about"
+              },
+              {
+                "source_id": "nch-about",
+                "title": "National Consumer Helpline About",
+                "locator": "About portal questions 1 8 and 9",
+                "canonical_url": "https://consumeraffairs.gov.in/pages/nch"
+              },
+              {
+                "source_id": "india-code-cpa-2019",
+                "title": "Consumer Protection Act, 2019 — Sections 35 & 69 (India Code)",
+                "locator": "Consumer Protection Act, 2019, Sections 35(1) and 69",
+                "canonical_url": "https://www.indiacode.nic.in/bitstream/123456789/15256/1/eng201935.pdf"
+              }
+            ],
+            "grounding": "verified_legal_source",
+            "document_title": null
+          },
+          {
+            "block_id": "block-evidence_checklist",
+            "block_type": "evidence_checklist",
+            "title": "ये चीज़ें तैयार रखें",
+            "content": "आज ही इनवॉइस, वारंटी, भुगतान रिकॉर्ड, ईयरबड्स के सीरियल नंबर और खराबी का छोटा वीडियो संभालें। कंपनी व दुकानदार के मना करने वाले चैट या ईमेल के स्क्रीनशॉट भी रखें और शिकायत केवल लिखित रूप में भेजें। इन विवरणों से Grievance Officer के लिए छोटा शिकायत मसौदा तैयार किया जा सकता है।",
+            "items": [
+              "आज ही इनवॉइस, वारंटी, भुगतान रिकॉर्ड, ईयरबड्स के सीरियल नंबर और खराबी का छोटा वीडियो संभालें। कंपनी व दुकानदार के मना करने वाले चैट या ईमेल के स्क्रीनशॉट भी रखें और शिकायत केवल लिखित रूप में भेजें। इन विवरणों से Grievance Officer के लिए छोटा शिकायत मसौदा तैयार किया जा सकता है।"
+            ],
+            "claim_ids": [
+              "claim-3"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-question",
+            "block_type": "question",
+            "title": "एक बात बताइए",
+            "content": "क्या खरीद भारत में चलने वाले ऑनलाइन प्लेटफॉर्म से हुई थी, और क्या आपने उसकी सामान्य ग्राहक सेवा के बजाय औपचारिक Grievance Officer को लिखित शिकायत भेजी है?",
+            "items": [],
+            "claim_ids": [
+              "claim-6"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "requires_confirmation",
+            "document_title": null
+          }
+        ],
+        "factual_issues": [
+          "क्या खरीद भारत में संचालित ई-कॉमर्स प्लेटफॉर्म से हुई थी?",
+          "क्या औपचारिक Grievance Officer से लिखित शिकायत की गई है?",
+          "खरीद, खराबी और इनकार की सटीक तारीखें क्या हैं?"
+        ],
+        "legal_issues": [
+          "क्या इस ऑनलाइन खरीद पर Consumer Protection (E-Commerce) Rules, 2020 का शिकायत-निवारण नियम लागू होता है?",
+          "क्या आंतरिक शिकायत पूरी हो चुकी है, जिससे NCH अगला उचित रास्ता बने?",
+          "अगर मामला हल न हो, तो Consumer Commission में शिकायत की समय-सीमा कब से गिनी जाएगी?"
+        ],
+        "case_stage": "कंपनी और विक्रेता से सामान्य सहायता मांगी गई; औपचारिक Grievance Officer की स्थिति अपुष्ट है।",
+        "next_action": "प्लेटफॉर्म के औपचारिक Grievance Officer को सबूतों सहित लिखित शिकायत भेजें, या यह कदम पहले हो चुका हो तो NCH पर शिकायत दर्ज करें।",
+        "publication_status": "supported",
+        "assistance_status": null,
+        "document_status": null,
+        "legal_verification_status": null,
+        "call_telemetry": [
+          {
+            "call_id": "735272f5-1d48-49e9-b899-ca22c64f96ac",
+            "stage": "routing",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 55.0
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 7748,
+              "output_tokens": 653,
+              "total_tokens": 8401,
+              "attempt_details": [
+                {
+                  "input_tokens": 7748,
+                  "output_tokens": 653,
+                  "total_tokens": 8401,
+                  "input_details": {
+                    "cache_write_tokens": 7745,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 7745
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 299
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 7748,
+                  "output_tokens": 653,
+                  "total_tokens": 8401,
+                  "input_details": {
+                    "cache_write_tokens": 7745,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 7745
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 299
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_a1e8264a389b471aabac1c4f6d38a082"
+              }
+            ],
+            "elapsed_ms": 7740
+          },
+          {
+            "call_id": "8bce5632-b481-4b12-a754-6016c1832d5b",
+            "stage": "primary",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 50.128508133
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 10116,
+              "output_tokens": 3089,
+              "total_tokens": 13205,
+              "attempt_details": [
+                {
+                  "input_tokens": 10116,
+                  "output_tokens": 3089,
+                  "total_tokens": 13205,
+                  "input_details": {
+                    "cache_write_tokens": 10113,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 10113
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 1034
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 10116,
+                  "output_tokens": 3089,
+                  "total_tokens": 13205,
+                  "input_details": {
+                    "cache_write_tokens": 10113,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 10113
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 1034
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_53a8d9ed833146b7b9cabd5aa0d2a152"
+              }
+            ],
+            "elapsed_ms": 23684
+          },
+          {
+            "call_id": "6b061ba2-dbd0-43a7-80d0-6c6578c2fe0c",
+            "stage": "review",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 26.433805526
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 6754,
+              "output_tokens": 1630,
+              "total_tokens": 8384,
+              "attempt_details": [
+                {
+                  "input_tokens": 6754,
+                  "output_tokens": 1630,
+                  "total_tokens": 8384,
+                  "input_details": {
+                    "cache_write_tokens": 6751,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 6751
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 741
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 6754,
+                  "output_tokens": 1630,
+                  "total_tokens": 8384,
+                  "input_details": {
+                    "cache_write_tokens": 6751,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 6751
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 741
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_813aa2a2e538441c888c9c7a7aa33e03"
+              }
+            ],
+            "elapsed_ms": 18202
+          }
+        ],
+        "usage_completeness": "complete",
+        "case_update_allowed": true,
+        "engine_version": "primary-agent-v2.1-routed",
+        "metrics": {
+          "route": "verified",
+          "route_history": [
+            "verified"
+          ],
+          "provider_requests_reserved": 3,
+          "reported_tokens": 29990,
+          "conservative_tokens_reserved": 135966,
+          "outstanding_token_reservations": 0,
+          "queries": 0,
+          "documents_attempted": 0,
+          "research_batches": 0,
+          "remaining_seconds": 8.227,
+          "projected_cost_usd": null,
+          "cost_status": "unknown",
+          "estimated_cost_usd": null,
+          "known_estimated_cost_usd": null,
+          "actual_billed_cost_usd": null,
+          "pricing_date": null,
+          "total_ms": 49773,
+          "timing_scope": "runner; excludes API authorization and final database commit",
+          "time_to_first_useful_guidance_ms": 49773,
+          "reasoning_ms": 23684,
+          "review_ms": 18202,
+          "retrieval_ms": 0
+        },
+        "safety_messages": [],
+        "sources": [
+          {
+            "source_id": "cpa-ecommerce-rules-2020",
+            "passage_id": "prop-consumer-ecommerce-grievance-r4",
+            "title": "Consumer Protection (E-Commerce) Rules, 2020",
+            "locator": "Consumer Protection (E-Commerce) Rules, 2020, Rule 4(4)-(5), Gazette pages 3-4",
+            "text": "Under Rule 4(4)–(5) of the Consumer Protection (E-Commerce) Rules, 2020, every e-commerce entity must appoint a grievance officer, display their contact mechanism, acknowledge consumer complaints within 48 hours, and redress the complaint within one month from receipt; if the platform's Grievance Officer has already been contacted and failed to resolve or redirected the consumer back to ordinary support, internal escalation is exhausted and the consumer should escalate externally to the National Consumer Helpline (1915) or Consumer Commission.\n\nExact official passage: An e-commerce entity must maintain a grievance-redress mechanism and display the grievance officer's details. Rule 4 states that the officer must acknowledge a consumer complaint within forty-eight hours and redress it within one month from receipt.",
+            "canonical_url": "https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf",
+            "retrieved_at": "2026-11-07T00:00:00Z",
+            "limitations": "Notified 23-Jul-2020 (read with 2020 corrigendum and Consumer Protection (E-Commerce) Amendment Rules, 2021); verify official Gazette commencement before relying on any later draft or proposed amendment. Where internal Grievance Officer escalation has already been attempted without resolution, do not send the user back to internal support—advance to NCH (1915) / e-Jagriti. Exceptions: Does not automatically guarantee a refund where underlying physical return/pickup facts are disputed; If the user already emailed/contacted the Grievance Officer and was redirected or closed without redress, internal Rule 4 escalation is already attempted—recommend National Consumer Helpline (1915 / consumerhelpline.gov.in) next Treatment: in_force_with_2021_amendment.",
+            "origin": "certified_proposition",
+            "content_hash": "sha256:79fdf8f18d068d08cc3acd1571b74f724b429eda087fd981efd0725ce6d761dc",
+            "verification_status": "editor_certified",
+            "publication_date": "2020-07-23",
+            "effective_date": "2020-07-23",
+            "source_type": "indian_official",
+            "jurisdiction": "India",
+            "citation_number": 1
+          },
+          {
+            "source_id": "nch-about",
+            "passage_id": "prop-consumer-nch-prelitigation",
+            "title": "National Consumer Helpline (1915 / consumerhelpline.gov.in) — Department of Consumer Affairs",
+            "locator": "About National Consumer Helpline — Portal questions 1, 8 and 9 (Toll-Free 1915)",
+            "text": "When platform customer support and the platform's Grievance Officer have already closed, ignored, or redirected a consumer refund/return dispute (such as a disputed multi-item pickup where physical collection and system return records differ), the immediate external pre-litigation next step is filing a grievance on the National Consumer Helpline (NCH — toll-free 1915 or https://consumerhelpline.gov.in), which forwards the dispute to convergence companies with a typical up-to-30-day resolution window; if still unresolved, file a formal complaint before the District Consumer Commission via e-Jagriti (https://e-jagriti.gov.in/).\n\nExact official passage: The National Consumer Helpline portal is a pre-litigation grievance mechanism. It forwards grievances to the concerned company, agency, regulator or ombudsman. It does not guarantee a remedy. If the grievance is not resolved to the consumer's satisfaction, the consumer may approach the appropriate Consumer Commission. The portal says the process may take up to 30 days to reach a logical conclusion.",
+            "canonical_url": "https://consumerhelpline.gov.in/public/index.php/about",
+            "retrieved_at": "2026-11-07T00:00:00Z",
+            "limitations": "Official Department of Consumer Affairs pre-litigation mechanism; formal adjudication and enforceable refund/compensation orders lie with District/State/National Consumer Commissions via e-Jagriti under CPA 2019 (Section 35 / Section 69 two-year limitation). Exceptions: NCH is pre-litigation assistance, not a court, and filing on NCH does not pause the two-year statutory limitation under Section 69 CPA 2019 Treatment: official_guidance_verified.",
+            "origin": "certified_proposition",
+            "content_hash": "sha256:9239d3bf351b3df4ea2aaf5d4d1d7c8d63e57dfe392d9e918d8990785f322ba0",
+            "verification_status": "editor_certified",
+            "publication_date": "2020-07-20",
+            "effective_date": "2020-07-20",
+            "source_type": "indian_official",
+            "jurisdiction": "India",
+            "citation_number": 2
+          },
+          {
+            "source_id": "nch-about",
+            "passage_id": "nch-prelitigation",
+            "title": "National Consumer Helpline About",
+            "locator": "About portal questions 1 8 and 9",
+            "text": "The National Consumer Helpline (NCH) is a single point of access for consumers across India for grievance redressal at the pre-litigation stage. Consumers can register grievances in 17 languages by calling the toll-free number 1915 or through the web portal consumerhelpline.gov.in. The portal provides an alternate dispute redressal mechanism before litigation; it does not guarantee a refund or a remedy.",
+            "canonical_url": "https://consumeraffairs.gov.in/pages/nch",
+            "retrieved_at": "2026-11-20",
+            "limitations": "Official operational information checked on 20 November 2026; not a guarantee of refund or resolution. Incident-specific legal eligibility still requires assessment.",
+            "origin": "corpus",
+            "content_hash": "sha256:e507dba52e59a514316e2651f9191fb0d62509cdd032f1d936503d563f92455b",
+            "verification_status": "verified_official_candidate",
+            "publication_date": null,
+            "effective_date": null,
+            "source_type": null,
+            "jurisdiction": null,
+            "citation_number": 3
+          },
+          {
+            "source_id": "india-code-cpa-2019",
+            "passage_id": "prop-consumer-cpa2019-district-forum-s35",
+            "title": "Consumer Protection Act, 2019 — Sections 35 & 69 (India Code)",
+            "locator": "Consumer Protection Act, 2019, Sections 35(1) and 69",
+            "text": "Under Sections 35 and 69 of the Consumer Protection Act, 2019, if internal grievance redress and National Consumer Helpline pre-litigation efforts do not resolve a consumer deficiency or disputed refund, a consumer may file a formal complaint before the District Consumer Disputes Redressal Commission (electronically through https://e-jagriti.gov.in/) where paid consideration does not exceed Rs. 50 lakh, within two years from the date the cause of action arose.\n\nExact official passage: A complaint, in relation to any goods sold or delivered or agreed to be sold or delivered or any service provided or agreed to be provided, may be filed with a District Commission by the consumer... The District Commission, the State Commission or the National Commission shall not admit a complaint unless it is filed within two years from the date on which the cause of action has arisen.",
+            "canonical_url": "https://www.indiacode.nic.in/bitstream/123456789/15256/1/eng201935.pdf",
+            "retrieved_at": "2026-11-07T00:00:00Z",
+            "limitations": "Pecuniary jurisdiction revised by Consumer Protection (Jurisdiction of the District Commission, the State Commission and the National Commission) Rules, 2021 (District Commission up to Rs. 50 lakh paid consideration); online filing administered via e-Jagriti. Exceptions: Pure employer-employee unpaid salary disputes are employment matters, not consumer disputes under CPA 2019 Treatment: in_force_with_2021_2023_rules.",
+            "origin": "certified_proposition",
+            "content_hash": "sha256:e37905dd14522f1e56faedb34ab518784039d83cec7ff87301c71785f40c534e",
+            "verification_status": "editor_certified",
+            "publication_date": "2020-07-20",
+            "effective_date": "2020-07-20",
+            "source_type": "indian_official",
+            "jurisdiction": "India",
+            "citation_number": 4
+          }
+        ],
+        "case_version": 0,
+        "commit_receipt": {
+          "status": "staged_only",
+          "case_version": 0,
+          "committed_patch_ids": [],
+          "staged_patch_ids": [
+            "patch-1",
+            "patch-2",
+            "patch-3",
+            "patch-4",
+            "patch-5"
+          ],
+          "artifact_ids": []
+        }
+      }
+    },
+    "case_version": 0,
+    "sources": [
+      {
+        "source_id": "cpa-ecommerce-rules-2020",
+        "passage_id": "prop-consumer-ecommerce-grievance-r4",
+        "title": "Consumer Protection (E-Commerce) Rules, 2020",
+        "locator": "Consumer Protection (E-Commerce) Rules, 2020, Rule 4(4)-(5), Gazette pages 3-4",
+        "text": "Under Rule 4(4)–(5) of the Consumer Protection (E-Commerce) Rules, 2020, every e-commerce entity must appoint a grievance officer, display their contact mechanism, acknowledge consumer complaints within 48 hours, and redress the complaint within one month from receipt; if the platform's Grievance Officer has already been contacted and failed to resolve or redirected the consumer back to ordinary support, internal escalation is exhausted and the consumer should escalate externally to the National Consumer Helpline (1915) or Consumer Commission.\n\nExact official passage: An e-commerce entity must maintain a grievance-redress mechanism and display the grievance officer's details. Rule 4 states that the officer must acknowledge a consumer complaint within forty-eight hours and redress it within one month from receipt.",
+        "canonical_url": "https://consumeraffairs.gov.in/public/upload/files/E%20commerce%20rules_1732703966.pdf",
+        "retrieved_at": "2026-11-07T00:00:00Z",
+        "limitations": "Notified 23-Jul-2020 (read with 2020 corrigendum and Consumer Protection (E-Commerce) Amendment Rules, 2021); verify official Gazette commencement before relying on any later draft or proposed amendment. Where internal Grievance Officer escalation has already been attempted without resolution, do not send the user back to internal support—advance to NCH (1915) / e-Jagriti. Exceptions: Does not automatically guarantee a refund where underlying physical return/pickup facts are disputed; If the user already emailed/contacted the Grievance Officer and was redirected or closed without redress, internal Rule 4 escalation is already attempted—recommend National Consumer Helpline (1915 / consumerhelpline.gov.in) next Treatment: in_force_with_2021_amendment.",
+        "origin": "certified_proposition",
+        "content_hash": "sha256:79fdf8f18d068d08cc3acd1571b74f724b429eda087fd981efd0725ce6d761dc",
+        "verification_status": "editor_certified",
+        "publication_date": "2020-07-23",
+        "effective_date": "2020-07-23",
+        "source_type": "indian_official",
+        "jurisdiction": "India",
+        "citation_number": 1
+      },
+      {
+        "source_id": "nch-about",
+        "passage_id": "prop-consumer-nch-prelitigation",
+        "title": "National Consumer Helpline (1915 / consumerhelpline.gov.in) — Department of Consumer Affairs",
+        "locator": "About National Consumer Helpline — Portal questions 1, 8 and 9 (Toll-Free 1915)",
+        "text": "When platform customer support and the platform's Grievance Officer have already closed, ignored, or redirected a consumer refund/return dispute (such as a disputed multi-item pickup where physical collection and system return records differ), the immediate external pre-litigation next step is filing a grievance on the National Consumer Helpline (NCH — toll-free 1915 or https://consumerhelpline.gov.in), which forwards the dispute to convergence companies with a typical up-to-30-day resolution window; if still unresolved, file a formal complaint before the District Consumer Commission via e-Jagriti (https://e-jagriti.gov.in/).\n\nExact official passage: The National Consumer Helpline portal is a pre-litigation grievance mechanism. It forwards grievances to the concerned company, agency, regulator or ombudsman. It does not guarantee a remedy. If the grievance is not resolved to the consumer's satisfaction, the consumer may approach the appropriate Consumer Commission. The portal says the process may take up to 30 days to reach a logical conclusion.",
+        "canonical_url": "https://consumerhelpline.gov.in/public/index.php/about",
+        "retrieved_at": "2026-11-07T00:00:00Z",
+        "limitations": "Official Department of Consumer Affairs pre-litigation mechanism; formal adjudication and enforceable refund/compensation orders lie with District/State/National Consumer Commissions via e-Jagriti under CPA 2019 (Section 35 / Section 69 two-year limitation). Exceptions: NCH is pre-litigation assistance, not a court, and filing on NCH does not pause the two-year statutory limitation under Section 69 CPA 2019 Treatment: official_guidance_verified.",
+        "origin": "certified_proposition",
+        "content_hash": "sha256:9239d3bf351b3df4ea2aaf5d4d1d7c8d63e57dfe392d9e918d8990785f322ba0",
+        "verification_status": "editor_certified",
+        "publication_date": "2020-07-20",
+        "effective_date": "2020-07-20",
+        "source_type": "indian_official",
+        "jurisdiction": "India",
+        "citation_number": 2
+      },
+      {
+        "source_id": "nch-about",
+        "passage_id": "nch-prelitigation",
+        "title": "National Consumer Helpline About",
+        "locator": "About portal questions 1 8 and 9",
+        "text": "The National Consumer Helpline (NCH) is a single point of access for consumers across India for grievance redressal at the pre-litigation stage. Consumers can register grievances in 17 languages by calling the toll-free number 1915 or through the web portal consumerhelpline.gov.in. The portal provides an alternate dispute redressal mechanism before litigation; it does not guarantee a refund or a remedy.",
+        "canonical_url": "https://consumeraffairs.gov.in/pages/nch",
+        "retrieved_at": "2026-11-20",
+        "limitations": "Official operational information checked on 20 November 2026; not a guarantee of refund or resolution. Incident-specific legal eligibility still requires assessment.",
+        "origin": "corpus",
+        "content_hash": "sha256:e507dba52e59a514316e2651f9191fb0d62509cdd032f1d936503d563f92455b",
+        "verification_status": "verified_official_candidate",
+        "publication_date": null,
+        "effective_date": null,
+        "source_type": null,
+        "jurisdiction": null,
+        "citation_number": 3
+      },
+      {
+        "source_id": "india-code-cpa-2019",
+        "passage_id": "prop-consumer-cpa2019-district-forum-s35",
+        "title": "Consumer Protection Act, 2019 — Sections 35 & 69 (India Code)",
+        "locator": "Consumer Protection Act, 2019, Sections 35(1) and 69",
+        "text": "Under Sections 35 and 69 of the Consumer Protection Act, 2019, if internal grievance redress and National Consumer Helpline pre-litigation efforts do not resolve a consumer deficiency or disputed refund, a consumer may file a formal complaint before the District Consumer Disputes Redressal Commission (electronically through https://e-jagriti.gov.in/) where paid consideration does not exceed Rs. 50 lakh, within two years from the date the cause of action arose.\n\nExact official passage: A complaint, in relation to any goods sold or delivered or agreed to be sold or delivered or any service provided or agreed to be provided, may be filed with a District Commission by the consumer... The District Commission, the State Commission or the National Commission shall not admit a complaint unless it is filed within two years from the date on which the cause of action has arisen.",
+        "canonical_url": "https://www.indiacode.nic.in/bitstream/123456789/15256/1/eng201935.pdf",
+        "retrieved_at": "2026-11-07T00:00:00Z",
+        "limitations": "Pecuniary jurisdiction revised by Consumer Protection (Jurisdiction of the District Commission, the State Commission and the National Commission) Rules, 2021 (District Commission up to Rs. 50 lakh paid consideration); online filing administered via e-Jagriti. Exceptions: Pure employer-employee unpaid salary disputes are employment matters, not consumer disputes under CPA 2019 Treatment: in_force_with_2021_2023_rules.",
+        "origin": "certified_proposition",
+        "content_hash": "sha256:e37905dd14522f1e56faedb34ab518784039d83cec7ff87301c71785f40c534e",
+        "verification_status": "editor_certified",
+        "publication_date": "2020-07-20",
+        "effective_date": "2020-07-20",
+        "source_type": "indian_official",
+        "jurisdiction": "India",
+        "citation_number": 4
+      }
+    ],
+    "verification": {
+      "passed": true,
+      "publication_safe": true,
+      "scope": "published_claims_only",
+      "claim_checks": {
+        "claim-3": "risk_calibrated_consistency",
+        "claim-6": "non_assertive_clarification",
+        "claim-1": "independent_semantic_review",
+        "claim-2": "independent_semantic_review",
+        "claim-4": "independent_semantic_review",
+        "claim-5": "independent_semantic_review"
+      },
+      "independent_review_performed": true,
+      "legal_certification": true
+    },
+    "token_usage": {
+      "input_tokens": 24618,
+      "output_tokens": 5372,
+      "total_tokens": 29990
+    },
+    "ai_configured": true
+  },
+  "elapsed_seconds": 64.08
+}
