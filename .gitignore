@@ -1,4 +1,8 @@
 .env
+.env.local
+.env.*.local
+*.jks
+*.keystore
 .venv/
 .tools/
 __pycache__/

@@ -1,3 +1,4 @@
+import { backendConfig } from './backend'
 import { useEffect, useRef, useState } from 'react'
 import {
   BookOpen,
@@ -22,6 +23,7 @@ import { api } from './api'
 import { apiFetch } from './byok'
 import Composer from './components/Composer'
 import { AgentWorkflowPanel, CasePanel, Drawer, KnowledgeBasePanel, Sources } from './components/Drawer'
+import { MyCasesPanel, ThreeActionHome } from './components/ActionWorkflowsPanel'
 import MessageView from './components/MessageView'
 import PracticePanel from './components/PracticePanel'
 import SettingsPanel, { type SettingsTab } from './components/SettingsPanel'
@@ -55,13 +57,13 @@ const welcome:Message={id:'welcome',role:'assistant',status:'complete',created_a
 
 export default function App(){
   const [items,setItems]=useState<Conversation[]>([]),[active,setActive]=useState(''),[detail,setDetail]=useState<Detail|null>(null)
-  const [sidebar,setSidebar]=useState(false),[panel,setPanel]=useState<'case'|'sources'|'drafts'|'roleplay'|'settings'|null>(null),[sources,setSources]=useState<Source[]>([]),[sourceFocus,setSourceFocus]=useState<number|undefined>()
+  const [sidebar,setSidebar]=useState(false),[panel,setPanel]=useState<'case'|'my_cases'|'sources'|'drafts'|'roleplay'|'settings'|null>(null),[sources,setSources]=useState<Source[]>([]),[sourceFocus,setSourceFocus]=useState<number|undefined>()
   const [settingsTab,setSettingsTab]=useState<SettingsTab>('devspace')
   const [streamEvents,setStreamEvents]=useState<StreamEvent[]>([])
   const [knowledge,setKnowledge]=useState<KnowledgeBase|null>(null),[workflow,setWorkflow]=useState<AgentWorkflow|null>(null)
   const [language,setLanguage]=useState<Language>('en'),[sending,setSending]=useState(false),[error,setError]=useState(''),[menu,setMenu]=useState(false)
   const [devspace,setDevspace]=useState(false)
-  const [configured,setConfigured]=useState(true),pending=useRef<{text:string;id:string;caseId:string;language:Language;attachments:string[]}|null>(null),attachments=useRef<string[]>([]),bottom=useRef<HTMLDivElement>(null)
+  const [configured,setConfigured]=useState(true),pending=useRef<{text:string;id:string;caseId:string;language:Language;attachments:string[];lastSeq?:number; admitted?:boolean}|null>(null),attachments=useRef<string[]>([]),bottom=useRef<HTMLDivElement>(null)
   const thinkingStartRef = useRef<number | null>(null)
   const [elapsedThinking, setElapsedThinking] = useState(0)
   const [lastDuration, setLastDuration] = useState<number | null>(null)
@@ -69,14 +71,64 @@ export default function App(){
   const [safety,setSafety]=useState<SafetyMessage[]>([])
   const initialized=useRef(false)
   function onProgress(event:StreamEvent){
+    if(typeof event.seq==='number'&&pending.current){pending.current.lastSeq=Math.max(pending.current.lastSeq||0,event.seq)}
     setStreamEvents(prev=>[...prev,{...event,timestamp:new Date().toLocaleTimeString()}])
     if(event.type==='safety'&&event.content_id&&event.text&&event.request_id){
       const item:SafetyMessage={type:'safety',content_id:event.content_id,text:event.text,request_id:event.request_id,sources:event.sources||[]}
       setSafety(previous=>previous.some(x=>x.content_id===item.content_id&&x.request_id===item.request_id)?previous:[...previous,item])
+    }else if(event.type==='answer_block'&&event.block&&event.request_id){
+      const reqId=event.request_id,blk=event.block,streamMsgId=`${reqId}:streaming`
+      setDetail(prev=>{
+        if(!prev || prev.conversation.id!==pending.current?.caseId)return prev
+        const existingIdx=prev.messages.findIndex(m=>m.id===streamMsgId)
+        if(existingIdx<0){
+          const liveMsg:Message={id:streamMsgId,role:'assistant',status:'streaming',created_at:new Date().toISOString(),content:blk.content,metadata:{resolution_blocks:[blk]}}
+          return {...prev,messages:[...prev.messages,liveMsg]}
+        }
+        const cur=prev.messages[existingIdx]
+        const prevBlocks=cur.metadata?.resolution_blocks||[]
+        const nextBlocks=prevBlocks.some(b=>b.block_id===blk.block_id)?prevBlocks.map(b=>b.block_id===blk.block_id?blk:b):[...prevBlocks,blk]
+        const updatedMsg:Message={...cur,content:nextBlocks.map(b=>b.content).join('\n\n'),metadata:{...cur.metadata,resolution_blocks:nextBlocks}}
+        const nextMessages=[...prev.messages];nextMessages[existingIdx]=updatedMsg
+        return {...prev,messages:nextMessages}
+      })
     }else if(event.status==='running'||event.stage==='saving')setProgress(stageLabels[event.stage]||'Preparing your response…')
   }
   const stageLabels:Record<string,string>={saving:'Saving your message…',triage:'Checking what help you need…',intake:'Organising the facts…',research:'Searching saved legal sources…',assess_information:'Checking whether the sources cover your question…',web_research:'Researching the missing information…',web_search:'Searching official websites…',web_fetch:'Reading official pages and documents…',respond:'Preparing your response…',review:'Checking facts and citations…',revise:'Refining the response after review…',verify:'Finalising the checked response…'}
   useEffect(()=>{if(initialized.current)return;initialized.current=true;void initialise()},[]); useEffect(()=>{bottom.current?.scrollIntoView({behavior:'smooth'})},[detail?.messages,sending])
+  // Package 3: Android hardware back button closes open menu/drawer/sidebar before exiting app,
+  // and handles in.nyaysaathi.app://oauth-callback deep links.
+  useEffect(() => {
+    window.__nyayHandleBackPress = () => {
+      if (menu) { setMenu(false); return true }
+      if (panel) { setPanel(null); return true }
+      if (sidebar) { setSidebar(false); return true }
+      return false
+    }
+    const handleOAuthDetail = (detail?: { provider?: string; error?: string }) => {
+      if (!detail) return
+      if (detail.error) {
+        setError(`Google connection was cancelled or failed: ${detail.error}`)
+      } else {
+        setPanel('case')
+      }
+    }
+    if (window.__nyayPendingOAuthCallback) {
+      const pendingOAuth = window.__nyayPendingOAuthCallback
+      delete window.__nyayPendingOAuthCallback
+      handleOAuthDetail(pendingOAuth)
+    }
+    const onOAuthCallback = (ev: Event) => {
+      const custom = ev as CustomEvent<{ provider?: string; error?: string }>
+      delete window.__nyayPendingOAuthCallback
+      handleOAuthDetail(custom.detail)
+    }
+    window.addEventListener('nyay:oauth-callback', onOAuthCallback)
+    return () => {
+      delete window.__nyayHandleBackPress
+      window.removeEventListener('nyay:oauth-callback', onOAuthCallback)
+    }
+  }, [menu, panel, sidebar])
   useEffect(() => {
     if (!sending) return
     const timer = setInterval(() => {
@@ -93,7 +145,16 @@ export default function App(){
   async function initialise(){try{const boot=await api.bootstrap();setConfigured(boot.ai_configured);setDevspace(Boolean(boot.devspace_enabled));const list=await api.list();setItems(list);if(list[0])await select(list[0].id);else await makeNew()}catch(e){setError((e as Error).message)}}
   async function refresh(){const list=await api.list();setItems(list)}
   async function makeNew(){try{const c=await api.create(language);await refresh();await select(c.id);setSidebar(false)}catch(e){setError((e as Error).message)}}
-  async function select(id:string){try{const d=await api.detail(id);attachments.current=[];setSafety(d.safety_messages||[]);setActive(id);setDetail(d);setLanguage(d.conversation.language);setSidebar(false);history.replaceState({},'',`/chat/${id}`)}catch(e){setError((e as Error).message)}}
+  async function makeNewInCase(caseId:string,lang:Language){try{const c=await api.create(lang,caseId);await refresh();await select(c.id);setPanel(null);setSidebar(false)}catch(e){setError((e as Error).message)}}
+  async function select(id:string){try{const d=await api.detail(id);attachments.current=[];setSafety(d.safety_messages||[]);setActive(id);setDetail(d);setLanguage(d.conversation.language);setSidebar(false);history.replaceState({},'',`/chat/${id}`)
+    if(backendConfig().mode==='supabase' && !pending.current) {
+      const turn=await api.activeTurn(id)
+      if(turn) {
+        pending.current={text:'',id:turn.request_id,caseId:id,language:d.conversation.language,attachments:[],admitted:true}
+        void retry(id)
+      }
+    }
+  }catch(e){setError((e as Error).message)}}
   async function send(text:string){
     if(!active||sending)return false
     const cid=active, req=crypto.randomUUID(), files=[...attachments.current]
@@ -137,7 +198,7 @@ export default function App(){
   async function showKnowledge(){showSettings('knowledge');try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}
   async function showWorkflow(){showSettings('workflow');try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}
   function showDevspace(){showSettings('devspace')}
-  async function retry(){const p=pending.current;if(!p||p.caseId!==active||sending)return;thinkingStartRef.current=Date.now();setElapsedThinking(0);setSending(true);setError('');try{await api.streamTurn(p.caseId,p.text,p.language,p.id,p.attachments,onProgress);const result=await api.detail(p.caseId);setDetail(d=>d?.conversation.id===p.caseId?result:d);pending.current=null;await refresh()}catch(e){setError((e as Error).message)}finally{if(thinkingStartRef.current){setLastDuration(Math.max(1,Math.round((Date.now()-thinkingStartRef.current)/100)/10))};thinkingStartRef.current=null;setSending(false)}}
+  async function retry(chat=active){const p=pending.current;if(!p||p.caseId!==chat||sending)return;thinkingStartRef.current=Date.now();setElapsedThinking(0);setSending(true);setError('');try{if(p.admitted)await api.resumeTurn(p.caseId,p.id,onProgress,p.lastSeq||0);else await api.streamTurn(p.caseId,p.text,p.language,p.id,p.attachments,onProgress,p.lastSeq||0);const result=await api.detail(p.caseId);setDetail(d=>d?.conversation.id===p.caseId?result:d);pending.current=null;await refresh()}catch(e){setError((e as Error).message)}finally{if(thinkingStartRef.current){setLastDuration(Math.max(1,Math.round((Date.now()-thinkingStartRef.current)/100)/10))};thinkingStartRef.current=null;setSending(false)}}
   async function speech(m:Message){const response=await apiFetch(`/api/conversations/${active}/messages/${m.id}/speech`,{method:'POST',credentials:'include',headers:{'X-CSRF-Token':decodeURIComponent(document.cookie.split('; ').find(x=>x.startsWith('nyay_csrf='))?.split('=')[1]||'')}});if(!response.ok){setError('Audio could not be created. The text answer is still available.');return}new Audio(URL.createObjectURL(await response.blob())).play()}
   const messages=detail?.messages.length?detail.messages:[welcome]
   const hasSufficientContext = Boolean(
@@ -191,6 +252,7 @@ export default function App(){
           <div className="menu-wrap">
             <button aria-label="Case menu" onClick={()=>setMenu(!menu)}><MoreHorizontal/></button>
             {menu&&<div className="dropdown">
+              <button onClick={()=>{setMenu(false);setPanel('my_cases')}}><BookOpen size={15}/> My cases</button>
               <button onClick={rename}><Pencil size={15}/> Rename chat</button>
               <button onClick={()=>exportCase('docx')}><FileText size={15}/> Export DOCX</button>
               <button onClick={()=>exportCase('pdf')}><FileText size={15}/> Export PDF</button>
@@ -215,7 +277,7 @@ export default function App(){
               message={m}
               thoughtDuration={isLatestAssistant ? lastDuration : undefined}
               onSources={(s, focus) => { setSources(s); setSourceFocus(focus); setPanel('sources') }}
-              onRetry={m.status === 'failed' ? retry : undefined}
+              onRetry={m.status === 'failed' ? () => void retry() : undefined}
               onSpeech={m.role === 'assistant' ? () => speech(m) : undefined}
               onOpenCase={() => setPanel('case')}
             />
@@ -233,23 +295,26 @@ export default function App(){
           </div>
         ))}
         {messages.length===1&&messages[0].id==='welcome'&&(
-          <div className="starters">
-            {starterCards.map(s=>{
-              const Icon = s.icon
-              return (
-                <button key={s.text} onClick={()=>send(s.text)}>
-                  <div className="starter-content">
-                    <div className="starter-title-row">
-                      <Icon size={16} className="starter-icon" aria-hidden="true" />
-                      <span className="starter-title">{s.text}</span>
+          <>
+            <ThreeActionHome onSelectPrompt={send} onOpenMyCases={()=>setPanel('my_cases')}/>
+            <div className="starters">
+              {starterCards.map(s=>{
+                const Icon = s.icon
+                return (
+                  <button key={s.text} onClick={()=>send(s.text)}>
+                    <div className="starter-content">
+                      <div className="starter-title-row">
+                        <Icon size={16} className="starter-icon" aria-hidden="true" />
+                        <span className="starter-title">{s.text}</span>
+                      </div>
+                      <small className="starter-hint">{s.hint}</small>
                     </div>
-                    <small className="starter-hint">{s.hint}</small>
-                  </div>
-                  <ChevronDown size={15} className="starter-chevron" aria-hidden="true" />
-                </button>
-              )
-            })}
-          </div>
+                    <ChevronDown size={15} className="starter-chevron" aria-hidden="true" />
+                  </button>
+                )
+              })}
+            </div>
+          </>
         )}
         {sending&&(
           <div className="thinking" role="status">
@@ -274,8 +339,13 @@ export default function App(){
           </div>
         )}{error&&<div className="inline-error" role="alert">{error}</div>}<div ref={bottom}/>
       </div></section>
+      {sending && pending.current?.caseId===active && backendConfig().mode==='supabase' &&
+        <button type="button" onClick={()=>{
+          const run=pending.current
+          if(run) void api.cancelTurn(run.caseId,run.id).catch(e=>setError(e.message))
+        }}>Cancel turn</button>}
       <Composer key={active} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}/>
     </main>
-    {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='settings'?(settingsTab==='knowledge'?'Knowledge Base':settingsTab==='workflow'?'Agent Workflow':settingsTab==='key'?'Your OpenAI key':'Settings'):panel==='roleplay'?'Roleplay':'Drafts'} hideHeader={panel==='roleplay'} onClose={()=>setPanel(null)}>{panel==='settings'?<SettingsPanel initialTab={settingsTab} onTabChange={setSettingsTab} knowledge={knowledge} workflow={workflow} devspaceEnabled={devspace} onLoadKnowledge={async()=>{try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}} onLoadWorkflow={async()=>{try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}} onDevspaceSaved={result=>setConfigured(result.configured)} onKeyChange={setConfigured}/>:panel==='roleplay'&&detail?<PracticePanel caseId={active} language={language} onClose={()=>setPanel(null)}/>:panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
+    {panel&&<Drawer title={panel==='case'?'Your case':panel==='my_cases'?'My cases':panel==='sources'?'Sources':panel==='settings'?(settingsTab==='knowledge'?'Knowledge Base':settingsTab==='workflow'?'Agent Workflow':settingsTab==='key'?'Your OpenAI key':'Settings'):panel==='roleplay'?'Roleplay':'Drafts'} hideHeader={panel==='roleplay'} onClose={()=>setPanel(null)}>{panel==='settings'?<SettingsPanel initialTab={settingsTab} onTabChange={setSettingsTab} knowledge={knowledge} workflow={workflow} devspaceEnabled={devspace} onLoadKnowledge={async()=>{try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}} onLoadWorkflow={async()=>{try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}} onDevspaceSaved={result=>setConfigured(result.configured)} onKeyChange={setConfigured}/>:panel==='roleplay'&&detail?<PracticePanel caseId={active} language={language} onClose={()=>setPanel(null)}/>:panel==='my_cases'?<MyCasesPanel conversations={items} activeConversationId={active} language={language} onSelectConversation={id=>{void select(id);setPanel(null)}} onNewChatInCase={makeNewInCase}/>:panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
   </div>
 }

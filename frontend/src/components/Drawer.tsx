@@ -24,6 +24,12 @@ import { api } from '../api'
 import { SECTION_ICONS } from '../icons'
 import JourneyPanel from './JourneyPanel'
 import DraftEditor from './DraftEditor'
+import {
+  DistinctLifecycleTracker,
+  DriveEvidenceSection,
+  EmailReviewAndGmailSection,
+  VerifiedContactCards,
+} from './ActionWorkflowsPanel'
 
 export function Drawer({title,onClose,children,hideHeader=false}:{title:string;onClose:()=>void;children:React.ReactNode;hideHeader?:boolean}){return <div className="panel-backdrop" onMouseDown={e=>{if(e.currentTarget===e.target)onClose()}}><aside className="panel">{!hideHeader&&<header><h2>{title}</h2><button onClick={onClose} aria-label="Close panel"><X/></button></header>}{children}</aside></div>}
 // A bare site root means the exact document is not linked; say so instead of implying it opens.
@@ -130,6 +136,16 @@ function BundleCard({bundle,caseId}:{bundle:EscalationBundle;caseId:string}){
   </div>
 }
 
+type WorkspaceSection =
+  | 'all'
+  | 'overview'
+  | 'evidence'
+  | 'legal_basis'
+  | 'documents'
+  | 'communications'
+  | 'timeline'
+  | 'next_actions'
+
 export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh?:()=>void;onImported?:(cid:string)=>void}){
   const m=detail.case_memory, facts=Object.entries(m.facts)
   const conflicts=m.contradictions.filter(x=>!(x as {resolved?:boolean}).resolved)
@@ -138,11 +154,21 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
   const nextStep=latestAssistant?.metadata?.next_action || latestAssistant?.metadata?.resolution_blocks?.find(b=>b.block_type==='immediate_actions'||b.block_type==='recommended_route')?.content
   const stage=latestAssistant?.metadata?.case_stage || (m.journey?.outcome && m.journey.outcome !== 'unknown' ? m.journey.outcome : 'intake')
 
+  const [workspaceTab,setWorkspaceTab]=useState<WorkspaceSection>('all')
   const [actionTitle,setActionTitle]=useState(''),[actionBusy,setActionBusy]=useState(false)
   const [subChannel,setSubChannel]=useState('Grievance Officer / Portal'),[subReceipt,setSubReceipt]=useState(''),[subMsg,setSubMsg]=useState('')
   const [bundle,setBundle]=useState<EscalationBundle|null>(null),[bundleLoading,setBundleLoading]=useState(false)
   const [passphrase,setPassphrase]=useState(''),[transferJson,setTransferJson]=useState(''),[transferMsg,setTransferMsg]=useState('')
   const cid=detail.conversation.id
+
+  const citedSources = Array.from(
+    new Map(
+      detail.messages
+        .flatMap(msg => msg.metadata?.sources || [])
+        .map(src => [src.passage_id || src.source_id, src])
+    ).values()
+  )
+  const showSec = (sec: WorkspaceSection) => workspaceTab === 'all' || workspaceTab === sec
 
   const isUrgentOrCriminal =
     m.domain === 'criminal' ||
@@ -178,12 +204,36 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
   const verifiedFacts=facts.filter(([,f])=>f.status==='user_confirmed'||f.status==='document_statement')
   const reportedFacts=facts.filter(([,f])=>f.status!=='user_confirmed'&&f.status!=='document_statement')
 
+  const workspaceTabs: Array<{ id: WorkspaceSection; label: string }> = [
+    { id: 'all', label: 'All' },
+    { id: 'overview', label: 'Overview' },
+    { id: 'evidence', label: 'Evidence' },
+    { id: 'legal_basis', label: 'Legal Basis' },
+    { id: 'documents', label: 'Documents' },
+    { id: 'communications', label: 'Communications' },
+    { id: 'timeline', label: 'Timeline' },
+    { id: 'next_actions', label: 'Next Actions' },
+  ]
+
   return <div className="panel-content case-workspace">
     {/* TIER 1: IMMEDIATE PRIORITY & ORIENTATION */}
     <div className="case-version">
       <span>Private case · v{m.version}</span>
       {m.domain && <span className={`case-domain-pill ${m.domain}`}>{humanLabel(m.domain)}</span>}
       <span className="case-stage-label">Stage: {humanLabel(stage)}</span>
+    </div>
+
+    <div className="knowledge-tabs workspace-section-tabs" aria-label="Case workspace sections">
+      {workspaceTabs.map(t => (
+        <button
+          key={t.id}
+          type="button"
+          className={workspaceTab === t.id ? 'active' : ''}
+          onClick={() => setWorkspaceTab(t.id)}
+        >
+          {t.label}
+        </button>
+      ))}
     </div>
 
     {nextStep&&<div className="next-step-banner priority">
@@ -204,7 +254,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
       )}
     </section>}
 
-    {isUrgentOrCriminal && (
+    {isUrgentOrCriminal && showSec('documents') && (
       <section className="elevated-bundle-section">
         <div className="elevated-bundle-header">
           <Scale size={16}/>
@@ -224,19 +274,22 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     )}
 
     {/* TIER 2: THE GROUND TRUTH (FACTUAL CORE & EVIDENCE) */}
-    <section className="case-overview">
-      <h3>What happened</h3>
-      <p>{overview}</p>
-      <span className="muted">Based on your account and supplied documents.</span>
-      {m.requested_remedy ? (
-        <>
-          <h3>What you want</h3>
-          <p>{m.requested_remedy}</p>
-        </>
-      ) : null}
-    </section>
+    {showSec('overview') && (
+      <section className="case-overview">
+        <h3>What happened</h3>
+        <p>{overview}</p>
+        <span className="muted">Based on your account and supplied documents.</span>
+        {m.requested_remedy ? (
+          <>
+            <h3>What you want</h3>
+            <p>{m.requested_remedy}</p>
+          </>
+        ) : null}
+        {workspaceTab === 'overview' && <DistinctLifecycleTracker conversationId={cid} onRefresh={onRefresh} />}
+      </section>
+    )}
 
-    {!!m.events?.length&&<details className="case-section" open>
+    {showSec('timeline') && !!m.events?.length&&<details className="case-section" open>
       <summary><span className="section-title-wrap"><CalendarClock size={16} aria-hidden="true"/> Timeline</span> <small>{m.events.length}</small></summary>
       <div className="workspace-numbered-timeline">
         {m.events.map((item,i)=>(
@@ -251,13 +304,35 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
       </div>
     </details>}
 
-    <details className="case-section" open>
-      <summary><span className="section-title-wrap"><Paperclip size={16} aria-hidden="true"/> Evidence</span> <small>{detail.attachments.length}</small></summary>
-      {detail.attachments.map(a=><EvidencePreview key={a.id} attachment={a} caseId={cid} onRefresh={onRefresh}/>)}
-      {!detail.attachments.length&&<p className="muted">Add an invoice, FIR copy, seizure memo, or screenshot using the attachment button.</p>}
-    </details>
+    {showSec('evidence') && (
+      <details className="case-section" open>
+        <summary><span className="section-title-wrap"><Paperclip size={16} aria-hidden="true"/> Evidence</span> <small>{detail.attachments.length}</small></summary>
+        {detail.attachments.map(a=><EvidencePreview key={a.id} attachment={a} caseId={cid} onRefresh={onRefresh}/>)}
+        {!detail.attachments.length&&<p className="muted">Add an invoice, FIR copy, seizure memo, or screenshot using the attachment button.</p>}
+        {workspaceTab === 'evidence' && <DriveEvidenceSection conversationId={cid} onRefresh={onRefresh} />}
+      </details>
+    )}
 
-    {!!facts.length&&<details className="case-section">
+    {showSec('legal_basis') && (workspaceTab === 'legal_basis' || citedSources.length > 0 || (m.legal_issues_for_review?.length || 0) > 0) && (
+      <details className="case-section" open={workspaceTab === 'legal_basis'}>
+        <summary><span className="section-title-wrap"><Scale size={16} aria-hidden="true"/> Legal Basis</span> <small>{citedSources.length}</small></summary>
+        {citedSources.length === 0 ? (
+          <p className="muted">Verified statutory provisions and official sources cited in your answers will appear here with effective dates and limitations.</p>
+        ) : (
+          <div className="workspace-stack">
+            {citedSources.map(s => (
+              <div className="knowledge-card" key={s.passage_id || s.source_id}>
+                <b>{s.title}</b>
+                <p className="muted">{s.locator}</p>
+                <small className="muted">{s.limitations}</small>
+              </div>
+            ))}
+          </div>
+        )}
+      </details>
+    )}
+
+    {showSec('overview') && !!facts.length&&<details className="case-section">
       <summary><span className="section-title-wrap"><ListTree size={16} aria-hidden="true"/> Important facts</span> <small>{facts.length}</small></summary>
       {!!verifiedFacts.length&&<p className="muted"><b>Confirmed / documentary ({verifiedFacts.length})</b> · Reported / pending check ({reportedFacts.length})</p>}
       <div className="workspace-numbered-facts">
@@ -277,7 +352,7 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
       </div>
     </details>}
 
-    {!!(m.parties?.length||m.locations?.length)&&<details className="case-section">
+    {showSec('overview') && !!(m.parties?.length||m.locations?.length)&&<details className="case-section">
       <summary><span className="section-title-wrap"><Users size={16} aria-hidden="true"/> People and places</span> <small>{(m.parties?.length||0)+(m.locations?.length||0)}</small></summary>
       <ul className="workspace-bullet-list">
         {[...(m.parties||[]),...(m.locations||[])].map((item,i)=>(
@@ -289,42 +364,47 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
     </details>}
 
     {/* TIER 3: DOMAIN-AWARE ACTION & PREPARATION */}
-    <details className="case-section" open>
-      <summary><span className="section-title-wrap"><CheckSquare size={16} aria-hidden="true"/> Action tracker</span> <small>{(detail.user_actions?.length||0)+m.actions_completed.length}</small></summary>
-      <p className="muted">Record steps you took outside chat so your strategy adjusts automatically.</p>
-      <div className="workspace-form-row">
-        <input
-          aria-label="Record completed action"
-          placeholder={m.domain==='criminal'?'e.g. Visited thana, asked for FIR copy, met advocate':'e.g. Sent grievance email with order screenshot'}
-          value={actionTitle}
-          onChange={e=>setActionTitle(e.target.value)}
-        />
-        <button type="button" disabled={actionBusy||actionTitle.trim().length<2} onClick={logAction}>Add</button>
-      </div>
-      {detail.user_actions?.map(act=><div className="action-item" key={act.id}><label><input type="checkbox" checked={act.status==='completed'} onChange={()=>toggleAction(act.id,act.status)}/><span>{act.title}</span></label><small>{humanLabel(act.status)}</small></div>)}
-      {!!m.actions_completed.length && (
-        <ul className="workspace-bullet-list">
-          {m.actions_completed.map((x,i)=><li key={i}><span className="completed-check">✓</span> {x}</li>)}
-        </ul>
-      )}
-      {!!m.responses_received?.length && (
-        <ul className="workspace-bullet-list">
-          {m.responses_received.map((x,i)=><li key={`r${i}`}>{String(x.description||x.content||'Response recorded')}</li>)}
-        </ul>
-      )}
-    </details>
+    {showSec('next_actions') && (
+      <details className="case-section" open>
+        <summary><span className="section-title-wrap"><CheckSquare size={16} aria-hidden="true"/> Action tracker</span> <small>{(detail.user_actions?.length||0)+m.actions_completed.length}</small></summary>
+        <p className="muted">Record steps you took outside chat so your strategy adjusts automatically.</p>
+        <div className="workspace-form-row">
+          <input
+            aria-label="Record completed action"
+            placeholder={m.domain==='criminal'?'e.g. Visited thana, asked for FIR copy, met advocate':'e.g. Sent grievance email with order screenshot'}
+            value={actionTitle}
+            onChange={e=>setActionTitle(e.target.value)}
+          />
+          <button type="button" disabled={actionBusy||actionTitle.trim().length<2} onClick={logAction}>Add</button>
+        </div>
+        {detail.user_actions?.map(act=><div className="action-item" key={act.id}><label><input type="checkbox" checked={act.status==='completed'} onChange={()=>toggleAction(act.id,act.status)}/><span>{act.title}</span></label><small>{humanLabel(act.status)}</small></div>)}
+        {!!m.actions_completed.length && (
+          <ul className="workspace-bullet-list">
+            {m.actions_completed.map((x,i)=><li key={i}><span className="completed-check">✓</span> {x}</li>)}
+          </ul>
+        )}
+        {!!m.responses_received?.length && (
+          <ul className="workspace-bullet-list">
+            {m.responses_received.map((x,i)=><li key={`r${i}`}>{String(x.description||x.content||'Response recorded')}</li>)}
+          </ul>
+        )}
+        {workspaceTab === 'next_actions' && (
+          <VerifiedContactCards conversationId={cid} domain={m.domain} onActionLogged={onRefresh} />
+        )}
+      </details>
+    )}
 
-    {!!detail.drafts.length&&<details className="case-section">
+    {showSec('documents') && !!detail.drafts.length&&<details className="case-section" open={workspaceTab === 'documents'}>
       <summary><span className="section-title-wrap"><FileText size={16} aria-hidden="true"/> Drafts</span> <small>{detail.drafts.length}</small></summary>
       {detail.drafts.map(d=><details key={d.id}><summary>{d.title} · {humanLabel(d.status)}</summary><DraftEditor draft={d} caseId={cid}/></details>)}
     </details>}
 
-    {m.domain!=='criminal'&&m.journey&&(m.journey.events.length>0||m.journey.recommendations.length>0)&&(
+    {showSec('timeline') && m.domain!=='criminal'&&m.journey&&(m.journey.events.length>0||m.journey.recommendations.length>0)&&(
       <JourneyPanel journey={m.journey} caseVersion={m.version}/>
     )}
 
-    {!isUrgentOrCriminal && (
-      <details className="case-section">
+    {showSec('documents') && !isUrgentOrCriminal && (
+      <details className="case-section" open={workspaceTab === 'documents'}>
         <summary><span className="section-title-wrap"><Scale size={16} aria-hidden="true"/> Lawyer escalation bundle</span></summary>
         <p className="muted">A summary to share with a lawyer or legal-aid clinic: what happened, your facts, open questions and the sources used. It contains only what you told us and the sources shown.</p>
         <button type="button" className="workspace-btn" disabled={bundleLoading} onClick={loadBundle}><Scale size={14}/> {bundleLoading?'Preparing bundle…':'Prepare Lawyer Escalation Bundle'}</button>
@@ -333,26 +413,37 @@ export function CasePanel({detail,onRefresh,onImported}:{detail:Detail;onRefresh
       </details>
     )}
 
+    {workspaceTab === 'communications' && (
+      <EmailReviewAndGmailSection
+        conversationId={cid}
+        attachments={detail.attachments}
+        drafts={detail.drafts}
+        onRefresh={onRefresh}
+      />
+    )}
+
     {/* TIER 4: ADMINISTRATIVE AUDIT & SYSTEM */}
     {!!detail.case_proposals?.length&&<details className="case-section"><summary>Case details awaiting review</summary><p className="muted">These are proposed details. They have not changed your saved case. Correct or restate the details in chat before using them.</p>{detail.case_proposals.map(proposal=><div key={proposal.message_id}>{proposal.base_version!==m.version&&<small className="muted">Earlier proposal — check against your latest case.</small>}{Object.entries(proposal.proposed_facts).filter(([key,fact])=>m.facts[key]?.value!==fact.value).map(([key,fact])=><p key={key}><b>{humanLabel(key)}</b>: {fact.value}</p>)}</div>)}</details>}
     {!!detail.staged_patches?.length&&<details className="case-section"><summary>Details needing clarification <small>{detail.staged_patches.length}</small></summary><p className="muted">These proposals have not changed your saved case. Correct or clarify them in chat.</p>{detail.staged_patches.map(({patch,reason})=><div className="case-fact" key={patch.patch_id}><b>{humanLabel(patch.payload.key||patch.payload.role||'Proposed detail')}</b><p>{patch.payload.value||patch.payload.description||patch.payload.name}</p><small className="muted">{reason}</small></div>)}</details>}
 
-    <details className="case-section">
-      <summary><span className="section-title-wrap"><Send size={16} aria-hidden="true"/> User-confirmed submission tracker</span> <small>{detail.submission_steps?.length||0}</small></summary>
-      <p className="muted">Nyay Saathi never files, signs, or pays on your behalf. Confirm each stage yourself and store your acknowledgment reference.</p>
-      <div className="workspace-stack">
-        <input aria-label="Target forum or channel" value={subChannel} onChange={e=>setSubChannel(e.target.value)} placeholder="Forum / Grievance Officer"/>
-        <input aria-label="Submission receipt or ticket reference" value={subReceipt} onChange={e=>setSubReceipt(e.target.value)} placeholder="Docket / NCH / Ticket number (optional)"/>
-        <div className="step-buttons">
-          <button type="button" onClick={()=>recordStep('previewed')}>1. Previewed</button>
-          <button type="button" onClick={()=>recordStep('consented')}>2. Explicit consent</button>
-          <button type="button" onClick={()=>recordStep('submitted_by_user')}>3. I submitted</button>
-          <button type="button" onClick={()=>recordStep('receipt_captured')}>4. Save receipt</button>
+    {showSec('communications') && (
+      <details className="case-section" open={workspaceTab === 'communications'}>
+        <summary><span className="section-title-wrap"><Send size={16} aria-hidden="true"/> User-confirmed submission tracker</span> <small>{detail.submission_steps?.length||0}</small></summary>
+        <p className="muted">Nyay Saathi never files, signs, or pays on your behalf. Confirm each stage yourself and store your acknowledgment reference.</p>
+        <div className="workspace-stack">
+          <input aria-label="Target forum or channel" value={subChannel} onChange={e=>setSubChannel(e.target.value)} placeholder="Forum / Grievance Officer"/>
+          <input aria-label="Submission receipt or ticket reference" value={subReceipt} onChange={e=>setSubReceipt(e.target.value)} placeholder="Docket / NCH / Ticket number (optional)"/>
+          <div className="step-buttons">
+            <button type="button" onClick={()=>recordStep('previewed')}>1. Previewed</button>
+            <button type="button" onClick={()=>recordStep('consented')}>2. Explicit consent</button>
+            <button type="button" onClick={()=>recordStep('submitted_by_user')}>3. I submitted</button>
+            <button type="button" onClick={()=>recordStep('receipt_captured')}>4. Save receipt</button>
+          </div>
+          {subMsg&&<small className="muted">{subMsg}</small>}
+          {detail.submission_steps?.map(s=><div className="workspace-line" key={s.id}><b>{humanLabel(s.step)}</b> · {s.target_channel}{s.receipt_reference?` · Ref: ${s.receipt_reference}`:''}</div>)}
         </div>
-        {subMsg&&<small className="muted">{subMsg}</small>}
-        {detail.submission_steps?.map(s=><div className="workspace-line" key={s.id}><b>{humanLabel(s.step)}</b> · {s.target_channel}{s.receipt_reference?` · Ref: ${s.receipt_reference}`:''}</div>)}
-      </div>
-    </details>
+      </details>
+    )}
 
     <details className="case-section">
       <summary><span className="section-title-wrap"><Lock size={16} aria-hidden="true"/> Privacy, retention & device transfer</span></summary>

@@ -1,0 +1,229 @@
+{
+  "embedding_config": {
+    "embedding_model": "text-embedding-3-small",
+    "embedding_version": "openai:text-embedding-3-small:dimensions=384:v1",
+    "embedding_dimensions": 384,
+    "similarity_metric": "cosine"
+  },
+  "corpus_version": "2026-11-20.openai-384.v1",
+  "query_input_tokens": 382,
+  "summary": {
+    "cases": 15,
+    "expected_recall_at_5": 0.8333,
+    "forbidden_violations": 0,
+    "supported_top_score_min": 0.301043,
+    "unsupported_top_score_max": 0.429351
+  },
+  "details": [
+    {
+      "case_id": "en_paraphrase_defective_appliance",
+      "category": "english_paraphrase_low_overlap",
+      "top_score": 0.310718,
+      "expected_rank_at_5": 2,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "cpa2019-s84-87-product-liability",
+        "cpa2019-s39-relief",
+        "sc-experion-2022-homebuyer",
+        "cpa2019-s2-10-11-defect-deficiency",
+        "cpa2019-s2-47-utp"
+      ]
+    },
+    {
+      "case_id": "en_paraphrase_upi_deducted",
+      "category": "english_paraphrase_low_overlap",
+      "top_score": 0.426413,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "rbi-2019-failed-tx-tat-rules",
+        "rbi-2019-failed-tx-atm-card",
+        "rbi-2017-unauth-negligence-para7",
+        "rbi-2017-unauth-reporting-para5",
+        "rbi-2017-unauth-reversal-burden"
+      ]
+    },
+    {
+      "case_id": "hi_consumer_defective_refund",
+      "category": "hindi_to_english",
+      "top_score": 0.301043,
+      "expected_rank_at_5": null,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "rbi-2019-ppi-wallet-liability",
+        "sc-experion-2022-homebuyer",
+        "rbi-2017-unauth-reporting-para5",
+        "rbi-2017-unauth-negligence-para7",
+        "rbi-2017-unauth-reversal-burden"
+      ]
+    },
+    {
+      "case_id": "hi_bank_otp_fraud",
+      "category": "hindi_to_english",
+      "top_score": 0.309429,
+      "expected_rank_at_5": null,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "rbi-2019-failed-tx-atm-card",
+        "cpa-cdrc-fee-2023",
+        "rbi-2019-failed-tx-tat-rules",
+        "rbi-2019-ppi-wallet-liability",
+        "rbi-2021-integrated-ombudsman"
+      ]
+    },
+    {
+      "case_id": "hinglish_upi_failed_tx",
+      "category": "hinglish_to_english",
+      "top_score": 0.40509,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "rbi-2019-failed-tx-tat-rules",
+        "rbi-2019-ppi-wallet-liability",
+        "rbi-2017-unauth-negligence-para7",
+        "rbi-2017-unauth-reporting-para5",
+        "rbi-2019-failed-tx-atm-card"
+      ]
+    },
+    {
+      "case_id": "hinglish_ecommerce_grievance",
+      "category": "hinglish_to_english",
+      "top_score": 0.592916,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "nch-1915-prelitigation",
+        "ecommerce-r4-grievance",
+        "cpa2019-s35-complaint",
+        "cpa2019-s34-jurisdiction",
+        "cpa2019-s39-relief"
+      ]
+    },
+    {
+      "case_id": "exact_section_cpa_s35_companions",
+      "category": "exact_section_with_companions",
+      "top_score": 0.814388,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "cpa2019-s35-complaint",
+        "cpa2019-s34-jurisdiction",
+        "cpa2019-s69-limitation",
+        "cpa2019-s39-relief",
+        "cpa-jurisdiction-rules-2021-r3-5"
+      ]
+    },
+    {
+      "case_id": "regional_maharashtra_consumer",
+      "category": "national_plus_state",
+      "top_score": 0.715382,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "mh-scdrc-grievance-procedure",
+        "mh-dcdrc-directory-mumbai-thane",
+        "cpa2019-s34-jurisdiction",
+        "cpa2019-s39-relief",
+        "cpa2019-s35-complaint"
+      ]
+    },
+    {
+      "case_id": "historical_pre_2024_fraud_ipc",
+      "category": "historical_temporal",
+      "top_score": 0.470326,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "ipc1860-s420-historical",
+        "cpa2019-s2-47-utp",
+        "rbi-2017-unauth-reporting-para5",
+        "rbi-2017-unauth-negligence-para7",
+        "rbi-2019-failed-tx-tat-rules"
+      ]
+    },
+    {
+      "case_id": "current_post_2024_fraud_bns",
+      "category": "current_temporal",
+      "top_score": 0.648739,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "bns2023-s318-cheating",
+        "bns2023-s316-cbt",
+        "bns2023-s319-personation",
+        "rbi-2017-unauth-reporting-para5",
+        "rbi-2017-unauth-negligence-para7"
+      ]
+    },
+    {
+      "case_id": "historical_pre_2020_cpa1986",
+      "category": "historical_temporal",
+      "top_score": 0.463627,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "cpa1986-historical-savings",
+        "rbi-2017-unauth-reversal-burden",
+        "rbi-2017-unauth-negligence-para7",
+        "rbi-2019-ppi-wallet-liability",
+        "rbi-2017-unauth-reporting-para5"
+      ]
+    },
+    {
+      "case_id": "card_closure_penalty_2022",
+      "category": "banking_cards",
+      "top_score": 0.659127,
+      "expected_rank_at_5": 1,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "rbi-2022-cards-unsolicited-closure",
+        "rbi-2022-cards-billing-dispute",
+        "rbi-2019-failed-tx-atm-card",
+        "rbi-2017-unauth-negligence-para7",
+        "rbi-2019-failed-tx-tat-rules"
+      ]
+    },
+    {
+      "case_id": "unsupported_divorce_query",
+      "category": "unsupported_question",
+      "top_score": 0.429351,
+      "expected_rank_at_5": null,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "cpa-mediation-r4-exclusions",
+        "bnss2023-s173-fir-zero-fir",
+        "lsa1987-s12-free-legal-aid",
+        "bns-bnss-commencement-2024-07-01",
+        "bnss2023-s531-repeal-savings"
+      ]
+    },
+    {
+      "case_id": "unsupported_passport_non_regex",
+      "category": "unsupported_question",
+      "top_score": 0.338612,
+      "expected_rank_at_5": null,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "rbi-2022-cards-unsolicited-closure",
+        "bnss2023-s531-repeal-savings",
+        "bnss2023-s173-fir-zero-fir",
+        "bns2023-s358-repeal-savings",
+        "bns-bnss-commencement-2024-07-01"
+      ]
+    },
+    {
+      "case_id": "unsupported_birth_cert_non_regex",
+      "category": "unsupported_question",
+      "top_score": 0.356035,
+      "expected_rank_at_5": null,
+      "forbidden_ids_at_5": [],
+      "top_ids": [
+        "bnss2023-s173-fir-zero-fir",
+        "bns2023-s316-cbt",
+        "mh-scdrc-grievance-procedure",
+        "mh-dcdrc-directory-mumbai-thane",
+        "cpa2019-s34-jurisdiction"
+      ]
+    }
+  ]
+}

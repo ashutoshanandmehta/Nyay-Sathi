@@ -172,13 +172,21 @@ def _public_prequery_terms(
 class PrimaryAgent:
     engine_version = "primary-agent-v2.0"
 
-    def __init__(self, settings, retriever, *, provider=None, research=None):
+    def __init__(self, settings, retriever, *, provider=None, research=None, today=None):
         self.settings, self.retriever = settings, retriever
         self.provider = provider or ResponsesProvider(settings)
         self.research = research or ResearchService(settings, retriever)
+        self.today = today
         prompts = Path(__file__).parents[1] / "prompts"
         self.prompt = (prompts / "primary.md").read_text()
         self.review_prompt = (prompts / "primary-review.md").read_text()
+
+    def _current_date(self, state):
+        if state.get("today") is not None:
+            return state["today"]
+        if callable(self.today):
+            return self.today()
+        return self.today
 
     def delete_thread(self, thread_id):
         # No provider-managed conversation or graph checkpoint is created by this runner.
@@ -339,7 +347,12 @@ class PrimaryAgent:
             cat = category or urgent_ctx["category"] or "emergency"
             if cat == "emergency_followup":
                 cat = "emergency"
-            item = safety_event(state.get("language", "en"), india=india, category=cat)
+            item = safety_event(
+                state.get("language", "en"),
+                today=self._current_date(state),
+                india=india,
+                category=cat,
+            )
             item["request_id"] = state["request_id"]
             state["safety_messages"].append(item)
             state["first_useful_guidance_ms"] = round((time.monotonic() - started) * 1000)

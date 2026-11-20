@@ -1,0 +1,183 @@
+[
+  {
+    "case_id": "en_paraphrase_defective_appliance",
+    "query": "my newly delivered kitchen appliance sparks and stopped working on day two, seller won't replace or give my money back",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "cpa2019-s39-relief",
+      "cpa2019-s2-10-11-defect-deficiency",
+      "ecommerce-r6-refund"
+    ],
+    "forbidden_ids": [],
+    "expect_empty": false
+  },
+  {
+    "case_id": "en_paraphrase_upi_deducted",
+    "query": "money vanished from my savings account during an instant phone transfer and recipient never got it, how fast must bank return it",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "rbi-2019-failed-tx-tat-rules"
+    ],
+    "forbidden_ids": [],
+    "expect_empty": false
+  },
+  {
+    "case_id": "hi_consumer_defective_refund",
+    "query": "मेरा ऑनलाइन खरीदा हुआ सामान खराब निकला और कंपनी पैसे वापस नहीं कर रही",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "ecommerce-r6-refund",
+      "ecommerce-r7-inventory-refund",
+      "cpa2019-s39-relief"
+    ],
+    "forbidden_ids": [],
+    "expect_empty": false
+  },
+  {
+    "case_id": "hi_bank_otp_fraud",
+    "query": "फर्जी कस्टमर केयर कॉल पर ओटीपी बताने के बाद बैंक खाते से अनधिकृत पैसे कट गए",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "rbi-2017-unauth-negligence-para7",
+      "rbi-2017-unauth-reporting-para5",
+      "bns2023-s319-personation"
+    ],
+    "forbidden_ids": [],
+    "expect_empty": false
+  },
+  {
+    "case_id": "hinglish_upi_failed_tx",
+    "query": "UPI se paise kat gaye par samne wale ko nahi mile, bank kab tak wapas karega aur muavza kitna milega",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "rbi-2019-failed-tx-tat-rules"
+    ],
+    "forbidden_ids": [],
+    "expect_empty": false
+  },
+  {
+    "case_id": "hinglish_ecommerce_grievance",
+    "query": "Flipkart grievance officer ko complaint bheji par 1 mahine se refund nahi mila, aage NCH 1915 ya consumer commission kaise jaye",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "ecommerce-r4-grievance",
+      "nch-1915-prelitigation",
+      "cpa2019-s35-complaint"
+    ],
+    "forbidden_ids": [],
+    "expect_empty": false
+  },
+  {
+    "case_id": "exact_section_cpa_s35_companions",
+    "query": "Section 35 Consumer Protection Act 2019 filing complaint in District Commission",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "cpa2019-s35-complaint"
+    ],
+    "forbidden_ids": [],
+    "expect_empty": false
+  },
+  {
+    "case_id": "regional_maharashtra_consumer",
+    "query": "Where to file consumer defect complaint in Mumbai Maharashtra and what relief can State Commission order",
+    "region": "Maharashtra",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "mh-scdrc-grievance-procedure",
+      "mh-dcdrc-directory-mumbai-thane"
+    ],
+    "forbidden_ids": [
+      "bihar-prohibition-s74-regional"
+    ],
+    "expect_empty": false
+  },
+  {
+    "case_id": "historical_pre_2024_fraud_ipc",
+    "query": "Cheating and dishonestly inducing delivery of money and FIR registration for financial fraud",
+    "region": "India",
+    "incident_date": "2023-05-10",
+    "expected_any_ids": [
+      "ipc1860-s420-historical",
+      "crpc1973-s154-historical"
+    ],
+    "forbidden_ids": [
+      "bns2023-s318-cheating",
+      "bnss2023-s173-fir-zero-fir"
+    ],
+    "expect_empty": false
+  },
+  {
+    "case_id": "current_post_2024_fraud_bns",
+    "query": "Cheating and dishonestly inducing delivery of money and Zero FIR registration for financial fraud",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "bns2023-s318-cheating",
+      "bnss2023-s173-fir-zero-fir"
+    ],
+    "forbidden_ids": [
+      "ipc1860-s420-historical",
+      "crpc1973-s154-historical"
+    ],
+    "expect_empty": false
+  },
+  {
+    "case_id": "historical_pre_2020_cpa1986",
+    "query": "Consumer complaint remedy for defective goods purchased in 2019",
+    "region": "India",
+    "incident_date": "2019-10-01",
+    "expected_any_ids": [
+      "cpa1986-historical-savings"
+    ],
+    "forbidden_ids": [
+      "cpa2019-s35-complaint",
+      "cpa2019-s39-relief"
+    ],
+    "expect_empty": false
+  },
+  {
+    "case_id": "card_closure_penalty_2022",
+    "query": "credit card closure request within 7 working days and Rs 500 per day delay penalty",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [
+      "rbi-2022-cards-unsolicited-closure"
+    ],
+    "forbidden_ids": [],
+    "expect_empty": false
+  },
+  {
+    "case_id": "unsupported_divorce_query",
+    "query": "How do I file for mutual consent divorce and child custody under Hindu Marriage Act?",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [],
+    "forbidden_ids": [],
+    "expect_empty": true
+  },
+  {
+    "case_id": "unsupported_passport_non_regex",
+    "query": "How do I renew my Indian passport?",
+    "region": "India",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [],
+    "forbidden_ids": [],
+    "expect_empty": true
+  },
+  {
+    "case_id": "unsupported_birth_cert_non_regex",
+    "query": "How do I get a duplicate birth certificate from municipal corporation?",
+    "region": "Maharashtra",
+    "incident_date": "2025-02-01",
+    "expected_any_ids": [],
+    "forbidden_ids": [],
+    "expect_empty": true
+  }
+]

@@ -92,11 +92,15 @@ def answer(
     )
 
 
-def install(isolated_app, provider, research=None):
+def install(isolated_app, provider, research=None, *, today=date(2026, 11, 10)):
     settings = isolated_app.state.settings.model_copy(update={"openai_api_key": "fixture-not-real"})
     isolated_app.state.settings = settings
     runner = PrimaryAgent(
-        settings, isolated_app.state.retriever, provider=provider, research=research
+        settings,
+        isolated_app.state.retriever,
+        provider=provider,
+        research=research,
+        today=today,
     )
     isolated_app.state.assistant_graph = runner
     return runner
@@ -228,7 +232,7 @@ def test_disguised_law_needs_public_evidence_even_with_supported_review(client, 
 
 def test_safety_is_durable_before_provider_failure_and_deduplicated(client, isolated_app):
     cid = create_case(client)
-    install(isolated_app, ScriptedProvider(TimeoutError()))
+    install(isolated_app, ScriptedProvider(TimeoutError()), today=date(2026, 11, 10))
     message = "Police entered our room in India and demand money now."
     result = post(client, cid, message, stream=True)
     assert result.status_code == 200
@@ -240,6 +244,17 @@ def test_safety_is_durable_before_provider_failure_and_deduplicated(client, isol
         detail["messages"][-1]["metadata"]["safety_messages"][0]["content_id"]
         == detail["safety_messages"][0]["content_id"]
     )
+
+    # When contact verification has expired, runner still persists and streams safety text
+    # while suppressing the unverified contact number.
+    expired_cid = create_case(client)
+    install(isolated_app, ScriptedProvider(TimeoutError()), today=date(2026, 11, 19))
+    expired_result = post(client, expired_cid, message, stream=True)
+    assert expired_result.status_code == 200
+    expired_detail = client.get(f"/api/conversations/{expired_cid}").json()
+    assert len(expired_detail["safety_messages"]) == 1
+    assert "prioritize your safety" in expired_detail["safety_messages"][0]["text"]
+    assert "112" not in expired_detail["safety_messages"][0]["text"]
 
 
 def test_tool_continuation_preserves_reasoning_and_passes_evidence(client, isolated_app):

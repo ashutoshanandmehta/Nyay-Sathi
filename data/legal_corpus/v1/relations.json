@@ -1,0 +1,82 @@
+[
+  {
+    "id": "rel-cpa35-req-s2-7",
+    "from_passage_id": "cpa2019-s35-complaint",
+    "to_passage_id": "cpa2019-s2-7-consumer",
+    "relation_type": "requires_definition",
+    "cutoff_date": null,
+    "notes": "Standing under Section 35 requires satisfying the Section 2(7) consumer definition and commercial-purpose exclusion."
+  },
+  {
+    "id": "rel-cpa35-req-s69",
+    "from_passage_id": "cpa2019-s35-complaint",
+    "to_passage_id": "cpa2019-s69-limitation",
+    "relation_type": "requires_exception",
+    "cutoff_date": null,
+    "notes": "District Commission complaints under Section 35 are subject to the two-year limitation period under Section 69."
+  },
+  {
+    "id": "rel-cpa39-req-s2-10",
+    "from_passage_id": "cpa2019-s39-relief",
+    "to_passage_id": "cpa2019-s2-10-11-defect-deficiency",
+    "relation_type": "requires_definition",
+    "cutoff_date": null,
+    "notes": "Section 39 remedies depend on establishing defect or deficiency under Section 2(10)-(11)."
+  },
+  {
+    "id": "rel-cpa34-amended-jurisdiction2021",
+    "from_passage_id": "cpa2019-s34-jurisdiction",
+    "to_passage_id": "cpa-jurisdiction-rules-2021-r3-5",
+    "relation_type": "amended_by",
+    "cutoff_date": "2021-12-30",
+    "notes": "G.S.R. 912(E) lowered District Commission pecuniary threshold from Rs. 1 crore to Rs. 50 lakh."
+  },
+  {
+    "id": "rel-cdrc-fee-2020-to-2023",
+    "from_passage_id": "cpa-cdrc-fee-2020-historical",
+    "to_passage_id": "cpa-cdrc-fee-2023",
+    "relation_type": "amended_by",
+    "cutoff_date": "2023-08-17",
+    "notes": "G.S.R. 606(E) substituted the Rule 7(2) fee table effective 17 August 2023."
+  },
+  {
+    "id": "rel-cpa1986-to-cpa2019",
+    "from_passage_id": "cpa1986-historical-savings",
+    "to_passage_id": "cpa2019-s35-complaint",
+    "relation_type": "superseded_by",
+    "cutoff_date": "2020-07-20",
+    "notes": "CPA 2019 replaced CPA 1986 effective 20 July 2020 subject to Section 107 savings."
+  },
+  {
+    "id": "rel-ipc420-to-bns318",
+    "from_passage_id": "ipc1860-s420-historical",
+    "to_passage_id": "bns2023-s318-cheating",
+    "relation_type": "superseded_by",
+    "cutoff_date": "2024-07-01",
+    "notes": "Pre-1 July 2024 cheating offences remain under IPC Section 420 via BNS Section 358 savings; on/after 1 July 2024 use BNS Section 318."
+  },
+  {
+    "id": "rel-crpc154-to-bnss173",
+    "from_passage_id": "crpc1973-s154-historical",
+    "to_passage_id": "bnss2023-s173-fir-zero-fir",
+    "relation_type": "transitional_saving",
+    "cutoff_date": "2024-07-01",
+    "notes": "Pending pre-1 July 2024 proceedings continue under CrPC 1973 via BNSS Section 531(2)(a); new FIRs follow BNSS Section 173."
+  },
+  {
+    "id": "rel-rbi-unauth-zero-to-negligence",
+    "from_passage_id": "rbi-2017-unauth-reporting-para5",
+    "to_passage_id": "rbi-2017-unauth-negligence-para7",
+    "relation_type": "requires_exception",
+    "cutoff_date": null,
+    "notes": "Zero-liability protection under Para 6 must be read with Para 7 customer-negligence exception (sharing credentials/OTP)."
+  },
+  {
+    "id": "rel-bos2006-to-rbios2021",
+    "from_passage_id": "rbi-2006-ombudsman-historical",
+    "to_passage_id": "rbi-2021-integrated-ombudsman",
+    "relation_type": "superseded_by",
+    "cutoff_date": "2021-11-12",
+    "notes": "RB-IOS 2021 integrated BOS 2006, NBFC Ombudsman 2018, and Digital Transactions Ombudsman 2019 w.e.f. 12 Nov 2021."
+  }
+]
