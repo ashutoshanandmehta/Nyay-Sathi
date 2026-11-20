@@ -4,7 +4,6 @@ import {
   ChevronDown,
   Cpu,
   FileText,
-  KeyRound,
   Languages,
   Lock,
   Menu,
@@ -31,27 +30,17 @@ import type { AgentWorkflow, Conversation, Detail, KnowledgeBase, Language, Mess
 
 const starterCards = [
   {
-    text: 'My refund has not arrived',
-    hint: 'Paid online, cancellation or return pending',
+    text: 'मेरे बैंक ने पैसे रोक दिए हैं',
+    hint: '',
     icon: STARTER_ICONS.refund.icon,
   },
   {
-    text: 'A product I bought is defective',
-    hint: 'Damaged item, seller refusing return or warranty repair',
+    text: 'मुझे सामान का रिफंड नहीं मिला',
+    hint: '',
     icon: STARTER_ICONS.defective.icon,
   },
-  {
-    text: 'My order was never delivered',
-    hint: 'Delivery deadline passed without response or refund',
-    icon: STARTER_ICONS.not_delivered.icon,
-  },
-  {
-    text: 'The seller refuses the promised return',
-    hint: 'Retailer or portal denied replacement under policy',
-    icon: STARTER_ICONS.return_refused.icon,
-  },
 ]
-const welcome:Message={id:'welcome',role:'assistant',status:'complete',created_at:'',metadata:{},content:'Tell me what happened in your own words. I’ll help organise the facts, evidence, and practical next step. You can write in English, Hindi, or Hinglish.'}
+const welcome:Message={id:'welcome',role:'assistant',status:'complete',created_at:'',metadata:{},content:'## नमस्ते! 😊\n\n### बताइए, क्या परेशानी है?\n\nआप आराम से अपनी बात बताइए। हम समझने और आगे क्या करना है, ये जानने में आपकी मदद करेंगे।'}
 
 export default function App(){
   const [items,setItems]=useState<Conversation[]>([]),[active,setActive]=useState(''),[detail,setDetail]=useState<Detail|null>(null)
@@ -59,9 +48,9 @@ export default function App(){
   const [settingsTab,setSettingsTab]=useState<SettingsTab>('devspace')
   const [streamEvents,setStreamEvents]=useState<StreamEvent[]>([])
   const [knowledge,setKnowledge]=useState<KnowledgeBase|null>(null),[workflow,setWorkflow]=useState<AgentWorkflow|null>(null)
-  const [language,setLanguage]=useState<Language>('en'),[sending,setSending]=useState(false),[error,setError]=useState(''),[menu,setMenu]=useState(false)
+  const [language,setLanguage]=useState<Language>('hi'),[sending,setSending]=useState(false),[error,setError]=useState(''),[menu,setMenu]=useState(false)
   const [devspace,setDevspace]=useState(false)
-  const [configured,setConfigured]=useState(true),pending=useRef<{text:string;id:string;caseId:string;language:Language;attachments:string[]}|null>(null),attachments=useRef<string[]>([]),bottom=useRef<HTMLDivElement>(null)
+  const pending=useRef<{text:string;id:string;caseId:string;language:Language;attachments:string[]}|null>(null),attachments=useRef<string[]>([]),bottom=useRef<HTMLDivElement>(null)
   const thinkingStartRef = useRef<number | null>(null)
   const [elapsedThinking, setElapsedThinking] = useState(0)
   const [lastDuration, setLastDuration] = useState<number | null>(null)
@@ -90,9 +79,9 @@ export default function App(){
   stageLabels.execute_tasks='Working on the parts of your request…'
   stageLabels.web_search='Searching relevant public sources…'
   stageLabels.web_fetch='Reading supporting pages and documents…'
-  async function initialise(){try{const boot=await api.bootstrap();setConfigured(boot.ai_configured);setDevspace(Boolean(boot.devspace_enabled));const list=await api.list();setItems(list);if(list[0])await select(list[0].id);else await makeNew()}catch(e){setError((e as Error).message)}}
+  async function initialise(){try{const boot=await api.bootstrap();setDevspace(Boolean(boot.devspace_enabled));const list=await api.list();setItems(list);if(list[0])await select(list[0].id);else await makeNew()}catch(e){setError((e as Error).message)}}
   async function refresh(){const list=await api.list();setItems(list)}
-  async function makeNew(){try{const c=await api.create(language);await refresh();await select(c.id);setSidebar(false)}catch(e){setError((e as Error).message)}}
+  async function makeNew(){try{const c=await api.create('hi');await refresh();await select(c.id);setSidebar(false)}catch(e){setError((e as Error).message)}}
   async function select(id:string){try{const d=await api.detail(id);attachments.current=[];setSafety(d.safety_messages||[]);setActive(id);setDetail(d);setLanguage(d.conversation.language);setSidebar(false);history.replaceState({},'',`/chat/${id}`)}catch(e){setError((e as Error).message)}}
   async function send(text:string){
     if(!active||sending)return false
@@ -165,7 +154,7 @@ export default function App(){
               )
             })()}
           </div>
-          {configured?<span>AI legal information assistant</span>:<button className="setup-link" onClick={()=>showSettings('key')}>Add your OpenAI key to start</button>}
+          <span>कानूनी जानकारी और शिकायत की तैयारी में मदद।</span>
         </div>
         <div className="top-actions">
           <div className="language-pill" title="Response language">
@@ -200,12 +189,6 @@ export default function App(){
           </div>
         </div>
       </header>
-      {!configured&&(
-        <div className="config-banner" role="alert">
-          <KeyRound size={17} aria-hidden="true" color="var(--warning)"/>
-          <span>Add your own OpenAI API key to get answers and voice. Your chats and case notes work without it. <button className="setup-link config-add-key-btn" onClick={()=>showSettings('key')}>Add your key</button></span>
-        </div>
-      )}
       <section className="messages" aria-live="polite"><div className="message-column">
         {messages.map((m, idx) => {
           const isLatestAssistant = m.role === 'assistant' && idx === messages.length - 1
@@ -243,7 +226,7 @@ export default function App(){
                       <Icon size={16} className="starter-icon" aria-hidden="true" />
                       <span className="starter-title">{s.text}</span>
                     </div>
-                    <small className="starter-hint">{s.hint}</small>
+                    {s.hint&&<small className="starter-hint">{s.hint}</small>}
                   </div>
                   <ChevronDown size={15} className="starter-chevron" aria-hidden="true" />
                 </button>
@@ -276,6 +259,6 @@ export default function App(){
       </div></section>
       <Composer key={active} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}/>
     </main>
-    {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='settings'?(settingsTab==='knowledge'?'Knowledge Base':settingsTab==='workflow'?'Agent Workflow':settingsTab==='key'?'Your OpenAI key':'Settings'):panel==='roleplay'?'Roleplay':'Drafts'} hideHeader={panel==='roleplay'} onClose={()=>setPanel(null)}>{panel==='settings'?<SettingsPanel initialTab={settingsTab} onTabChange={setSettingsTab} knowledge={knowledge} workflow={workflow} devspaceEnabled={devspace} onLoadKnowledge={async()=>{try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}} onLoadWorkflow={async()=>{try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}} onDevspaceSaved={result=>setConfigured(result.configured)} onKeyChange={setConfigured}/>:panel==='roleplay'&&detail?<PracticePanel caseId={active} language={language} onClose={()=>setPanel(null)}/>:panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
+    {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='settings'?(settingsTab==='knowledge'?'Knowledge Base':settingsTab==='workflow'?'Agent Workflow':settingsTab==='key'?'Your OpenAI key':'Settings'):panel==='roleplay'?'Roleplay':'Drafts'} hideHeader={panel==='roleplay'} onClose={()=>setPanel(null)}>{panel==='settings'?<SettingsPanel initialTab={settingsTab} onTabChange={setSettingsTab} knowledge={knowledge} workflow={workflow} devspaceEnabled={devspace} onLoadKnowledge={async()=>{try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}} onLoadWorkflow={async()=>{try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}} onDevspaceSaved={()=>{}}/>:panel==='roleplay'&&detail?<PracticePanel caseId={active} language={language} onClose={()=>setPanel(null)}/>:panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
   </div>
 }
