@@ -469,6 +469,13 @@ class Database:
                 "UPDATE conversations SET title=?, updated_at=? WHERE id=?", (title, now(), cid)
             )
 
+    def set_conversation_language(self, owner_id: str, cid: str, language: str) -> None:
+        self.get_conversation(owner_id, cid)
+        with self.connect() as c:
+            c.execute(
+                "UPDATE conversations SET language=?, updated_at=? WHERE id=?", (language, now(), cid)
+            )
+
     def delete_conversation(self, owner_id: str, cid: str) -> list[str]:
         self.get_conversation(owner_id, cid)
         destroyed_at = now()

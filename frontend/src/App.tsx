@@ -21,26 +21,14 @@ import { api } from './api'
 import { apiFetch } from './byok'
 import Composer from './components/Composer'
 import { AgentWorkflowPanel, CasePanel, Drawer, KnowledgeBasePanel, Sources } from './components/Drawer'
+import LanguageIntroModal from './components/LanguageIntroModal'
 import MessageView from './components/MessageView'
 import PracticePanel from './components/PracticePanel'
 import SettingsPanel, { type SettingsTab } from './components/SettingsPanel'
 import Sidebar from './components/Sidebar'
 import { getTopicMeta, STARTER_ICONS } from './icons'
+import { detectLanguage, STARTER_CARDS, WELCOME_CONTENT } from './language'
 import type { AgentWorkflow, Conversation, Detail, KnowledgeBase, Language, Message, Source, SafetyMessage, StreamEvent } from './types'
-
-const starterCards = [
-  {
-    text: 'बैंक ने मेरे पैसे रोक रखे हैं',
-    hint: '',
-    icon: STARTER_ICONS.refund.icon,
-  },
-  {
-    text: 'सामान लौटाया, पर पैसे वापस नहीं मिले',
-    hint: '',
-    icon: STARTER_ICONS.defective.icon,
-  },
-]
-
 
 export default function App(){
   const [items,setItems]=useState<Conversation[]>([]),[active,setActive]=useState(''),[detail,setDetail]=useState<Detail|null>(null)
@@ -48,7 +36,9 @@ export default function App(){
   const [settingsTab,setSettingsTab]=useState<SettingsTab>('devspace')
   const [streamEvents,setStreamEvents]=useState<StreamEvent[]>([])
   const [knowledge,setKnowledge]=useState<KnowledgeBase|null>(null),[workflow,setWorkflow]=useState<AgentWorkflow|null>(null)
-  const [language,setLanguage]=useState<Language>('hi'),[sending,setSending]=useState(false),[error,setError]=useState(''),[menu,setMenu]=useState(false)
+  const [language,setLanguage]=useState<Language>(()=>{try{return (localStorage.getItem('nyay_preferred_language') as Language)||'hi'}catch{return 'hi'}})
+  const [showLanguageModal,setShowLanguageModal]=useState<boolean>(()=>{try{return !localStorage.getItem('nyay_language_chosen')}catch{return false}})
+  const [sending,setSending]=useState(false),[error,setError]=useState(''),[menu,setMenu]=useState(false)
   const [devspace,setDevspace]=useState(false)
   const pending=useRef<{text:string;id:string;caseId:string;language:Language;attachments:string[]}|null>(null),attachments=useRef<string[]>([]),bottom=useRef<HTMLDivElement>(null)
   const thinkingStartRef = useRef<number | null>(null)
@@ -79,22 +69,40 @@ export default function App(){
   stageLabels.execute_tasks='Working on the parts of your request…'
   stageLabels.web_search='Searching relevant public sources…'
   stageLabels.web_fetch='Reading supporting pages and documents…'
+  function handleLanguageSelect(newLang: Language){
+    setLanguage(newLang)
+    try {
+      localStorage.setItem('nyay_preferred_language', newLang)
+      localStorage.setItem('nyay_language_chosen', 'true')
+    } catch {}
+    setShowLanguageModal(false)
+  }
   async function initialise(){try{const boot=await api.bootstrap();setDevspace(Boolean(boot.devspace_enabled));const list=await api.list();setItems(list);if(list[0])await select(list[0].id);else await makeNew()}catch(e){setError((e as Error).message)}}
   async function refresh(){const list=await api.list();setItems(list)}
-  async function makeNew(){try{const c=await api.create('hi');await refresh();await select(c.id);setSidebar(false)}catch(e){setError((e as Error).message)}}
+  async function makeNew(){try{const c=await api.create(language);await refresh();await select(c.id);setSidebar(false)}catch(e){setError((e as Error).message)}}
   async function select(id:string){try{const d=await api.detail(id);attachments.current=[];setSafety(d.safety_messages||[]);setActive(id);setDetail(d);setLanguage(d.conversation.language);setSidebar(false);history.replaceState({},'',`/chat/${id}`)}catch(e){setError((e as Error).message)}}
   async function send(text:string){
     if(!active||sending)return false
+    const detected = detectLanguage(text)
+    let activeLang = language
+    if (detected && detected !== language) {
+      activeLang = detected
+      setLanguage(detected)
+      try {
+        localStorage.setItem('nyay_preferred_language', detected)
+        localStorage.setItem('nyay_language_chosen', 'true')
+      } catch {}
+    }
     const cid=active, req=crypto.randomUUID(), files=[...attachments.current]
     thinkingStartRef.current = Date.now()
     setElapsedThinking(0)
     setSending(true);setProgress('Saving your message…');setError('')
     setStreamEvents([{stage:'saving',status:'running',timestamp:new Date().toLocaleTimeString()}])
-    pending.current={text,id:req,caseId:cid,language,attachments:files}
+    pending.current={text,id:req,caseId:cid,language:activeLang,attachments:files}
     const optimistic:Message={id:req,role:'user',content:text,status:'sending',created_at:new Date().toISOString(),metadata:{attachment_ids:files}}
     setDetail(d=>d?{...d,messages:[...d.messages,optimistic]}:d)
     try{
-      await api.streamTurn(cid,text,language,req,files,onProgress)
+      await api.streamTurn(cid,text,activeLang,req,files,onProgress)
       pending.current=null;attachments.current=[]
       const result=await api.detail(cid);setDetail(d=>d?.conversation.id===cid?result:d)
       await refresh();return true
@@ -158,9 +166,9 @@ export default function App(){
           <span>Nyay Saathi एक AI सहायक है।</span>
         </div>
         <div className="top-actions">
-          <div className="language-pill" title="Response language">
-            <Languages size={15} aria-hidden="true" color="var(--jade-ink)" />
-            <select aria-label="Response language" value={language} onChange={e=>setLanguage(e.target.value as Language)}>
+          <div className="language-pill" title="Response language / भाषा">
+            <Languages size={15} aria-hidden="true" color="var(--jade-ink)" style={{ cursor: 'pointer' }} onClick={() => setShowLanguageModal(true)} />
+            <select aria-label="Response language" value={language} onChange={e=>handleLanguageSelect(e.target.value as Language)}>
               <option value="en">English</option>
               <option value="hi">हिन्दी</option>
               <option value="hinglish">Hinglish</option>
@@ -191,7 +199,22 @@ export default function App(){
         </div>
       </header>
       <section className="messages" aria-live="polite"><div className="message-column">
-        {isNewChat&&<div className="welcome-copy" lang="hi"><h1>नमस्ते! 😊</h1><h2>बताइए, क्या हुआ?</h2><p>अपनी बात खुलकर बताइए। हम आपकी परेशानी समझकर आगे का रास्ता सुझाएँगे।</p></div>}
+        {isNewChat&&(()=>{
+          const welcomeContent = WELCOME_CONTENT[language] || WELCOME_CONTENT.hi
+          return (
+            <div className="welcome-copy" lang={language}>
+              <div className="welcome-lang-selector" role="radiogroup" aria-label="Quick language selector">
+                <span>भाषा / Lang:</span>
+                <button type="button" className={`welcome-lang-btn ${language === 'hi' ? 'active' : ''}`} onClick={() => handleLanguageSelect('hi')}>हिन्दी</button>
+                <button type="button" className={`welcome-lang-btn ${language === 'en' ? 'active' : ''}`} onClick={() => handleLanguageSelect('en')}>English</button>
+                <button type="button" className={`welcome-lang-btn ${language === 'hinglish' ? 'active' : ''}`} onClick={() => handleLanguageSelect('hinglish')}>Hinglish</button>
+              </div>
+              <h1>{welcomeContent.badge}</h1>
+              <h2>{welcomeContent.headline}</h2>
+              <p>{welcomeContent.description}</p>
+            </div>
+          )
+        })()}
         {messages.map((m, idx) => {
           const isLatestAssistant = m.role === 'assistant' && idx === messages.length - 1
           return (
@@ -240,28 +263,43 @@ export default function App(){
           </div>
         )}{error&&<div className="inline-error" role="alert">{error}</div>}<div ref={bottom}/>
       </div></section>
-      <Composer key={active} welcome={isNewChat} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}>
-        {isNewChat&&(
-          <section className="common-problems" lang="hi" aria-labelledby="common-problems-title"><h2 id="common-problems-title">कुछ आम परेशानियाँ</h2><p>क्या आपके साथ भी ऐसा हुआ है?</p><div className="starters">
-            {starterCards.map(s=>{
-              const Icon = s.icon
-              return (
-                <button key={s.text} onClick={()=>send(s.text)}>
-                  <div className="starter-content">
-                    <div className="starter-title-row">
-                      <Icon size={16} className="starter-icon" aria-hidden="true" />
-                      <span className="starter-title">{s.text}</span>
-                    </div>
-                    {s.hint&&<small className="starter-hint">{s.hint}</small>}
-                  </div>
-                  <ChevronDown size={15} className="starter-chevron" aria-hidden="true" />
-                </button>
-              )
-            })}
-          </div></section>
-        )}
+      <Composer key={active} welcome={isNewChat} language={language} disabled={sending||!active} onSend={send} onUpload={(id)=>attachments.current.push(id)} onRemove={id=>{attachments.current=attachments.current.filter(x=>x!==id)}}>
+        {isNewChat&&(()=>{
+          const welcomeContent = WELCOME_CONTENT[language] || WELCOME_CONTENT.hi
+          const starters = STARTER_CARDS[language] || STARTER_CARDS.hi
+          return (
+            <section className="common-problems" lang={language} aria-labelledby="common-problems-title">
+              <h2 id="common-problems-title">{welcomeContent.problemTitle}</h2>
+              <p>{welcomeContent.problemSub}</p>
+              <div className="starters">
+                {starters.map(s=>{
+                  const Icon = s.icon
+                  return (
+                    <button key={s.text} onClick={()=>send(s.text)}>
+                      <div className="starter-content">
+                        <div className="starter-title-row">
+                          <Icon size={16} className="starter-icon" aria-hidden="true" />
+                          <span className="starter-title">{s.text}</span>
+                        </div>
+                        {s.hint&&<small className="starter-hint">{s.hint}</small>}
+                      </div>
+                      <ChevronDown size={15} className="starter-chevron" aria-hidden="true" />
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })()}
       </Composer>
     </main>
+    {showLanguageModal && (
+      <LanguageIntroModal
+        currentLanguage={language}
+        onSelect={handleLanguageSelect}
+        onClose={() => setShowLanguageModal(false)}
+      />
+    )}
     {panel&&<Drawer title={panel==='case'?'Your case':panel==='sources'?'Sources':panel==='settings'?(settingsTab==='knowledge'?'Knowledge Base':settingsTab==='workflow'?'Agent Workflow':settingsTab==='key'?'Your OpenAI key':'Settings'):panel==='roleplay'?'Roleplay':'Drafts'} hideHeader={panel==='roleplay'} onClose={()=>setPanel(null)}>{panel==='settings'?<SettingsPanel initialTab={settingsTab} onTabChange={setSettingsTab} knowledge={knowledge} workflow={workflow} devspaceEnabled={devspace} onLoadKnowledge={async()=>{try{setKnowledge(await api.knowledgeBase())}catch(e){setError((e as Error).message)}}} onLoadWorkflow={async()=>{try{setWorkflow(await api.agentWorkflow())}catch(e){setError((e as Error).message)}}} onDevspaceSaved={()=>{}}/>:panel==='roleplay'&&detail?<PracticePanel caseId={active} language={language} onClose={()=>setPanel(null)}/>:panel==='case'&&detail?<CasePanel detail={detail} onRefresh={()=>{if(active)void select(active)}} onImported={cid=>{void refresh().then(()=>select(cid))}}/>:panel==='sources'?<Sources sources={sources} focus={sourceFocus}/>:<div className="panel-content">{detail?.drafts.map(d=><section className="draft" key={d.id}><h3>{d.title}</h3><small>{d.status} · version {d.version}</small><textarea defaultValue={d.content}/></section>)}{!detail?.drafts.length&&<p>No drafts yet. Ask me to draft a factual seller email or complaint.</p>}</div>}</Drawer>}
   </div>
 }

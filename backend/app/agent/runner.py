@@ -48,6 +48,70 @@ from app.schemas.models import CaseMemory
 from app.services.model_calls import model_calls
 from app.services.progress import publisher
 
+# Unambiguous Hinglish marker tokens that do not collide with standard English words.
+HINGLISH_UNAMBIGUOUS_TOKENS = frozenset(
+    {
+        "hai", "hain", "hona", "hoga", "hogi", "hoge", "hua", "hue", "hui",
+        "nahi", "nahin", "mat",
+        "kya", "kyu", "kyun", "kaise", "kaha", "kahan", "kab", "kisko", "kisse", "kaun",
+        "kare", "karein", "karna", "karne", "karo", "kiya", "kiye",
+        "diya", "diye", "dena", "dene",
+        "gaya", "gaye", "gayi", "jana", "jao", "jaun",
+        "paise", "paisa", "rupaye", "rupay", "kat", "kate", "katgaye", "katwaye",
+        "mera", "meri", "mere", "mujhe", "mujhko", "mai", "main",
+        "hume", "humko", "hamara", "hamari", "hamare",
+        "aap", "aapka", "aapke", "aapki", "aapne", "aapko",
+        "tum", "tumhara", "tumhe", "tumko",
+        "uska", "uski", "uske", "usne", "unka", "unke", "unki", "unhone",
+        "iska", "iski", "iske", "isne", "inke", "inhe",
+        "bataiye", "batao", "bataye", "boliye", "suno", "dekho",
+        "chahiye", "mila", "mile", "mili", "milna",
+        "raha", "rahe", "rahi", "tha", "thi",
+        "bhi", "toh", "lekin", "magar",
+        "baat", "cheez", "saman", "khata", "shikayat", "thaney", "thana",
+        "abhi", "pehle", "baad", "bheja", "bhejo", "wapas", "laute", "lautaya", "rok", "roka", "rakha",
+    }
+)
+
+ENGLISH_INDICATOR_TOKENS = frozenset(
+    {
+        "the", "is", "are", "was", "were", "has", "have", "had", "and", "or", "to", "in", "on", "at", "by", "for", "with",
+        "my", "i", "me", "you", "your", "we", "our", "it", "its", "they", "their", "this", "that", "these", "those",
+        "refund", "fraud", "money", "bank", "account", "returned", "return", "order", "ordered", "item", "product",
+        "seller", "merchant", "complaint", "police", "help", "what", "how", "can", "should", "where", "when", "why", "who",
+        "deducted", "payment", "transaction", "defective", "court", "legal", "rights", "please", "withheld", "weeks",
+        "under", "act", "section", "draft", "consumer", "commission", "notice", "reply", "process", "limitation", "period",
+    }
+)
+
+
+def detect_message_language(text: str) -> str | None:
+    if not text or len(text.strip()) < 2:
+        return None
+    trimmed = text.strip()
+
+    # 1. Devanagari script (Hindi)
+    devanagari_count = len(re.findall(r"[\u0900-\u097F]", trimmed))
+    if devanagari_count >= 3 or (len(trimmed) > 0 and devanagari_count / len(trimmed) > 0.15):
+        return "hi"
+
+    # 2. Tokenize Latin words
+    words = re.findall(r"[a-z]+", trimmed.lower())
+    if not words:
+        return None
+
+    # 3. Hinglish markers
+    hinglish_count = sum(1 for w in words if w in HINGLISH_UNAMBIGUOUS_TOKENS)
+    if hinglish_count >= 1:
+        return "hinglish"
+
+    # 4. English markers
+    english_count = sum(1 for w in words if w in ENGLISH_INDICATOR_TOKENS)
+    if english_count >= 1 and hinglish_count == 0:
+        return "en"
+
+    return None
+
 # Everyday words people use, mapped to the legal concepts the local packs are indexed under.
 CONCEPT_EXPANSIONS = (
     (
@@ -334,6 +398,16 @@ class PrimaryAgent:
             safety_messages=[],
         )
         database = Database(self.settings.database_path)
+        # Automatic language switch detection
+        detected_lang = detect_message_language(state.get("current_message", ""))
+        if detected_lang and detected_lang != state.get("language"):
+            state["language"] = detected_lang
+            try:
+                database.set_conversation_language(
+                    state["owner_id"], state["conversation_id"], detected_lang
+                )
+            except Exception:
+                pass
         started = time.monotonic()
         budget = TurnBudget(self.settings)
 
