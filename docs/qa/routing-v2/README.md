@@ -1,6 +1,6 @@
 # Three-level V2 routing implementation — 20 November 2026
 
-Status: implemented locally on the latest GitHub Hindi-homepage baseline. This report does not establish live-model quality or production readiness. Existing production is unchanged by this change.
+Status: implemented and pushed on a separate branch based on the latest GitHub Hindi-homepage baseline; Vercel built a separate preview. This report does not establish live-model quality or production readiness. Existing production is unchanged by this change.
 
 ## Implemented behavior
 
@@ -25,7 +25,7 @@ All automated checks used local fixtures, mocked provider transport, or a delibe
 - Targeted backend checks: `python -m pytest backend/tests/test_agent_routing.py backend/tests/test_primary_agent.py backend/tests/test_primary_provider_transport.py backend/tests/test_practice.py backend/tests/test_search_costs.py backend/tests/test_devspace.py backend/tests/test_answer_quality.py -q` — 152 passed, 1 skipped. Includes real API→runner→message-metadata tests for all three paths, urgent-before-router-failure, exclusions, budget exhaustion, bounded escalation and SDK serialization/model parameters.
 - Broader backend regression: 774 passed, 4 skipped, one prompt-size failure. The prompt was reduced to 10,490 characters under the existing 10,500 limit; the affected prompt test and the entire targeted set above then passed. No prompt-size safeguard was weakened.
 - Frontend: 47 tests passed, including route escalation and absence of false certification. Production TypeScript/Vite build passed; an existing bundle-size warning remains.
-- Browser results are recorded in the final verification log alongside this report. These are offline UI checks, not a live conversation quality claim.
+- Eight desktop/mobile browser checks passed; results are recorded in the final verification log alongside this report. These are offline UI checks, not a live conversation quality claim.
 
 Use the project's Python environment with test dependencies and `npm ci` in `frontend`. The local environment symlink used for verification is not committed. Browser config expects `backend/.venv` and deliberately sets an empty API key. No secrets or private conversations are included in these artifacts.
 

@@ -38,7 +38,7 @@ def workflow_description(settings):
         ),
         (
             "repair",
-            "One targeted repair",
+            "Bounded targeted repair",
             "Only affected content; changed consequential claims are reviewed again within the shared allowance.",
         ),
         (
@@ -63,7 +63,6 @@ def workflow_description(settings):
             {"from": "applicability", "to": "research", "condition": "material gap and preflight research not yet attempted"},
             {"from": "applicability", "to": "primary", "condition": "assessment and explicit limitations ready"},
             {"from": "primary", "to": "research", "condition": "material evidence gap and budget"},
-            {"from": "research", "to": "primary", "condition": "evidence or honest limitations"},
             {"from": "primary", "to": "verify", "condition": "draft ready"},
             {
                 "from": "verify",
