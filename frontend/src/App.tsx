@@ -143,7 +143,7 @@ export default function App(){
         <button className="mobile-new" onClick={makeNew} aria-label="New chat"><Plus/></button>
         <div className="case-title">
           <div className="case-title-row">
-            <b>{isNewChat?'न्याय साथी':detail?.conversation.title||'Nyay Saathi'}</b>
+            <b>{isNewChat?'Nyay Saathi':detail?.conversation.title||'Nyay Saathi'}</b>
             {detail?.case_memory?.domain && (() => {
               const topic = getTopicMeta(detail.case_memory.domain)
               const TopicIcon = topic.icon
