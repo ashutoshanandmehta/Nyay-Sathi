@@ -52,6 +52,14 @@ from app.services.progress import publisher
 CONCEPT_EXPANSIONS = (
     (
         re.compile(
+            r"\b(?:earbuds?|headphones?|refund|defective|delivery|seller|warranty|replacement)\b|"
+            r"ईयरबड|सामान.{0,30}खराब|रिफंड|पैसे\s+वापस|दुकानदार|डिलीवरी|वारंटी|बदली",
+            re.I,
+        ),
+        "consumer defective goods refund replacement seller National Consumer Helpline pre-litigation complaint",
+    ),
+    (
+        re.compile(
             r"\b(?:jail|arrest\w*|custody|giraftar\w*|hirasat|lock-?up|thana)\b|जेल|गिरफ्तार|हिरासत",
             re.I,
         ),
@@ -208,6 +216,11 @@ class PrimaryAgent:
             query_text, jurisdiction="India", limit=4, exclude_origin="official_pack"
         )
         trusted = [h for h in hits if h.get("certified_proposition")]
+        # Official consumer corpus candidates also need to reach the agent. They are
+        # NOT promoted to certified propositions: applicability and claim review remain.
+        corpus_hits, _ = self.research.retrieve_certified(
+            query_text, jurisdiction="India", limit=6, origin="corpus", min_relative_score=0.65
+        )
         for pattern, concept in CERTIFIED_CONCEPTS:
             if pattern.search(state["current_message"]):
                 # Both sides of it: the officer's demand (s.7) and the payer's 7-day report (s.8).
@@ -268,7 +281,7 @@ class PrimaryAgent:
         seen = set(guaranteed_ids)
 
         candidates = []
-        for h in (trusted + pack_hits + concept_extras):
+        for h in (trusted + pack_hits + corpus_hits + concept_extras):
             if h["passage_id"] not in seen:
                 seen.add(h["passage_id"])
                 candidates.append(h)
@@ -776,6 +789,7 @@ class PrimaryAgent:
                 "route": state.get("route"),
                 "applicability": state.get("route_guidance"),
                 "limitations": state.get("routing_limitations", []),
+                "research_already_attempted": bool(state.get("routing_research_attempted")),
             },
         }
         if state.get("urgent_continuation"):
@@ -810,6 +824,9 @@ class PrimaryAgent:
                 round_index + 1 < self.settings.agent_max_rounds
                 and budget.available(3, reserve=self.settings.agent_repair_reserve)
                 and budget.batches < self.settings.agent_max_batches
+                # Keep time for the answer, applicability and independent review;
+                # a second search must not consume the whole hosted deadline.
+                and budget.remaining_time() >= self.settings.agent_research_seconds + 20
             )
             output, calls, answer = self.provider.complete(
                 items,

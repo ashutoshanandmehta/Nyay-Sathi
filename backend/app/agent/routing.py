@@ -114,6 +114,7 @@ def prepare_route(agent, state, budget, event):
             )
             return {"researched": True}
         event("web_research", detail="Gathering official evidence before applicability checks")
+        state["routing_research_attempted"] = True
         result = agent.research.run(request, state, budget)
         state["tool_records"].extend(result.get("tool_records", []))
         passages = {p["passage_id"]: p for p in state["passages"]}

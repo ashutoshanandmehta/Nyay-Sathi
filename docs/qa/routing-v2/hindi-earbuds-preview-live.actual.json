@@ -1,0 +1,770 @@
+{
+  "test_type": "single authorized live new-routing preview turn",
+  "prompt": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+  "requested_language": "hi",
+  "new_routing_preview_tested": true,
+  "deployment_url": "https://nyay-sathi-jzjdcvek5-anandmehtaashutosh-6445s-projects.vercel.app",
+  "bootstrap_status": 200,
+  "create_status": 200,
+  "turn_status": 200,
+  "actual_response": {
+    "conversation_id": "8c4b5d1d-fd93-402f-85e5-659d834ed66d",
+    "user_message": {
+      "id": "06bffd13-be75-4e1a-9774-353a34d0cb7f",
+      "role": "user",
+      "content": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+      "created_at": "2026-11-20T16:08:20.050327+00:00",
+      "status": "complete",
+      "metadata": {
+        "attachment_ids": [],
+        "language": "hi"
+      }
+    },
+    "assistant_message": {
+      "id": "e9e9b588-0563-4841-996c-bdf934075fe8",
+      "role": "assistant",
+      "content": "### ये चीज़ें तैयार रखें\n\nइस मामले के मूल दस्तावेज़, संदेश और भुगतान रिकॉर्ड संभालें। तारीख वाली प्रतियां और घटनाक्रम बनाएं; मूल रिकॉर्ड न बदलें।\n\n### जो अभी पक्का नहीं है\n\nइस बार विश्वसनीय कानूनी निष्कर्ष के लिए ज़रूरी विवरण सत्यापित नहीं हो सके। उपलब्ध तथ्य और तैयारी उपयोगी हैं; किसी खास कानूनी रास्ते के लिए स्रोतों की और जांच चाहिए।",
+      "created_at": "2026-11-20T16:09:18.102238+00:00",
+      "status": "complete",
+      "metadata": {
+        "verification": {
+          "passed": true,
+          "publication_safe": true,
+          "scope": "published_claims_only",
+          "claim_checks": {
+            "fallback": "approved_template",
+            "preserve": "approved_template"
+          },
+          "independent_review_performed": false,
+          "legal_certification": false
+        },
+        "token_usage": {
+          "input_tokens": 25550,
+          "output_tokens": 2482,
+          "total_tokens": 28032
+        },
+        "events": [
+          {
+            "stage": "context",
+            "status": "running",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "action": "Pre-fetching certified statutory provisions & intake facts",
+            "detail": "Loading facts & certified knowledge pack"
+          },
+          {
+            "stage": "context",
+            "status": "complete",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "result": "Loaded 0 retrieved source passages & facts",
+            "passages_count": 0,
+            "detail": "Context ready (0 legal provisions loaded)"
+          },
+          {
+            "stage": "routing",
+            "status": "running",
+            "agent": "Workflow Router",
+            "detail": "Choosing the appropriate level of help"
+          },
+          {
+            "stage": "routing",
+            "status": "complete",
+            "route": "research",
+            "previous_route": null,
+            "detail": "ऑनलाइन खरीद में खराब उत्पाद के लिए बिना अदालत जाए उपलब्ध मौजूदा उपभोक्ता-शिकायत और समाधान विकल्पों की वर्तमान आधिकारिक जानकारी जाँचना आवश्यक है।",
+            "agent": "Workflow Router"
+          },
+          {
+            "stage": "web_research",
+            "status": "running",
+            "detail": "Gathering official evidence before applicability checks"
+          },
+          {
+            "stage": "web_research",
+            "status": "complete",
+            "passages_count": 0,
+            "detail": "Research finished; checking applicability",
+            "duration_ms": 11043
+          },
+          {
+            "stage": "applicability",
+            "status": "running",
+            "detail": "Checking jurisdiction, incident date and source currency"
+          },
+          {
+            "stage": "applicability",
+            "status": "complete",
+            "detail": "Applicability check completed; remaining uncertainties are retained"
+          },
+          {
+            "stage": "primary",
+            "status": "running",
+            "agent": "Primary Reasoning Agent",
+            "tool": "reasoning_engine",
+            "round": 1,
+            "action": "Synthesizing legal claims & response strategy (Round 1)",
+            "detail": "Synthesizing response & legal claims (Round 1)"
+          },
+          {
+            "stage": "web_research",
+            "status": "running",
+            "agent": "Legal Retrieval Agent",
+            "tool": "research_legal_issue",
+            "query": "भारत में खराब ऑनलाइन खरीदे सामान के लिए बिना अदालत जाए राष्ट्रीय उपभोक्ता हेल्पलाइन पर शिकायत कैसे दर्ज करें, शिकायत के लिए कौन से दस्तावेज चाहिए, और समाधान न होने पर अगला कदम क्या है?, Consumer Protection Act 2019 के तहत खराब वस्तु के मामले में उपभोक्ता को replacement, refund या compensation जैसे कौन से remedies मिल सकते हैं और शिकायत की limitation क्या है?",
+            "action": "Searching statutory corpus & official portals for: भारत में खराब ऑनलाइन खरीदे सामान के लिए बिना अदालत जाए राष्ट्रीय उपभोक्ता हेल्पलाइन पर शिकायत कैसे दर्ज करें, शिकायत के लिए कौन से दस्तावेज चाहिए, और समाधान न होने पर अगला कदम क्या है?, Consumer Protection Act 2019 के तहत खराब वस्तु के मामले में उपभोक्ता को replacement, refund या compensation जैसे कौन से remedies मिल सकते हैं और शिकायत की limitation क्या है?",
+            "detail": "Searching legal provisions: भारत में खराब ऑनलाइन खरीदे सामान के लिए बिना अदालत जाए राष्ट्रीय उपभोक्ता हेल्पलाइन पर शिकायत कैसे दर्ज करें, शिकायत के लिए कौन से दस्तावेज चाहिए, और समाधान न होने पर अगला कदम क्या है?, Consumer Protection Act 2019 के तहत खराब वस्तु के मामले में उपभोक्ता को replacement, refund या compensation जैसे कौन से remedies मिल सकते हैं और शिकायत की limitation क्या है?"
+          },
+          {
+            "stage": "web_research",
+            "status": "complete",
+            "agent": "Legal Retrieval Agent",
+            "tool": "research_legal_issue",
+            "result": "Fetched 0 statutory passages from official registry",
+            "duration_ms": 22016,
+            "detail": "Retrieved 0 source passages (22016ms)"
+          },
+          {
+            "stage": "applicability",
+            "status": "running",
+            "detail": "Checking newly retrieved evidence"
+          },
+          {
+            "stage": "applicability",
+            "status": "complete",
+            "detail": "New evidence assessed; unresolved issues retained"
+          },
+          {
+            "stage": "primary",
+            "status": "running",
+            "agent": "Primary Reasoning Agent",
+            "tool": "reasoning_engine",
+            "round": 2,
+            "action": "Synthesizing legal claims & response strategy (Round 2)",
+            "detail": "Synthesizing response & legal claims (Round 2)"
+          },
+          {
+            "stage": "primary",
+            "status": "fallback",
+            "error_type": "APITimeoutError"
+          },
+          {
+            "stage": "complete",
+            "status": "supported",
+            "duration_ms": 58024
+          }
+        ],
+        "request_coverage": [
+          {
+            "request_id": "task-1",
+            "status": "answered",
+            "reason": null
+          }
+        ],
+        "interpretation": {
+          "schema_version": "request-v2",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "source_text": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+              "intent": "conversation",
+              "domain": "general",
+              "relationship": null,
+              "entities": [],
+              "case_link": "unrelated",
+              "requires_research": false,
+              "requires_case_update": false,
+              "risk_level": "ordinary",
+              "uncertainty": [],
+              "public_query": null,
+              "source_segment_ids": [],
+              "needs_early_extraction": false,
+              "extraction_reason": null
+            }
+          ],
+          "case_relevance": "unrelated",
+          "clarification_needed": false,
+          "requested_deliverables": [],
+          "user_goal": null,
+          "suggested_remedy": null,
+          "required_answer_elements": [],
+          "missing_details": [],
+          "invalid_tasks": []
+        },
+        "task_plan": [
+          {
+            "task_id": "task-1",
+            "workflow": "conversation",
+            "status": "ready",
+            "research_status": "not_required",
+            "reason": "Interpretation selects assistance, never legal eligibility or permission to submit."
+          }
+        ],
+        "tool_records": [
+          {
+            "tool": "web_search",
+            "status": "failed",
+            "error_type": "APITimeoutError"
+          },
+          {
+            "tool": "web_search",
+            "status": "failed",
+            "error_type": "APITimeoutError"
+          },
+          {
+            "tool": "web_search",
+            "status": "succeeded",
+            "query_hash": "110414f52eff54b837961c3b1ae8dffdce0e314afe20b79371a297432c06e408",
+            "candidate_count": 20
+          },
+          {
+            "tool": "web_search",
+            "status": "failed",
+            "error_type": "APITimeoutError"
+          }
+        ],
+        "unit_outcomes": [
+          {
+            "task_id": "task-1",
+            "status": "supported"
+          }
+        ],
+        "resolution_plan": {},
+        "resolution_blocks": [
+          {
+            "block_id": "block-evidence_checklist",
+            "block_type": "evidence_checklist",
+            "title": "ये चीज़ें तैयार रखें",
+            "content": "इस मामले के मूल दस्तावेज़, संदेश और भुगतान रिकॉर्ड संभालें। तारीख वाली प्रतियां और घटनाक्रम बनाएं; मूल रिकॉर्ड न बदलें।",
+            "items": [
+              "इस मामले के मूल दस्तावेज़, संदेश और भुगतान रिकॉर्ड संभालें। तारीख वाली प्रतियां और घटनाक्रम बनाएं; मूल रिकॉर्ड न बदलें।"
+            ],
+            "claim_ids": [
+              "preserve"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-limitation",
+            "block_type": "limitation",
+            "title": "जो अभी पक्का नहीं है",
+            "content": "इस बार विश्वसनीय कानूनी निष्कर्ष के लिए ज़रूरी विवरण सत्यापित नहीं हो सके। उपलब्ध तथ्य और तैयारी उपयोगी हैं; किसी खास कानूनी रास्ते के लिए स्रोतों की और जांच चाहिए।",
+            "items": [],
+            "claim_ids": [
+              "fallback"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "requires_confirmation",
+            "document_title": null
+          }
+        ],
+        "factual_issues": [],
+        "legal_issues": [],
+        "case_stage": "intake",
+        "next_action": null,
+        "publication_status": "supported",
+        "assistance_status": null,
+        "document_status": null,
+        "legal_verification_status": null,
+        "call_telemetry": [
+          {
+            "call_id": "f5f92d9e-8d5c-4ff7-9363-d72fbf9e95a7",
+            "stage": "routing",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 55.0
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 2087,
+              "output_tokens": 380,
+              "total_tokens": 2467,
+              "attempt_details": [
+                {
+                  "input_tokens": 2087,
+                  "output_tokens": 380,
+                  "total_tokens": 2467,
+                  "input_details": {
+                    "cache_write_tokens": 2084,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 2084
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 143
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 2087,
+                  "output_tokens": 380,
+                  "total_tokens": 2467,
+                  "input_details": {
+                    "cache_write_tokens": 2084,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 2084
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 143
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_934b2ae2c2c0442799bc0123c13b92de"
+              }
+            ],
+            "elapsed_ms": 5859
+          },
+          {
+            "call_id": "48f15045-f632-445f-939f-d00e6b7b0027",
+            "stage": "web_search",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 10.999059074000002
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 0,
+            "usage_reported": null,
+            "usage_completeness": "unknown",
+            "status": "failed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "sent",
+                "usage": null
+              }
+            ],
+            "error_type": "APITimeoutError",
+            "elapsed_ms": 11040
+          },
+          {
+            "call_id": "3edb74e1-29f1-47ac-91de-7b3da4cedc73",
+            "stage": "web_search",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 10.998543764000004
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 0,
+            "usage_reported": null,
+            "usage_completeness": "unknown",
+            "status": "failed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "sent",
+                "usage": null
+              }
+            ],
+            "error_type": "APITimeoutError",
+            "elapsed_ms": 11036
+          },
+          {
+            "call_id": "159f6d4e-c1d0-4bd1-bead-f62f6030d376",
+            "stage": "applicability",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 41.053628614999994
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 2090,
+              "output_tokens": 605,
+              "total_tokens": 2695,
+              "attempt_details": [
+                {
+                  "input_tokens": 2090,
+                  "output_tokens": 605,
+                  "total_tokens": 2695,
+                  "input_details": {
+                    "cache_write_tokens": 2087,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 2087
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 308
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 2090,
+                  "output_tokens": 605,
+                  "total_tokens": 2695,
+                  "input_details": {
+                    "cache_write_tokens": 2087,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 2087
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 308
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_15a943329daa4893992cda2a761458f9"
+              }
+            ],
+            "elapsed_ms": 7858
+          },
+          {
+            "call_id": "42a91028-2ab5-496a-96d7-1e4472d2a83e",
+            "stage": "primary",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 33.186992668
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 6237,
+              "output_tokens": 251,
+              "total_tokens": 6488,
+              "attempt_details": [
+                {
+                  "input_tokens": 6237,
+                  "output_tokens": 251,
+                  "total_tokens": 6488,
+                  "input_details": {
+                    "cache_write_tokens": 6234,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 6234
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 65
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 6237,
+                  "output_tokens": 251,
+                  "total_tokens": 6488,
+                  "input_details": {
+                    "cache_write_tokens": 6234,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 6234
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 65
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_23daa5fd99cb46b286a2dba104b7c55e"
+              }
+            ],
+            "elapsed_ms": 3255
+          },
+          {
+            "call_id": "bd76b8c8-e47c-4774-af95-3a346c4b61f7",
+            "stage": "web_search",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 10.999694811000012
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 0,
+            "usage_reported": null,
+            "usage_completeness": "unknown",
+            "status": "failed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "sent",
+                "usage": null
+              }
+            ],
+            "error_type": "APITimeoutError",
+            "elapsed_ms": 11036
+          },
+          {
+            "call_id": "fe217e8c-0884-41a8-bcf5-5f352a9951d1",
+            "stage": "web_search",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 10.996650304
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 12763,
+              "output_tokens": 745,
+              "total_tokens": 13508,
+              "attempt_details": [
+                {
+                  "input_tokens": 12763,
+                  "output_tokens": 745,
+                  "total_tokens": 13508,
+                  "input_details": {
+                    "cache_write_tokens": 76,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 76
+                    },
+                    "cached_tokens": 4316
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 246
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 12763,
+                  "output_tokens": 745,
+                  "total_tokens": 13508,
+                  "input_details": {
+                    "cache_write_tokens": 76,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 76
+                    },
+                    "cached_tokens": 4316
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 246
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_fbefed8ba65a4a5cb47f7392d65693b7"
+              }
+            ],
+            "elapsed_ms": 8521
+          },
+          {
+            "call_id": "377d9055-56f8-46d7-9f41-1f07429eac5d",
+            "stage": "applicability",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 7.911979349999996
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 2373,
+              "output_tokens": 501,
+              "total_tokens": 2874,
+              "attempt_details": [
+                {
+                  "input_tokens": 2373,
+                  "output_tokens": 501,
+                  "total_tokens": 2874,
+                  "input_details": {
+                    "cache_write_tokens": 2370,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 2370
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 191
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 2373,
+                  "output_tokens": 501,
+                  "total_tokens": 2874,
+                  "input_details": {
+                    "cache_write_tokens": 2370,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 2370
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 191
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_d89a7b9ddfc94766b04655b638733221"
+              }
+            ],
+            "elapsed_ms": 5813
+          },
+          {
+            "call_id": "ce8ede00-94eb-4d15-ae7e-ab2db318bd0f",
+            "stage": "primary",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 2.0893753779999997
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 0,
+            "usage_reported": null,
+            "usage_completeness": "unknown",
+            "status": "failed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "sent",
+                "usage": null
+              }
+            ],
+            "error_type": "APITimeoutError",
+            "elapsed_ms": 2111
+          }
+        ],
+        "usage_completeness": "partial",
+        "case_update_allowed": false,
+        "engine_version": "primary-agent-v2.1-routed",
+        "metrics": {
+          "route": "research",
+          "route_history": [
+            "research"
+          ],
+          "provider_requests_reserved": 9,
+          "reported_tokens": 28032,
+          "conservative_tokens_reserved": 308854,
+          "outstanding_token_reservations": 169022,
+          "queries": 4,
+          "documents_attempted": 10,
+          "research_batches": 2,
+          "remaining_seconds": 0.0,
+          "projected_cost_usd": null,
+          "cost_status": "unknown",
+          "estimated_cost_usd": null,
+          "known_estimated_cost_usd": null,
+          "actual_billed_cost_usd": null,
+          "pricing_date": null,
+          "total_ms": 58024,
+          "timing_scope": "runner; excludes API authorization and final database commit",
+          "time_to_first_useful_guidance_ms": 58024,
+          "reasoning_ms": 5366,
+          "review_ms": 0,
+          "retrieval_ms": 33059
+        },
+        "safety_messages": [],
+        "sources": [],
+        "case_version": 0,
+        "commit_receipt": {
+          "status": "no_change",
+          "case_version": 0,
+          "committed_patch_ids": [],
+          "staged_patch_ids": [],
+          "artifact_ids": []
+        }
+      }
+    },
+    "case_version": 0,
+    "sources": [],
+    "verification": {
+      "passed": true,
+      "publication_safe": true,
+      "scope": "published_claims_only",
+      "claim_checks": {
+        "fallback": "approved_template",
+        "preserve": "approved_template"
+      },
+      "independent_review_performed": false,
+      "legal_certification": false
+    },
+    "token_usage": {
+      "input_tokens": 25550,
+      "output_tokens": 2482,
+      "total_tokens": 28032
+    },
+    "ai_configured": true
+  },
+  "elapsed_seconds": 60.53
+}

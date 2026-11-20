@@ -162,3 +162,45 @@ def test_urgent_guidance_precedes_router_failure(client, isolated_app):
     detail = client.get(f"/api/conversations/{cid}").json()
     assert len(detail["safety_messages"]) == 1
     assert "1930" in detail["safety_messages"][0]["text"]
+
+
+def test_hindi_earbuds_retrieves_real_nch_sources_without_network():
+    """Regression for the live failure: the consumer corpus never reached preflight."""
+    from app.agent.runner import PrimaryAgent
+    from app.rag.retrieval import HybridRetriever
+
+    settings = Settings(_env_file=None, openai_api_key=None)
+    agent = PrimaryAgent(settings, HybridRetriever(settings))
+    state = {
+        "current_message": SCENARIOS[1][1] + " कंपनी और दुकानदार पैसे वापस नहीं दे रहे।",
+        "memory": {},
+        "passages": [],
+        "tool_records": [],
+    }
+    agent._pre_retrieve_certified(state)
+    by_id = {p["passage_id"]: p for p in state["passages"]}
+    assert "nch-prelitigation" in by_id
+    nch = by_id["nch-prelitigation"]
+    assert nch["retrieved_at"] == "2026-11-20" and "1915" in nch["text"]
+    assert nch["origin"] == "corpus" and not nch["certified_proposition"]
+    assert "consumeraffairs.gov.in" in nch["canonical_url"]
+
+
+def test_primary_preserves_publication_time_instead_of_repeating_research(isolated_app):
+    provider = ScriptedProvider(answer())
+    runner = install(isolated_app, provider)
+    runner.settings.agent_routing_enabled = True
+    runner.settings.agent_deadline_seconds = 58
+    now = [0.0]
+    budget = TurnBudget(runner.settings, clock=lambda: now[0])
+    now[0] = 30.0
+    state = {
+        "current_message": "I paid for a product.",
+        "memory": {},
+        "passages": [],
+        "language": "hi",
+        "routing_research_attempted": True,
+    }
+    runner._reason(state, budget, lambda *a, **k: None, lambda *a, **k: None)
+    assert provider.requests[0][1]["allow_tools"] is False
+    assert budget.remaining_time() == 28.0

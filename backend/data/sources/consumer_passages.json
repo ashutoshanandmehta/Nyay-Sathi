@@ -44,20 +44,20 @@
     "source_id": "nch-about",
     "title": "National Consumer Helpline About",
     "locator": "About portal questions 1 8 and 9",
-    "text": "The National Consumer Helpline portal is a pre-litigation grievance mechanism. It forwards grievances to the concerned company, agency, regulator or ombudsman. It does not guarantee a remedy. If the grievance is not resolved to the consumer's satisfaction, the consumer may approach the appropriate Consumer Commission. The portal says the process may take up to 30 days to reach a logical conclusion.",
-    "canonical_url": "https://consumerhelpline.gov.in/public/index.php/about",
-    "retrieved_at": "2026-11-05",
-    "limitations": "Operational guidance can change; verify the current portal before acting."
+    "text": "The National Consumer Helpline (NCH) is a single point of access for consumers across India for grievance redressal at the pre-litigation stage. Consumers can register grievances in 17 languages by calling the toll-free number 1915 or through the web portal consumerhelpline.gov.in. The portal provides an alternate dispute redressal mechanism before litigation; it does not guarantee a refund or a remedy.",
+    "canonical_url": "https://consumeraffairs.gov.in/pages/nch",
+    "retrieved_at": "2026-11-20",
+    "limitations": "Official operational information checked on 20 November 2026; not a guarantee of refund or resolution. Incident-specific legal eligibility still requires assessment."
   },
   {
     "passage_id": "nch-contact",
     "source_id": "nch-contact",
     "title": "National Consumer Helpline Contact Details",
     "locator": "Contact details",
-    "text": "The National Consumer Helpline lists toll-free numbers 1915 and 1800 11 4000, available 8 AM to 8 PM except national holidays, and provides web, SMS, WhatsApp, app and UMANG channels for consumer grievances.",
-    "canonical_url": "https://consumerhelpline.gov.in/public/index.php/contact",
-    "retrieved_at": "2026-11-05",
-    "limitations": "Contact details and hours may change; verify on the official page."
+    "text": "Consumers can register grievances with the National Consumer Helpline through the toll-free number 1915, the web portal consumerhelpline.gov.in, the NCH app, UMANG, and WhatsApp at 8800001915. These are channels for consumers to submit their grievances; opening a channel does not itself register a grievance.",
+    "canonical_url": "https://consumeraffairs.gov.in/pages/nch",
+    "retrieved_at": "2026-11-20",
+    "limitations": "Official contact information checked on 20 November 2026. The consumer must complete submission and retain the docket or acknowledgement."
   },
   {
     "passage_id": "ecommerce-r4-grievance",

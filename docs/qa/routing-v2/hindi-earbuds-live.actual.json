@@ -1,0 +1,844 @@
+{
+  "test_type": "single authorized live production app turn",
+  "prompt": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+  "requested_language": "hi",
+  "new_routing_preview_tested": false,
+  "production_url": "https://nyay-sathi-sage.vercel.app",
+  "bootstrap_status": 200,
+  "create_status": 200,
+  "turn_status": 200,
+  "actual_response": {
+    "conversation_id": "4e6b9fc1-cad0-46f7-8267-fe86c609b9f3",
+    "user_message": {
+      "id": "0b62b205-5f1e-4b54-9dec-89d88a608232",
+      "role": "user",
+      "content": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+      "created_at": "2026-11-20T15:56:06.083665+00:00",
+      "status": "complete",
+      "metadata": {
+        "attachment_ids": [],
+        "language": null
+      }
+    },
+    "assistant_message": {
+      "id": "34c3c636-b1d1-4cb9-9df9-22000fdf5649",
+      "role": "assistant",
+      "content": "The user purchased earbuds online for ₹5,000 which became faulty within a week.\n\nThe company has refused to assist with the faulty earbuds, and the shopkeeper is also denying a refund.\n\n### मेरी सलाह\n\nIf customer service is unresponsive, file a complaint on the Consumer Online Resource and Empowerment Centre (CORE) website.\n\n### आज आप क्या कर सकते हैं\n\nFirst, contact the customer service of the online platform you purchased the earbuds from. Explain your issue and ask for a replacement or refund.\n\n### ये चीज़ें तैयार रखें\n\nPreserve transaction receipts, emails, and any communication with the company and shopkeeper.\n\n### जो अभी पक्का नहीं है\n\nEnsure you have completed all initial steps like contacting customer service before moving to file a formal complaint.",
+      "created_at": "2026-11-20T15:56:17.258550+00:00",
+      "status": "complete",
+      "metadata": {
+        "verification": {
+          "passed": true,
+          "publication_safe": true,
+          "scope": "published_claims_only",
+          "claim_checks": {
+            "claim-1": "risk_calibrated_consistency",
+            "claim-2": "risk_calibrated_consistency",
+            "claim-3": "risk_calibrated_consistency",
+            "claim-5": "risk_calibrated_consistency",
+            "claim-4": "independent_semantic_review",
+            "claim-6": "independent_semantic_review"
+          },
+          "independent_review_performed": true,
+          "legal_certification": false
+        },
+        "token_usage": {
+          "input_tokens": 8444,
+          "output_tokens": 1226,
+          "total_tokens": 9670
+        },
+        "events": [
+          {
+            "stage": "context",
+            "status": "running",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "action": "Pre-fetching certified statutory provisions & intake facts",
+            "detail": "Loading facts & certified knowledge pack"
+          },
+          {
+            "stage": "context",
+            "status": "complete",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "result": "Loaded 0 verified statutory provisions & facts",
+            "passages_count": 0,
+            "detail": "Context ready (0 legal provisions loaded)"
+          },
+          {
+            "stage": "primary",
+            "status": "running",
+            "agent": "Primary Reasoning Agent",
+            "tool": "reasoning_engine",
+            "round": 1,
+            "action": "Synthesizing legal claims & response strategy (Round 1)",
+            "detail": "Synthesizing response & legal claims (Round 1)"
+          },
+          {
+            "stage": "review",
+            "status": "running",
+            "agent": "Verifier Agent",
+            "tool": "verifier_evaluator",
+            "action": "Auditing grounding and citation integrity for 6 claims",
+            "detail": "Verifier Agent auditing claims & legal citations"
+          },
+          {
+            "stage": "structuring",
+            "status": "running",
+            "agent": "Output Structuring Agent",
+            "tool": "format_composer",
+            "action": "Structuring response with numbered steps, checklists & citations",
+            "detail": "Structuring formatted response & citations"
+          },
+          {
+            "stage": "verify",
+            "status": "passed",
+            "agent": "Output Certification Agent",
+            "result": "Output verified & certified for safe publication",
+            "detail": "Verified legal guidance ready · Certified"
+          },
+          {
+            "stage": "complete",
+            "status": "supported",
+            "duration_ms": 11115
+          }
+        ],
+        "request_coverage": [
+          {
+            "request_id": "task-1",
+            "status": "answered",
+            "reason": null
+          }
+        ],
+        "interpretation": {
+          "schema_version": "request-v2",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "source_text": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+              "intent": "legal_options",
+              "domain": "consumer",
+              "relationship": "self",
+              "entities": [],
+              "case_link": "new",
+              "requires_research": false,
+              "requires_case_update": true,
+              "risk_level": "ordinary",
+              "uncertainty": [],
+              "public_query": null,
+              "source_segment_ids": [
+                "seg-1"
+              ],
+              "needs_early_extraction": false,
+              "extraction_reason": null
+            }
+          ],
+          "case_relevance": "new",
+          "clarification_needed": false,
+          "requested_deliverables": [],
+          "user_goal": null,
+          "suggested_remedy": null,
+          "required_answer_elements": [],
+          "missing_details": [],
+          "invalid_tasks": []
+        },
+        "task_plan": [
+          {
+            "task_id": "task-1",
+            "workflow": "consumer",
+            "status": "ready",
+            "research_status": "not_required",
+            "reason": "Interpretation selects assistance, never legal eligibility or permission to submit."
+          }
+        ],
+        "tool_records": [],
+        "unit_outcomes": [
+          {
+            "task_id": "task-1",
+            "status": "supported"
+          }
+        ],
+        "resolution_plan": {},
+        "resolution_blocks": [
+          {
+            "block_id": "block-direct_answer",
+            "block_type": "direct_answer",
+            "title": "संक्षेप में",
+            "content": "The user purchased earbuds online for ₹5,000 which became faulty within a week.\n\nThe company has refused to assist with the faulty earbuds, and the shopkeeper is also denying a refund.",
+            "items": [],
+            "claim_ids": [
+              "claim-1",
+              "claim-2"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "reported_by_user",
+            "document_title": null
+          },
+          {
+            "block_id": "block-recommended_route",
+            "block_type": "recommended_route",
+            "title": "मेरी सलाह",
+            "content": "If customer service is unresponsive, file a complaint on the Consumer Online Resource and Empowerment Centre (CORE) website.",
+            "items": [],
+            "claim_ids": [
+              "claim-4"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-immediate_actions",
+            "block_type": "immediate_actions",
+            "title": "आज आप क्या कर सकते हैं",
+            "content": "First, contact the customer service of the online platform you purchased the earbuds from. Explain your issue and ask for a replacement or refund.",
+            "items": [
+              "First, contact the customer service of the online platform you purchased the earbuds from. Explain your issue and ask for a replacement or refund."
+            ],
+            "claim_ids": [
+              "claim-3"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-evidence_checklist",
+            "block_type": "evidence_checklist",
+            "title": "ये चीज़ें तैयार रखें",
+            "content": "Preserve transaction receipts, emails, and any communication with the company and shopkeeper.",
+            "items": [
+              "Preserve transaction receipts, emails, and any communication with the company and shopkeeper."
+            ],
+            "claim_ids": [
+              "claim-5"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-limitation",
+            "block_type": "limitation",
+            "title": "जो अभी पक्का नहीं है",
+            "content": "Ensure you have completed all initial steps like contacting customer service before moving to file a formal complaint.",
+            "items": [],
+            "claim_ids": [
+              "claim-6"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "requires_confirmation",
+            "document_title": null
+          }
+        ],
+        "factual_issues": [],
+        "legal_issues": [],
+        "case_stage": "intake",
+        "next_action": "Contact customer service and prepare complaint for Consumer Online Resource and Empowerment Centre.",
+        "publication_status": "supported",
+        "assistance_status": null,
+        "document_status": null,
+        "legal_verification_status": null,
+        "call_telemetry": [
+          {
+            "call_id": "8fed8a43-9b35-4ada-80ff-20dbb2b7113a",
+            "stage": "primary",
+            "category": "generation",
+            "model": "gpt-4o",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 55.0
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 5839,
+              "output_tokens": 963,
+              "total_tokens": 6802,
+              "attempt_details": [
+                {
+                  "input_tokens": 5839,
+                  "output_tokens": 963,
+                  "total_tokens": 6802,
+                  "input_details": {
+                    "cache_write_tokens": 0,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 0
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 0
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 5839,
+                  "output_tokens": 963,
+                  "total_tokens": 6802,
+                  "input_details": {
+                    "cache_write_tokens": 0,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 0
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 0
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_feea94aadb494d618c56d0902dda1adc"
+              }
+            ],
+            "elapsed_ms": 7832
+          },
+          {
+            "call_id": "43e7a33d-78ef-423b-ade6-8481d6b79fc0",
+            "stage": "review",
+            "category": "generation",
+            "model": "gpt-4o",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 50.11334047699998
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 2605,
+              "output_tokens": 263,
+              "total_tokens": 2868,
+              "attempt_details": [
+                {
+                  "input_tokens": 2605,
+                  "output_tokens": 263,
+                  "total_tokens": 2868,
+                  "input_details": {
+                    "cache_write_tokens": 0,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 0
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 0
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 2605,
+                  "output_tokens": 263,
+                  "total_tokens": 2868,
+                  "input_details": {
+                    "cache_write_tokens": 0,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 0
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 0
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_695ccaa47ef742b6b22c734f032b0286"
+              }
+            ],
+            "elapsed_ms": 3224
+          }
+        ],
+        "usage_completeness": "complete",
+        "case_update_allowed": true,
+        "engine_version": "primary-agent-v2.0",
+        "metrics": {
+          "provider_requests_reserved": 2,
+          "reported_tokens": 9670,
+          "conservative_tokens_reserved": 56584,
+          "outstanding_token_reservations": 0,
+          "queries": 0,
+          "documents_attempted": 0,
+          "research_batches": 0,
+          "remaining_seconds": 46.885,
+          "projected_cost_usd": null,
+          "cost_status": "unknown",
+          "estimated_cost_usd": null,
+          "known_estimated_cost_usd": null,
+          "actual_billed_cost_usd": null,
+          "pricing_date": null,
+          "total_ms": 11115,
+          "timing_scope": "runner; excludes API authorization and final database commit",
+          "time_to_first_useful_guidance_ms": 11115,
+          "reasoning_ms": 7832,
+          "review_ms": 3224,
+          "retrieval_ms": 0
+        },
+        "safety_messages": [],
+        "sources": [],
+        "case_version": 1,
+        "commit_receipt": {
+          "status": "committed",
+          "case_version": 1,
+          "committed_patch_ids": [
+            "patch-1",
+            "patch-2"
+          ],
+          "staged_patch_ids": [],
+          "artifact_ids": []
+        }
+      }
+    },
+    "case_version": 1,
+    "sources": [],
+    "verification": {
+      "passed": true,
+      "publication_safe": true,
+      "scope": "published_claims_only",
+      "claim_checks": {
+        "claim-1": "risk_calibrated_consistency",
+        "claim-2": "risk_calibrated_consistency",
+        "claim-3": "risk_calibrated_consistency",
+        "claim-5": "risk_calibrated_consistency",
+        "claim-4": "independent_semantic_review",
+        "claim-6": "independent_semantic_review"
+      },
+      "independent_review_performed": true,
+      "legal_certification": false
+    },
+    "token_usage": {
+      "input_tokens": 8444,
+      "output_tokens": 1226,
+      "total_tokens": 9670
+    },
+    "ai_configured": true
+  },
+  "actual_assistant_messages": [
+    {
+      "id": "34c3c636-b1d1-4cb9-9df9-22000fdf5649",
+      "conversation_id": "4e6b9fc1-cad0-46f7-8267-fe86c609b9f3",
+      "request_id": "7d359944-c361-4e95-ba00-efb367b960b2",
+      "role": "assistant",
+      "content": "The user purchased earbuds online for ₹5,000 which became faulty within a week.\n\nThe company has refused to assist with the faulty earbuds, and the shopkeeper is also denying a refund.\n\n### मेरी सलाह\n\nIf customer service is unresponsive, file a complaint on the Consumer Online Resource and Empowerment Centre (CORE) website.\n\n### आज आप क्या कर सकते हैं\n\nFirst, contact the customer service of the online platform you purchased the earbuds from. Explain your issue and ask for a replacement or refund.\n\n### ये चीज़ें तैयार रखें\n\nPreserve transaction receipts, emails, and any communication with the company and shopkeeper.\n\n### जो अभी पक्का नहीं है\n\nEnsure you have completed all initial steps like contacting customer service before moving to file a formal complaint.",
+      "status": "complete",
+      "created_at": "2026-11-20T15:56:17.258550+00:00",
+      "metadata": {
+        "verification": {
+          "passed": true,
+          "publication_safe": true,
+          "scope": "published_claims_only",
+          "claim_checks": {
+            "claim-1": "risk_calibrated_consistency",
+            "claim-2": "risk_calibrated_consistency",
+            "claim-3": "risk_calibrated_consistency",
+            "claim-5": "risk_calibrated_consistency",
+            "claim-4": "independent_semantic_review",
+            "claim-6": "independent_semantic_review"
+          },
+          "independent_review_performed": true,
+          "legal_certification": false
+        },
+        "token_usage": {
+          "input_tokens": 8444,
+          "output_tokens": 1226,
+          "total_tokens": 9670
+        },
+        "events": [
+          {
+            "stage": "context",
+            "status": "running",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "action": "Pre-fetching certified statutory provisions & intake facts",
+            "detail": "Loading facts & certified knowledge pack"
+          },
+          {
+            "stage": "context",
+            "status": "complete",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "result": "Loaded 0 verified statutory provisions & facts",
+            "passages_count": 0,
+            "detail": "Context ready (0 legal provisions loaded)"
+          },
+          {
+            "stage": "primary",
+            "status": "running",
+            "agent": "Primary Reasoning Agent",
+            "tool": "reasoning_engine",
+            "round": 1,
+            "action": "Synthesizing legal claims & response strategy (Round 1)",
+            "detail": "Synthesizing response & legal claims (Round 1)"
+          },
+          {
+            "stage": "review",
+            "status": "running",
+            "agent": "Verifier Agent",
+            "tool": "verifier_evaluator",
+            "action": "Auditing grounding and citation integrity for 6 claims",
+            "detail": "Verifier Agent auditing claims & legal citations"
+          },
+          {
+            "stage": "structuring",
+            "status": "running",
+            "agent": "Output Structuring Agent",
+            "tool": "format_composer",
+            "action": "Structuring response with numbered steps, checklists & citations",
+            "detail": "Structuring formatted response & citations"
+          },
+          {
+            "stage": "verify",
+            "status": "passed",
+            "agent": "Output Certification Agent",
+            "result": "Output verified & certified for safe publication",
+            "detail": "Verified legal guidance ready · Certified"
+          },
+          {
+            "stage": "complete",
+            "status": "supported",
+            "duration_ms": 11115
+          }
+        ],
+        "request_coverage": [
+          {
+            "request_id": "task-1",
+            "status": "answered",
+            "reason": null
+          }
+        ],
+        "interpretation": {
+          "schema_version": "request-v2",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "source_text": "मैंने पिछले महीने ऑनलाइन ₹5,000 के ईयरबड्स खरीदे थे। एक हफ्ते में ही खराब हो गए। कंपनी वाले बोल रहे हैं कि हम कुछ नहीं कर सकते और दुकानदार भी पैसे वापस नहीं कर रहा। अब मैं क्या करूँ? मुझे कोर्ट-कचहरी के चक्कर नहीं लगाने हैं।",
+              "intent": "legal_options",
+              "domain": "consumer",
+              "relationship": "self",
+              "entities": [],
+              "case_link": "new",
+              "requires_research": false,
+              "requires_case_update": true,
+              "risk_level": "ordinary",
+              "uncertainty": [],
+              "public_query": null,
+              "source_segment_ids": [
+                "seg-1"
+              ],
+              "needs_early_extraction": false,
+              "extraction_reason": null
+            }
+          ],
+          "case_relevance": "new",
+          "clarification_needed": false,
+          "requested_deliverables": [],
+          "user_goal": null,
+          "suggested_remedy": null,
+          "required_answer_elements": [],
+          "missing_details": [],
+          "invalid_tasks": []
+        },
+        "task_plan": [
+          {
+            "task_id": "task-1",
+            "workflow": "consumer",
+            "status": "ready",
+            "research_status": "not_required",
+            "reason": "Interpretation selects assistance, never legal eligibility or permission to submit."
+          }
+        ],
+        "tool_records": [],
+        "unit_outcomes": [
+          {
+            "task_id": "task-1",
+            "status": "supported"
+          }
+        ],
+        "resolution_plan": {},
+        "resolution_blocks": [
+          {
+            "block_id": "block-direct_answer",
+            "block_type": "direct_answer",
+            "title": "संक्षेप में",
+            "content": "The user purchased earbuds online for ₹5,000 which became faulty within a week.\n\nThe company has refused to assist with the faulty earbuds, and the shopkeeper is also denying a refund.",
+            "items": [],
+            "claim_ids": [
+              "claim-1",
+              "claim-2"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "reported_by_user",
+            "document_title": null
+          },
+          {
+            "block_id": "block-recommended_route",
+            "block_type": "recommended_route",
+            "title": "मेरी सलाह",
+            "content": "If customer service is unresponsive, file a complaint on the Consumer Online Resource and Empowerment Centre (CORE) website.",
+            "items": [],
+            "claim_ids": [
+              "claim-4"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-immediate_actions",
+            "block_type": "immediate_actions",
+            "title": "आज आप क्या कर सकते हैं",
+            "content": "First, contact the customer service of the online platform you purchased the earbuds from. Explain your issue and ask for a replacement or refund.",
+            "items": [
+              "First, contact the customer service of the online platform you purchased the earbuds from. Explain your issue and ask for a replacement or refund."
+            ],
+            "claim_ids": [
+              "claim-3"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-evidence_checklist",
+            "block_type": "evidence_checklist",
+            "title": "ये चीज़ें तैयार रखें",
+            "content": "Preserve transaction receipts, emails, and any communication with the company and shopkeeper.",
+            "items": [
+              "Preserve transaction receipts, emails, and any communication with the company and shopkeeper."
+            ],
+            "claim_ids": [
+              "claim-5"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-limitation",
+            "block_type": "limitation",
+            "title": "जो अभी पक्का नहीं है",
+            "content": "Ensure you have completed all initial steps like contacting customer service before moving to file a formal complaint.",
+            "items": [],
+            "claim_ids": [
+              "claim-6"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "requires_confirmation",
+            "document_title": null
+          }
+        ],
+        "factual_issues": [],
+        "legal_issues": [],
+        "case_stage": "intake",
+        "next_action": "Contact customer service and prepare complaint for Consumer Online Resource and Empowerment Centre.",
+        "publication_status": "supported",
+        "assistance_status": null,
+        "document_status": null,
+        "legal_verification_status": null,
+        "call_telemetry": [
+          {
+            "call_id": "8fed8a43-9b35-4ada-80ff-20dbb2b7113a",
+            "stage": "primary",
+            "category": "generation",
+            "model": "gpt-4o",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 55.0
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 5839,
+              "output_tokens": 963,
+              "total_tokens": 6802,
+              "attempt_details": [
+                {
+                  "input_tokens": 5839,
+                  "output_tokens": 963,
+                  "total_tokens": 6802,
+                  "input_details": {
+                    "cache_write_tokens": 0,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 0
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 0
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 5839,
+                  "output_tokens": 963,
+                  "total_tokens": 6802,
+                  "input_details": {
+                    "cache_write_tokens": 0,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 0
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 0
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_feea94aadb494d618c56d0902dda1adc"
+              }
+            ],
+            "elapsed_ms": 7832
+          },
+          {
+            "call_id": "43e7a33d-78ef-423b-ade6-8481d6b79fc0",
+            "stage": "review",
+            "category": "generation",
+            "model": "gpt-4o",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 50.11334047699998
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 2605,
+              "output_tokens": 263,
+              "total_tokens": 2868,
+              "attempt_details": [
+                {
+                  "input_tokens": 2605,
+                  "output_tokens": 263,
+                  "total_tokens": 2868,
+                  "input_details": {
+                    "cache_write_tokens": 0,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 0
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 0
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 2605,
+                  "output_tokens": 263,
+                  "total_tokens": 2868,
+                  "input_details": {
+                    "cache_write_tokens": 0,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 0
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 0
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_695ccaa47ef742b6b22c734f032b0286"
+              }
+            ],
+            "elapsed_ms": 3224
+          }
+        ],
+        "usage_completeness": "complete",
+        "case_update_allowed": true,
+        "engine_version": "primary-agent-v2.0",
+        "metrics": {
+          "provider_requests_reserved": 2,
+          "reported_tokens": 9670,
+          "conservative_tokens_reserved": 56584,
+          "outstanding_token_reservations": 0,
+          "queries": 0,
+          "documents_attempted": 0,
+          "research_batches": 0,
+          "remaining_seconds": 46.885,
+          "projected_cost_usd": null,
+          "cost_status": "unknown",
+          "estimated_cost_usd": null,
+          "known_estimated_cost_usd": null,
+          "actual_billed_cost_usd": null,
+          "pricing_date": null,
+          "total_ms": 11115,
+          "timing_scope": "runner; excludes API authorization and final database commit",
+          "time_to_first_useful_guidance_ms": 11115,
+          "reasoning_ms": 7832,
+          "review_ms": 3224,
+          "retrieval_ms": 0
+        },
+        "safety_messages": [],
+        "sources": [],
+        "case_version": 1,
+        "commit_receipt": {
+          "status": "committed",
+          "case_version": 1,
+          "committed_patch_ids": [
+            "patch-1",
+            "patch-2"
+          ],
+          "staged_patch_ids": [],
+          "artifact_ids": []
+        }
+      }
+    }
+  ],
+  "elapsed_seconds": 17.39
+}
