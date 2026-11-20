@@ -1,0 +1,631 @@
+{
+  "test_type": "single owner-requested live refund scenario",
+  "prompt": "मैंने ऑनलाइन ₹2,800 का सामान मंगाया था, लेकिन गलत सामान आया। मैंने उसे वापस भी कर दिया। तीन हफ्ते हो गए, अभी तक पैसे नहीं मिले। हर बार कस्टमर केयर वाले कहते हैं कि इंतज़ार करो। मेरे पास ऑर्डर नंबर और वापसी का मैसेज है। अब शिकायत कहाँ करूँ?",
+  "requested_language": "hi",
+  "deployment_url": "https://nyay-sathi-bwwp2b32l-anandmehtaashutosh-6445s-projects.vercel.app",
+  "implementation_commit": "b60e30d",
+  "actual_billed_cost": "unknown",
+  "health": {
+    "status": "ok",
+    "ai_configured": true,
+    "engine_version": "primary-agent-v2.1-routed"
+  },
+  "turn_status": 200,
+  "turn_http_seconds": 58.49,
+  "actual_response": {
+    "conversation_id": "f9b48610-3648-476b-8549-71cde0abaecc",
+    "user_message": {
+      "id": "16145cb6-13f9-4e44-87f0-72a7bb3faa63",
+      "role": "user",
+      "content": "मैंने ऑनलाइन ₹2,800 का सामान मंगाया था, लेकिन गलत सामान आया। मैंने उसे वापस भी कर दिया। तीन हफ्ते हो गए, अभी तक पैसे नहीं मिले। हर बार कस्टमर केयर वाले कहते हैं कि इंतज़ार करो। मेरे पास ऑर्डर नंबर और वापसी का मैसेज है। अब शिकायत कहाँ करूँ?",
+      "created_at": "2026-11-20T16:46:17.123930+00:00",
+      "status": "complete",
+      "metadata": {
+        "attachment_ids": [],
+        "language": "hi"
+      }
+    },
+    "assistant_message": {
+      "id": "edaa16a2-7967-42be-82a6-f3eef83c403b",
+      "role": "assistant",
+      "content": "तीन हफ्ते बाद भी केवल “इंतज़ार करें” कहना पर्याप्त जवाब नहीं है। **अब सामान्य कस्टमर केयर के बजाय प्लेटफ़ॉर्म या विक्रेता के शिकायत अधिकारी को ऐप के शिकायत सेक्शन या आधिकारिक ईमेल से लिखित शिकायत भेजें और शिकायत संख्या लें।**\n\n### ये चीज़ें तैयार रखें\n\nऑर्डर की रसीद, भुगतान रिकॉर्ड, गलत सामान की फोटो अगर उपलब्ध हो, वापसी का संदेश या पिकअप प्रमाण और कस्टमर केयर चैट सुरक्षित रखें। शिकायत भेजने के बाद उसका स्क्रीनशॉट और तारीख भी रख लें।\n\n### एक बात बताइए\n\nक्या आपने यह खरीद भारत में रहते हुए, भारत में सेवा देने वाले प्लेटफ़ॉर्म या विक्रेता से की थी?\n\nमैं मसौदे की हर पंक्ति की जाँच नहीं कर पाया, इसलिए अधूरा मसौदा देने के बजाय उसे अभी छोड़ दिया है। मुझसे दोबारा कहिए, मैं लिख दूँगा, या बताइए कि उसमें कौन-सी बातें ज़रूर हों।",
+      "created_at": "2026-11-20T16:47:15.184082+00:00",
+      "status": "complete",
+      "metadata": {
+        "verification": {
+          "passed": false,
+          "publication_safe": true,
+          "scope": "published_claims_only",
+          "claim_checks": {
+            "claim-4": "risk_calibrated_consistency",
+            "claim-6": "non_assertive_clarification",
+            "claim-1": "timeout_safe_practical_precaution"
+          },
+          "independent_review_performed": false,
+          "legal_certification": false
+        },
+        "token_usage": {
+          "input_tokens": 23926,
+          "output_tokens": 4067,
+          "total_tokens": 27993
+        },
+        "events": [
+          {
+            "stage": "context",
+            "status": "running",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "action": "Pre-fetching certified statutory provisions & intake facts",
+            "detail": "Loading facts & certified knowledge pack"
+          },
+          {
+            "stage": "context",
+            "status": "complete",
+            "agent": "Context & Intake Agent",
+            "tool": "certified_knowledge_pack",
+            "result": "Loaded 8 retrieved source passages & facts",
+            "passages_count": 8,
+            "detail": "Context ready (8 legal provisions loaded)"
+          },
+          {
+            "stage": "routing",
+            "status": "running",
+            "agent": "Workflow Router",
+            "detail": "Choosing the appropriate level of help"
+          },
+          {
+            "stage": "routing",
+            "status": "complete",
+            "route": "research",
+            "previous_route": null,
+            "detail": "उपलब्ध आधिकारिक अंश वर्तमान शिकायत-पोर्टल, शिकायत दर्ज करने की सही प्रक्रिया या 2026 में लागू ई-कॉमर्स नियमों की पुष्टि नहीं करते। सही और वर्तमान शिकायत-मार्ग बताने के लिए सीमित सार्वजनिक कानूनी शोध आवश्यक है।",
+            "agent": "Workflow Router"
+          },
+          {
+            "stage": "web_research",
+            "status": "running",
+            "detail": "Gathering official evidence before applicability checks"
+          },
+          {
+            "stage": "web_research",
+            "status": "complete",
+            "passages_count": 0,
+            "detail": "Research finished; checking applicability",
+            "duration_ms": 11035
+          },
+          {
+            "stage": "applicability",
+            "status": "running",
+            "detail": "Checking jurisdiction, incident date and source currency"
+          },
+          {
+            "stage": "applicability",
+            "status": "complete",
+            "detail": "Applicability check completed; remaining uncertainties are retained"
+          },
+          {
+            "stage": "primary",
+            "status": "running",
+            "agent": "Primary Reasoning Agent",
+            "tool": "reasoning_engine",
+            "round": 1,
+            "action": "Synthesizing legal claims & response strategy (Round 1)",
+            "detail": "Synthesizing response & legal claims (Round 1)"
+          },
+          {
+            "stage": "review",
+            "status": "running",
+            "agent": "Verifier Agent",
+            "tool": "verifier_evaluator",
+            "action": "Auditing grounding and citation integrity for 6 claims",
+            "detail": "Verifier Agent auditing claims & legal citations"
+          },
+          {
+            "stage": "review",
+            "status": "limited",
+            "agent": "Verifier Agent",
+            "error_type": "APITimeoutError",
+            "warning": "Review limited by APITimeoutError"
+          },
+          {
+            "stage": "structuring",
+            "status": "running",
+            "agent": "Output Structuring Agent",
+            "tool": "format_composer",
+            "action": "Structuring response with numbered steps, checklists & citations",
+            "detail": "Structuring formatted response & citations"
+          },
+          {
+            "stage": "verify",
+            "status": "passed",
+            "agent": "Output Structuring Agent",
+            "result": "Publication checks completed; unsupported content withheld",
+            "detail": "Response prepared with publication safeguards"
+          },
+          {
+            "stage": "complete",
+            "status": "partial",
+            "duration_ms": 58020
+          }
+        ],
+        "request_coverage": [
+          {
+            "request_id": "task-1",
+            "status": "deferred",
+            "reason": "Some requested content could not be verified."
+          }
+        ],
+        "interpretation": {
+          "schema_version": "request-v2",
+          "tasks": [
+            {
+              "task_id": "task-1",
+              "source_text": "मैंने ऑनलाइन ₹2,800 का सामान मंगाया था, लेकिन गलत सामान आया। मैंने उसे वापस भी कर दिया। तीन हफ्ते हो गए, अभी तक पैसे नहीं मिले। हर बार कस्टमर केयर वाले कहते हैं कि इंतज़ार करो। मेरे पास ऑर्डर नंबर और वापसी का मैसेज है। अब शिकायत कहाँ करूँ?",
+              "intent": "legal_options",
+              "domain": "consumer",
+              "relationship": "ऑनलाइन खरीद और लंबित रिफंड",
+              "entities": [],
+              "case_link": "new",
+              "requires_research": false,
+              "requires_case_update": true,
+              "risk_level": "ordinary",
+              "uncertainty": [],
+              "public_query": null,
+              "source_segment_ids": [],
+              "needs_early_extraction": false,
+              "extraction_reason": null
+            }
+          ],
+          "case_relevance": "new",
+          "clarification_needed": false,
+          "requested_deliverables": [],
+          "user_goal": null,
+          "suggested_remedy": null,
+          "required_answer_elements": [],
+          "missing_details": [],
+          "invalid_tasks": []
+        },
+        "task_plan": [
+          {
+            "task_id": "task-1",
+            "workflow": "consumer",
+            "status": "ready",
+            "research_status": "not_required",
+            "reason": "Interpretation selects assistance, never legal eligibility or permission to submit."
+          }
+        ],
+        "tool_records": [
+          {
+            "tool": "certified_knowledge_pack",
+            "status": "hit",
+            "query_hash": "3500f64aa62d842e",
+            "certified_hit_count": 3,
+            "official_pack_hit_count": 1
+          },
+          {
+            "tool": "web_search",
+            "status": "failed",
+            "error_type": "APITimeoutError"
+          },
+          {
+            "tool": "web_search",
+            "status": "failed",
+            "error_type": "APITimeoutError"
+          }
+        ],
+        "unit_outcomes": [
+          {
+            "task_id": "task-1",
+            "status": "partial"
+          }
+        ],
+        "resolution_plan": {},
+        "resolution_blocks": [
+          {
+            "block_id": "block-direct_answer",
+            "block_type": "direct_answer",
+            "title": "संक्षेप में",
+            "content": "तीन हफ्ते बाद भी केवल “इंतज़ार करें” कहना पर्याप्त जवाब नहीं है। **अब सामान्य कस्टमर केयर के बजाय प्लेटफ़ॉर्म या विक्रेता के शिकायत अधिकारी को ऐप के शिकायत सेक्शन या आधिकारिक ईमेल से लिखित शिकायत भेजें और शिकायत संख्या लें।**",
+            "items": [],
+            "claim_ids": [
+              "claim-1"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-evidence_checklist",
+            "block_type": "evidence_checklist",
+            "title": "ये चीज़ें तैयार रखें",
+            "content": "ऑर्डर की रसीद, भुगतान रिकॉर्ड, गलत सामान की फोटो अगर उपलब्ध हो, वापसी का संदेश या पिकअप प्रमाण और कस्टमर केयर चैट सुरक्षित रखें। शिकायत भेजने के बाद उसका स्क्रीनशॉट और तारीख भी रख लें।",
+            "items": [
+              "ऑर्डर की रसीद, भुगतान रिकॉर्ड, गलत सामान की फोटो अगर उपलब्ध हो, वापसी का संदेश या पिकअप प्रमाण और कस्टमर केयर चैट सुरक्षित रखें। शिकायत भेजने के बाद उसका स्क्रीनशॉट और तारीख भी रख लें।"
+            ],
+            "claim_ids": [
+              "claim-4"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "practical_precaution",
+            "document_title": null
+          },
+          {
+            "block_id": "block-question",
+            "block_type": "question",
+            "title": "एक बात बताइए",
+            "content": "क्या आपने यह खरीद भारत में रहते हुए, भारत में सेवा देने वाले प्लेटफ़ॉर्म या विक्रेता से की थी?",
+            "items": [],
+            "claim_ids": [
+              "claim-6"
+            ],
+            "source_ids": [],
+            "sources": [],
+            "grounding": "requires_confirmation",
+            "document_title": null
+          }
+        ],
+        "factual_issues": [
+          "क्या प्लेटफ़ॉर्म या विक्रेता ने सामान वापस मिलने की पुष्टि की है?",
+          "रिफंड की बताई गई समयसीमा क्या थी और वह कब समाप्त हुई?",
+          "क्या शिकायत अभी तक शिकायत अधिकारी को लिखित रूप में भेजी गई है?"
+        ],
+        "legal_issues": [
+          "भारत में इस लेन-देन के लिए वर्तमान आधिकारिक उपभोक्ता शिकायत मंच कौन-सा है?",
+          "लौटाए गए गलत सामान का रिफंड रोकने पर कौन-से मौजूदा उपभोक्ता और ई-कॉमर्स नियम लागू होते हैं?"
+        ],
+        "case_stage": "सामान्य कस्टमर केयर से संपर्क किया गया; औपचारिक लिखित शिकायत बाकी है।",
+        "next_action": "शिकायत अधिकारी को लिखित रिफंड मांग भेजकर शिकायत संख्या प्राप्त करें।",
+        "publication_status": "partial",
+        "assistance_status": null,
+        "document_status": null,
+        "legal_verification_status": null,
+        "call_telemetry": [
+          {
+            "call_id": "40594b0c-6fed-4cc3-ad1e-d8e0c8b283ad",
+            "stage": "routing",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 55.0
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 8836,
+              "output_tokens": 357,
+              "total_tokens": 9193,
+              "attempt_details": [
+                {
+                  "input_tokens": 8836,
+                  "output_tokens": 357,
+                  "total_tokens": 9193,
+                  "input_details": {
+                    "cache_write_tokens": 8833,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8833
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 71
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 8836,
+                  "output_tokens": 357,
+                  "total_tokens": 9193,
+                  "input_details": {
+                    "cache_write_tokens": 8833,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8833
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 71
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_6731e87f0eb34aa7a763b3314757daab"
+              }
+            ],
+            "elapsed_ms": 6339
+          },
+          {
+            "call_id": "5377a475-e73c-40d2-b85b-13973e2766ce",
+            "stage": "web_search",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 10.999204425999999
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 0,
+            "usage_reported": null,
+            "usage_completeness": "unknown",
+            "status": "failed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "sent",
+                "usage": null
+              }
+            ],
+            "error_type": "APITimeoutError",
+            "elapsed_ms": 11033
+          },
+          {
+            "call_id": "f97d420d-27ae-40d9-9f06-6a50cf46834e",
+            "stage": "web_search",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 10.996364989999996
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 0,
+            "usage_reported": null,
+            "usage_completeness": "unknown",
+            "status": "failed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "sent",
+                "usage": null
+              }
+            ],
+            "error_type": "APITimeoutError",
+            "elapsed_ms": 11028
+          },
+          {
+            "call_id": "14a1b358-4d0d-42bc-a9a2-a47a5786aed6",
+            "stage": "applicability",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 40.54474512699999
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 8616,
+              "output_tokens": 1096,
+              "total_tokens": 9712,
+              "attempt_details": [
+                {
+                  "input_tokens": 8616,
+                  "output_tokens": 1096,
+                  "total_tokens": 9712,
+                  "input_details": {
+                    "cache_write_tokens": 8613,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8613
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 396
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 8616,
+                  "output_tokens": 1096,
+                  "total_tokens": 9712,
+                  "input_details": {
+                    "cache_write_tokens": 8613,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 8613
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 396
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_8ddaa5f9a9ab43629be09199a1c089e3"
+              }
+            ],
+            "elapsed_ms": 12636
+          },
+          {
+            "call_id": "49682b2a-262e-491d-98e7-80e0b6d32865",
+            "stage": "primary",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 27.900145594999998
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 1,
+            "usage_reported": {
+              "input_tokens": 6474,
+              "output_tokens": 2614,
+              "total_tokens": 9088,
+              "attempt_details": [
+                {
+                  "input_tokens": 6474,
+                  "output_tokens": 2614,
+                  "total_tokens": 9088,
+                  "input_details": {
+                    "cache_write_tokens": 6471,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 6471
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 824
+                  }
+                }
+              ]
+            },
+            "usage_completeness": "complete",
+            "status": "completed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "response",
+                "usage": {
+                  "input_tokens": 6474,
+                  "output_tokens": 2614,
+                  "total_tokens": 9088,
+                  "input_details": {
+                    "cache_write_tokens": 6471,
+                    "cache_write_tokens_details": {
+                      "ttl_12h_tokens": 0,
+                      "ttl_30m_tokens": 6471
+                    },
+                    "cached_tokens": 0
+                  },
+                  "output_details": {
+                    "reasoning_tokens": 824
+                  }
+                },
+                "http_status": 200,
+                "provider_request_id": "req_efda1eb5a2624e629e3ea59e7848b0a5"
+              }
+            ],
+            "elapsed_ms": 23304
+          },
+          {
+            "call_id": "900395aa-9c7a-45e3-b0ff-1ae173351536",
+            "stage": "review",
+            "category": "generation",
+            "model": "gpt-5.6-sol",
+            "settings": {
+              "max_retries": 0,
+              "timeout": 4.592579131999997
+            },
+            "attempts_observed": 1,
+            "attempts_confirmed": 0,
+            "usage_reported": null,
+            "usage_completeness": "unknown",
+            "status": "failed",
+            "first_token_ms": null,
+            "first_token_reason": "non_streaming",
+            "provider_queue_ms": null,
+            "application_wait_ms": 0,
+            "attempts": [
+              {
+                "status": "sent",
+                "usage": null
+              }
+            ],
+            "error_type": "APITimeoutError",
+            "elapsed_ms": 4610
+          }
+        ],
+        "usage_completeness": "partial",
+        "case_update_allowed": true,
+        "engine_version": "primary-agent-v2.1-routed",
+        "metrics": {
+          "route": "research",
+          "route_history": [
+            "research"
+          ],
+          "provider_requests_reserved": 6,
+          "reported_tokens": 27993,
+          "conservative_tokens_reserved": 240737,
+          "outstanding_token_reservations": 109925,
+          "queries": 2,
+          "documents_attempted": 0,
+          "research_batches": 1,
+          "remaining_seconds": 0.0,
+          "projected_cost_usd": null,
+          "cost_status": "unknown",
+          "estimated_cost_usd": null,
+          "known_estimated_cost_usd": null,
+          "actual_billed_cost_usd": null,
+          "pricing_date": null,
+          "total_ms": 58020,
+          "timing_scope": "runner; excludes API authorization and final database commit",
+          "time_to_first_useful_guidance_ms": 58020,
+          "reasoning_ms": 23304,
+          "review_ms": 4610,
+          "retrieval_ms": 11035
+        },
+        "safety_messages": [],
+        "sources": [],
+        "case_version": 0,
+        "commit_receipt": {
+          "status": "staged_only",
+          "case_version": 0,
+          "committed_patch_ids": [],
+          "staged_patch_ids": [
+            "patch-1",
+            "patch-2",
+            "patch-3",
+            "patch-4",
+            "patch-5"
+          ],
+          "artifact_ids": []
+        }
+      }
+    },
+    "case_version": 0,
+    "sources": [],
+    "verification": {
+      "passed": false,
+      "publication_safe": true,
+      "scope": "published_claims_only",
+      "claim_checks": {
+        "claim-4": "risk_calibrated_consistency",
+        "claim-6": "non_assertive_clarification",
+        "claim-1": "timeout_safe_practical_precaution"
+      },
+      "independent_review_performed": false,
+      "legal_certification": false
+    },
+    "token_usage": {
+      "input_tokens": 23926,
+      "output_tokens": 4067,
+      "total_tokens": 27993
+    },
+    "ai_configured": true
+  },
+  "elapsed_seconds": 68.71
+}

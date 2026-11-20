@@ -221,3 +221,35 @@ def test_verified_reuses_router_assessment_but_research_requires_fresh_check():
     prepare_route(agent, state, budget, emit)
     assert budget.requests == 2 and len(searches) == 1
     assert state["route_guidance"]["limitations"] == ["Fresh source assessment"]
+
+
+def test_hindi_returned_wrong_goods_retrieves_consumer_not_police_sources():
+    from app.agent.runner import PrimaryAgent, _public_prequery_terms
+    from app.rag.retrieval import HybridRetriever
+
+    prompt = (
+        "मैंने ऑनलाइन ₹2,800 का सामान मंगाया था, लेकिन गलत सामान आया। "
+        "मैंने उसे वापस भी कर दिया। तीन हफ्ते हो गए, अभी तक पैसे नहीं मिले। "
+        "हर बार कस्टमर केयर वाले कहते हैं कि इंतज़ार करो। मेरे पास ऑर्डर नंबर "
+        "और वापसी का मैसेज है। अब शिकायत कहाँ करूँ?"
+    )
+    query = _public_prequery_terms(prompt, "unknown", False)
+    assert "National Consumer Helpline" in query and "police station" not in query
+    settings = Settings(_env_file=None, openai_api_key=None)
+    agent = PrimaryAgent(settings, HybridRetriever(settings))
+    state = {"current_message": prompt, "memory": {}, "passages": [], "tool_records": []}
+    agent._pre_retrieve_certified(state)
+    ids = {p["passage_id"] for p in state["passages"]}
+    assert "nch-prelitigation" in ids
+    assert not any("criminal" in pid or "bnss" in pid for pid in ids)
+
+
+def test_general_complaint_does_not_imply_police_but_explicit_police_complaint_does():
+    from app.agent.runner import _public_prequery_terms
+
+    assert "first information report" not in _public_prequery_terms(
+        "मुझे शिकायत करनी है", "unknown", False
+    )
+    assert "first information report" in _public_prequery_terms(
+        "पुलिस मेरी शिकायत नहीं लिख रही", "unknown", False
+    )

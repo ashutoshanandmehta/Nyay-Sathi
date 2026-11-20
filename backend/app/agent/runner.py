@@ -53,7 +53,7 @@ CONCEPT_EXPANSIONS = (
     (
         re.compile(
             r"\b(?:earbuds?|headphones?|refund|defective|delivery|seller|warranty|replacement)\b|"
-            r"ईयरबड|सामान.{0,30}खराब|रिफंड|पैसे\s+वापस|दुकानदार|डिलीवरी|वारंटी|बदली",
+            r"ईयरबड|सामान.{0,30}खराब|गलत\s+(?:सामान|उत्पाद)|वापसी|लौटाया|रिफंड|पैसे\s+वापस|दुकानदार|डिलीवरी|वारंटी|बदली",
             re.I,
         ),
         "consumer defective goods refund replacement seller National Consumer Helpline pre-litigation complaint",
@@ -71,7 +71,7 @@ CONCEPT_EXPANSIONS = (
     ),
     (
         re.compile(
-            r"\b(?:complaint|fir|thana|police\s+station|report\s+to\s+police)\b|शिकायत|shikayat",
+            r"\b(?:fir|thana|police\s+station|report\s+to\s+police)\b|पुलिस|थाना",
             re.I,
         ),
         "information cognizable offence first information report fir police station written complaint superintendent of police",
@@ -287,7 +287,13 @@ class PrimaryAgent:
                 candidates.append(h)
 
         candidates.sort(key=lambda h: h.get("search_score", 0.0), reverse=True)
+        # Separate pack lookups can return a weak top hit for a generic word such
+        # as "complaint". Do not let that weak tail displace much stronger corpus
+        # matches. Explicit concept-guaranteed passages above remain preserved.
+        score_floor = (candidates[0].get("search_score", 0.0) * 0.4) if candidates else 0.0
         for h in candidates:
+            if h.get("search_score", 0.0) < score_floor:
+                continue
             if len(selected) >= cap:
                 break
             if _source_room(h, selected):
