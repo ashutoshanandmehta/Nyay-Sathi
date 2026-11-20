@@ -1965,30 +1965,101 @@ a:focus-visible,
 .settings-tab-bar { overflow-x: auto; gap: 2px; padding-left: 12px; padding-right: 12px; }
 .settings-tab-btn { white-space: nowrap; padding: 7px 8px; gap: 5px; font-size: 12px; }
 
-/* New chats lead with voice; active threads retain the bottom composer. */
-.chat-shell.welcome-mode { overflow-y: auto; }
-.welcome-mode .topbar { flex-shrink: 0; }
+/* The welcome screen shares the app palette with a softer, focused hierarchy. */
+.chat-shell.welcome-mode {
+  overflow-y: auto;
+  background: radial-gradient(ellipse at 50% 34%, #e4f2eb 0, transparent 58%), #fafbf8;
+}
+.welcome-mode .topbar {
+  flex-shrink: 0;
+  background: rgb(250 251 248 / 90%);
+  border-bottom-color: rgb(46 125 109 / 10%);
+}
 .welcome-mode .messages { flex: 0 0 auto; overflow: visible; }
-.welcome-mode .message-column { padding: 32px 0 0; }
-.welcome-copy { font-family: 'Noto Sans Devanagari', sans-serif; }
-.welcome-copy h1 { font-size: clamp(28px, 4vw, 40px); margin: 0 0 24px; }
-.welcome-copy h2 { font-size: clamp(22px, 3vw, 28px); margin: 0 0 16px; }
-.welcome-copy p { color: var(--muted); font-size: 18px; line-height: 1.8; margin: 0; }
-.welcome-mode .welcome-composer { position: relative; inset: auto; width: min(760px, calc(100% - 32px)); margin: 0 auto; padding: 0 0 24px; background: transparent; }
-.welcome-voice { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 36px 0 24px; }
-.welcome-voice .mic-button { width: 112px; height: 112px; border-radius: 50%; background: var(--line); color: var(--evergreen); }
-.welcome-voice .mic-button.listening { background: #e3efe9; }
-.welcome-voice h2 { font-size: 21px; margin: 20px 0 10px; }
-.welcome-voice p { color: var(--muted); font-size: 16px; margin: 0; }
-.welcome-composer .composer { border-radius: 32px; }
-.common-problems { margin-top: 24px; font-family: 'Noto Sans Devanagari', sans-serif; }
-.common-problems h2 { font-size: 20px; margin: 0 0 10px; }
-.common-problems p { color: var(--muted); margin: 0 0 14px; }
-.common-problems .starters { margin: 0; grid-template-columns: 1fr; }
-.common-problems .starters button { padding: 18px; font-size: 17px; }
-.welcome-composer .fine-print { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 20px; font-size: 13px; }
+.welcome-mode .message-column { width: min(700px, calc(100% - 48px)); padding: 52px 0 0; }
+.welcome-copy { font-family: 'Noto Sans Devanagari', sans-serif; text-align: center; }
+.welcome-copy h1 {
+  display: inline-block;
+  padding: 8px 16px 5px;
+  border: 1px solid #d6e8df;
+  border-radius: 100px;
+  background: #eef6f0;
+  color: #316958;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 22px;
+}
+.welcome-copy h2 { font-size: clamp(27px, 3vw, 38px); line-height: 1.5; letter-spacing: -.035em; margin: 0 0 14px; }
+.welcome-copy p { max-width: 510px; margin: 0 auto; color: var(--muted); font-size: 16px; line-height: 1.95; }
+.welcome-mode .welcome-composer {
+  position: relative;
+  inset: auto;
+  width: min(700px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 0 0 28px;
+  background: transparent;
+}
+.welcome-voice { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 36px 0 26px; }
+.welcome-voice .mic-button {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 1px solid #317966;
+  background: linear-gradient(145deg, #397f6b, #1d5445);
+  color: white;
+  box-shadow: 0 0 0 9px #e4f0e8, 0 0 0 10px #d8e7de, 0 12px 30px rgb(29 84 69 / 18%);
+  transition: transform .18s, box-shadow .18s, background .18s;
+}
+.welcome-voice .mic-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 0 0 11px #e4f0e8, 0 0 0 12px #d8e7de, 0 16px 32px rgb(29 84 69 / 23%); }
+.welcome-voice .mic-button.listening { background: #286b56; box-shadow: 0 0 0 calc(10px + var(--level, 0) * 12px) #cfe8db; }
+.welcome-voice .mic-button:disabled { opacity: .55; cursor: default; }
+.welcome-voice h2 { font-size: 20px; font-weight: 600; margin: 26px 0 6px; }
+.welcome-voice p { color: var(--muted); font-size: 14px; margin: 0; }
+.welcome-composer .composer {
+  min-height: 64px;
+  padding: 10px;
+  border: 1px solid #d8e4dc;
+  border-radius: 22px;
+  background: rgb(255 255 255 / 95%);
+  box-shadow: 0 6px 24px rgb(30 67 51 / 5%);
+}
+.welcome-composer .composer:focus-within { border-color: #77a992; box-shadow: 0 0 0 3px #e0eee5, 0 6px 24px rgb(30 67 51 / 5%); }
+.welcome-composer .composer textarea { font-size: 15px; min-width: 0; }
+.welcome-composer .composer textarea::placeholder { color: #77847b; opacity: 1; }
+.welcome-composer .send { background: #286651; border-radius: 13px; }
+.welcome-composer .send:disabled { background: #edf2ed; color: #7a8b80; }
+.common-problems { margin-top: 30px; font-family: 'Noto Sans Devanagari', sans-serif; }
+.common-problems h2 { font-size: 17px; font-weight: 600; margin: 0 0 5px; }
+.common-problems p { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+.common-problems .starters { margin: 0; grid-template-columns: 1fr 1fr; gap: 12px; }
+.common-problems .starters button {
+  min-height: 86px;
+  padding: 18px;
+  border: 1px solid #dfe7df;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 85%);
+  box-shadow: 0 2px 3px rgb(30 67 51 / 2%);
+}
+.common-problems .starters button:hover { border-color: #91b6a2; background: #f5faf5; box-shadow: 0 6px 16px rgb(30 67 51 / 6%); }
+.common-problems .starter-title-row { gap: 12px; }
+.common-problems .starter-title { font-size: 15px; font-weight: 500; line-height: 1.7; }
+.common-problems .starter-icon { width: 36px; height: 36px; padding: 9px; border-radius: 11px; background: #eaf3ed; color: #35715a; transform: none; }
+.common-problems button:nth-child(2) .starter-icon { background: #faf0e2; color: #916b30; }
+.common-problems .starter-chevron { width: 16px; color: #82978a; }
+.welcome-composer .fine-print { border-top: 1px solid #e3e9e1; margin-top: 28px; padding-top: 19px; color: #66776b; font-size: 12px; }
+.welcome-mode button:focus-visible { outline: 3px solid #79ac94; outline-offset: 4px; }
 @media (max-width: 800px) {
-  .welcome-mode .message-column { padding-top: 24px; }
-  .welcome-voice { padding-top: 28px; }
-  .welcome-voice .mic-button { width: 100px; height: 100px; }
+  .welcome-mode .message-column { padding-top: 32px; }
+  .welcome-mode .top-actions > button { display: none; }
+  .welcome-copy h1 { font-size: 16px; margin-bottom: 18px; }
+  .welcome-copy p { font-size: 15px; }
+  .welcome-voice { padding-top: 30px; }
+  .welcome-voice .mic-button { width: 90px; height: 90px; }
+  .common-problems .starters { grid-template-columns: 1fr; gap: 10px; }
+  .common-problems .starters button { min-height: 72px; padding: 14px 16px; }
+  .welcome-mode .welcome-composer { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-voice .mic-button, .common-problems .starters button { transition: none; }
+  .welcome-voice .mic-button:hover:not(:disabled), .common-problems .starters button:hover { transform: none; }
 }
