@@ -256,7 +256,9 @@ describe('sidebar case actions',()=>{
     expect(screen.getByText('Flowinggg')).toBeInTheDocument()
     // Current active element
     expect(screen.getByText('Feedback Loop')).toBeInTheDocument()
-    expect(screen.getByText('5/6')).toBeInTheDocument()
+    expect(screen.getByText('Preparing')).toBeInTheDocument()
+    expect(screen.queryByText('5/6')).toBeNull()
+    expect(screen.queryByText('Certified')).toBeNull()
     // Other elements are not shown (only ONE element at a time)
     expect(screen.queryByText('Context & Intake')).toBeNull()
     expect(screen.queryByText('Primary Reasoning')).toBeNull()
@@ -265,6 +267,20 @@ describe('sidebar case actions',()=>{
     cleanup()
     render(<AgentFlowWidget isStreaming={false} events={[]}/>)
     expect(screen.queryByText('Flowinggg')).toBeNull()
+  })
+
+  it('shows the actual selected route and escalation without claiming certification',()=>{
+    cleanup()
+    render(<AgentFlowWidget isStreaming events={[
+      {stage:'routing', status:'complete', route:'fast'},
+      {stage:'routing', status:'complete', route:'research', previous_route:'fast'},
+      {stage:'applicability', status:'running', detail:'Checking incident date'}
+    ]}/>)
+    expect(screen.getByText('Research')).toBeInTheDocument()
+    expect(screen.getByText('Applicability checks')).toBeInTheDocument()
+    expect(screen.getByText('Checking incident date')).toBeInTheDocument()
+    expect(screen.queryByText(/Certified/)).toBeNull()
+    expect(screen.queryByText('8/6')).toBeNull()
   })
 
   it('switches tabs smoothly in SettingsPanel',()=>{

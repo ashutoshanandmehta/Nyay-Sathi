@@ -161,12 +161,12 @@ class OfficialSearchProvider:
                 + query,
             }
             if model not in self.no_reasoning_models:
-                request["reasoning"] = {"effort": "low"}
+                request["reasoning"] = {"effort": self.settings.agent_reasoning_effort or "medium"}
             try:
                 response = client.responses.create(**request)
             except BadRequestError:
                 # Only finding links, so a small model works; retry once without `reasoning`.
-                if "reasoning" not in request:
+                if model == "gpt-5.6-sol" or "reasoning" not in request:
                     raise
                 self.no_reasoning_models.add(model)
                 request.pop("reasoning")

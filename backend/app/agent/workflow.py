@@ -18,6 +18,9 @@ def workflow_description(settings):
             "Relevant context",
             "Original question, scoped private evidence, dispute stage and current date.",
         ),
+        ("routing", "Choose workflow", "Semantic routing on every turn: Fast, Verified or Research; one model at medium reasoning."),
+        ("fast", "Fast", "Use sufficient existing evidence and focused context; retain publication checks."),
+        ("applicability", "Verified applicability", "Assess jurisdiction, incident date and source currency; exclude inapplicable evidence."),
         (
             "primary",
             "Primary reasoning agent",
@@ -46,12 +49,19 @@ def workflow_description(settings):
     ]
     return {
         "name": "Nyay Saathi primary-agent workflow",
-        "version": "primary-agent-v2.0",
+        "version": "primary-agent-v2.1-routed",
         "nodes": [{"id": i, "label": label, "detail": detail} for i, label, detail in nodes],
         "edges": [
             {"from": "checks", "to": "safety", "condition": "immediate danger detected"},
             {"from": "checks", "to": "context", "condition": "authorized"},
-            {"from": "context", "to": "primary", "condition": "scoped context ready"},
+            {"from": "context", "to": "routing", "condition": "scoped context ready"},
+            {"from": "routing", "to": "fast", "condition": "existing evidence sufficient and applicable"},
+            {"from": "routing", "to": "applicability", "condition": "date or jurisdiction uncertain"},
+            {"from": "routing", "to": "research", "condition": "material public evidence gap"},
+            {"from": "fast", "to": "primary", "condition": "focused context ready"},
+            {"from": "research", "to": "applicability", "condition": "preflight evidence gathered"},
+            {"from": "applicability", "to": "research", "condition": "material gap and preflight research not yet attempted"},
+            {"from": "applicability", "to": "primary", "condition": "assessment and explicit limitations ready"},
             {"from": "primary", "to": "research", "condition": "material evidence gap and budget"},
             {"from": "research", "to": "primary", "condition": "evidence or honest limitations"},
             {"from": "primary", "to": "verify", "condition": "draft ready"},
@@ -84,6 +94,6 @@ def workflow_description(settings):
         "limits": {
             "model_calls_per_turn": settings.agent_max_requests,
             "retrieval_expansions": settings.agent_max_batches,
-            "revision_attempts": 1,
+            "revision_attempts": settings.agent_max_repairs,
         },
     }

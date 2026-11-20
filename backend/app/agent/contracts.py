@@ -92,6 +92,23 @@ class ResearchRequest(Contract):
     fresh_required: bool = False
 
 
+class RouteDecision(Contract):
+    route: Literal["fast", "verified", "research"]
+    reason: str = Field(min_length=4, max_length=240)
+    existing_evidence_sufficient: bool
+    applicability_uncertain: bool
+    research: ResearchRequest | None = None
+
+
+class ApplicabilityAssessment(Contract):
+    jurisdiction: str = Field(max_length=120)
+    relevant_date: str = Field(max_length=120)
+    limitations: list[str] = Field(max_length=6)
+    excluded_evidence_ids: list[str] = Field(max_length=32)
+    essential_question: str | None = Field(default=None, max_length=240)
+    research: ResearchRequest | None = None
+
+
 class AgentTask(Contract):
     task_id: str = Field(pattern=r"^task-[1-8]$")
     title: str = Field(min_length=1, max_length=120)

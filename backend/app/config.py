@@ -29,13 +29,13 @@ class Settings(BaseSettings):
     upload_path: Path = DEFAULT_RUNTIME_DIR / "uploads"
     export_path: Path = DEFAULT_RUNTIME_DIR / "exports"
     openai_api_key: str | None = None
-    openai_chat_model: str = "gpt-4o"
-    openai_review_model: str = "gpt-4o"
+    openai_chat_model: str = "gpt-5.6-sol"
+    openai_review_model: str = "gpt-5.6-sol"
     openai_planner_model: str | None = None
     openai_embedding_model: str = "text-embedding-3-small"
     openai_transcription_model: str = "gpt-transcribe"
     openai_tts_model: str = "gpt-realtime-2.1-mini"
-    openai_web_search_model: str = "gpt-6-astra"
+    openai_web_search_model: str = "gpt-5.6-sol"
     # Live voice input over WebRTC; gpt-realtime-whisper with "minimal" delay is the fastest.
     openai_live_transcription_model: str = "gpt-realtime-whisper"
     live_transcription_delay: Literal["minimal", "low", "medium", "high", "xhigh"] = "minimal"
@@ -64,10 +64,11 @@ class Settings(BaseSettings):
     agent_search_concurrency: int = Field(default=2, ge=1, le=2)
     agent_max_passages: int = Field(default=8, ge=1, le=16)
     agent_passages_per_source: int = Field(default=4, ge=1, le=8)
-    agent_reasoning_effort: str | None = "low"
+    agent_routing_enabled: bool = True
+    agent_reasoning_effort: str | None = "medium"
     # Roleplay replies are short and in character: favour speed. Unset to use the model default.
     openai_roleplay_model: str | None = None
-    practice_reasoning_effort: str | None = "low"
+    practice_reasoning_effort: str | None = "medium"
     agent_max_cost_usd: float | None = Field(default=None, gt=0)
     # Empty pricing means unknown cost, never free usage. Set from dated provider pricing.
     agent_pricing: dict[str, dict[str, float]] = Field(default_factory=dict)

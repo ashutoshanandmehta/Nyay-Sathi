@@ -28,6 +28,8 @@ def devspace(client, isolated_app, tmp_path, monkeypatch):
     isolated_app.state.env_path = env
     monkeypatch.setenv(API_KEY, "")
     for name in EDITABLE:
+        # Track absent variables too: the endpoint writes os.environ directly.
+        monkeypatch.setenv(name, os.environ.get(name, ""))
         monkeypatch.delenv(name, raising=False)
     yield client, env
     del isolated_app.state.env_path

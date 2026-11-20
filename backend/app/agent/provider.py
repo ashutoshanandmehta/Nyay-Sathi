@@ -88,6 +88,8 @@ class ResponsesProvider:
                 }
             },
         }
+        if settings.agent_reasoning_effort:
+            kwargs["reasoning"] = {"effort": settings.agent_reasoning_effort}
         try:
             with model_calls.sdk(settings, "plan", model, factory=self.factory) as client:
                 response = client.responses.create(**kwargs)
@@ -138,7 +140,7 @@ class ResponsesProvider:
             )
         )
         reservation = budget.reserve(model, size)
-        min_timeout = 20.0 if review else 0.1
+        min_timeout = 0.1  # Every stage, including review, respects the shared deadline.
         settings = self.settings.model_copy(
             update={
                 "model_timeout_seconds": min(
@@ -177,7 +179,8 @@ class ResponsesProvider:
                 try:
                     response = client.responses.create(**kwargs)
                 except BadRequestError as exc:
-                    if "reasoning" in kwargs and "reasoning" in str(exc).lower():
+                    if (model != "gpt-5.6-sol" and "reasoning" in kwargs
+                            and "reasoning" in str(exc).lower()):
                         self.no_reasoning_models.add(model)
                         kwargs.pop("reasoning", None)
                         response = client.responses.create(**kwargs)

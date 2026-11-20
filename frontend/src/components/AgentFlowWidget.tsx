@@ -18,7 +18,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { StreamEvent } from '../types'
 
-export type AgentStageId = 'context' | 'reasoning' | 'research' | 'verifier' | 'repair' | 'final'
+export type AgentStageId = 'routing' | 'applicability' | 'context' | 'reasoning' | 'research' | 'verifier' | 'repair' | 'final'
 
 export interface AgentFlowWidgetProps {
   isStreaming: boolean
@@ -37,11 +37,13 @@ interface StageDefinition {
 }
 
 const STAGES: StageDefinition[] = [
+  { id: 'routing', label: 'Choosing workflow', agentName: 'Workflow Router', sublabel: 'Fast, Verified or Research', icon: Layers, color: '#0284c7' },
+  { id: 'applicability', label: 'Applicability checks', agentName: 'Applicability Agent', sublabel: 'Jurisdiction, dates and source currency', icon: Scale, color: '#7c3aed' },
   {
     id: 'context',
     label: 'Context & Intake',
     agentName: 'Context & Intake Agent',
-    sublabel: 'Facts & certified legal provisions',
+    sublabel: 'Facts & retrieved legal provisions',
     icon: Layers,
     color: '#0284c7', // Sky
   },
@@ -73,15 +75,15 @@ const STAGES: StageDefinition[] = [
     id: 'repair',
     label: 'Feedback Loop',
     agentName: 'Feedback Repair Loop',
-    sublabel: 'Verifier flagged repair → Self-healing',
+    sublabel: 'Targeted repair within the turn allowance',
     icon: RotateCw,
     color: '#ea580c', // Orange
   },
   {
     id: 'final',
-    label: 'Certified Output',
-    agentName: 'Output Structuring & Certification Agent',
-    sublabel: 'Verified & certified for publication',
+    label: 'Response preparation',
+    agentName: 'Output Structuring Agent',
+    sublabel: 'Publication checks and limitations',
     icon: CheckCircle2,
     color: '#16a34a', // Emerald
   },
@@ -132,6 +134,9 @@ export default function AgentFlowWidget({
     if (!events.length) return 'context'
     const last = events[events.length - 1]
     const s = last.stage?.toLowerCase() || ''
+    if (s === 'routing') return 'routing'
+    if (s === 'applicability') return 'applicability'
+    if (s === 'fast') return 'reasoning'
     if (s === 'saving' || s === 'context' || s === 'triage' || s === 'intake' || s === 'checks') {
       return 'context'
     }
@@ -156,6 +161,7 @@ export default function AgentFlowWidget({
   const stageIndex = STAGES.findIndex(s => s.id === activeStageId)
   const activeStage = STAGES[stageIndex >= 0 ? stageIndex : 0]
   const isLoop = activeStage.id === 'repair'
+  const route = [...events].reverse().find(event => event.route)?.route
   const isFinal = activeStage.id === 'final'
   const Icon = activeStage.icon
 
@@ -188,7 +194,7 @@ export default function AgentFlowWidget({
               {elapsed}s
             </span>
           )}
-          <span className="flowing-step-pill" title="Current step">{stageIndex + 1}/6</span>
+          <span className="flowing-step-pill" title="Selected workflow">{route ? `${route[0].toUpperCase()}${route.slice(1)}` : 'Preparing'}</span>
         </div>
       </div>
 
@@ -215,7 +221,7 @@ export default function AgentFlowWidget({
                 borderColor: `${activeStage.color}45`,
               }}
             >
-              {isLoop ? 'Loop active' : isFinal ? 'Certified' : 'Working'}
+              {lastEvent?.status === 'failed' || lastEvent?.status === 'fallback' ? 'Limited' : isLoop ? 'Repairing' : isFinal ? 'Preparing' : lastEvent?.status === 'complete' ? 'Done' : 'Working'}
             </span>
           </div>
 
@@ -246,17 +252,6 @@ export default function AgentFlowWidget({
             </div>
           )}
         </div>
-      </div>
-
-      {/* Micro Progress Bar */}
-      <div className="flowing-progress-track">
-        <div
-          className="flowing-progress-bar"
-          style={{
-            width: `${((stageIndex + 1) / 6) * 100}%`,
-            backgroundColor: activeStage.color,
-          }}
-        />
       </div>
 
       {/* Trace and Workflow actions */}

@@ -1,0 +1,17 @@
+20 November 2026 — offline verification only; paid requests: 0
+
+Scenario artifact: 15/15 offline orchestration fixtures recorded by scripts/evaluate_routing.py.
+Targeted Python: 152 passed, 1 skipped, 5 dependency deprecation warnings (43.71 seconds).
+Broader Python run: 774 passed, 4 skipped, 1 failed (prompt-size constraint).
+The prompt was shortened to 10,490 characters; the failing prompt test passed in the targeted rerun.
+Frontend: 8 test files, 47 tests passed (12.46 seconds).
+Build: TypeScript + Vite production build passed; existing >500KB bundle warning.
+Playwright: 8 passed, desktop Chromium + Pixel 7 (1.1 minutes, one worker).
+Browser checks: owner bootstrap/reload, offline failure disclosure, history/case isolation,
+urgent guidance survives reload once, workflow drawer. These do not test live LLM quality.
+Static check: ruff for new router/tests/evaluator; git diff --check.
+App.tsx and stylesheets: unchanged from origin/main ca9000d.
+Production environment metadata: only OPENAI_API_KEY and DEVSPACE_ENABLED, both production-scoped.
+No environment value was retrieved or changed for this implementation.
+No new production deployment or database migration performed.
+Live routing/model access/quality/latency: NOT VERIFIED; approved capped billing required.

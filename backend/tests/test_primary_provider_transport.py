@@ -75,6 +75,8 @@ def test_installed_sdk_serialization_parsing_and_usage_hooks(monkeypatch):
         )
     assert isinstance(parsed, AgentAnswer) and not calls
     assert captured[0]["store"] is False
+    assert captured[0]["model"] == "gpt-5.6-sol"
+    assert captured[0]["reasoning"] == {"effort": "medium"}
     assert captured[0]["tools"][0]["parameters"]["additionalProperties"] is False
     assert scope.records[0]["attempts_observed"] == 1
     assert scope.records[0]["usage_completeness"] == "complete"
@@ -289,3 +291,20 @@ def test_static_context_and_evidence_byte_identical_between_rounds():
     # Instructions are also constant
     assert agent.prompt is not None and len(agent.prompt) > 0
 
+
+
+@pytest.mark.parametrize("stage,review", [("routing", False), ("applicability", False), ("primary", False), ("review", True), ("repair", False)])
+def test_selected_model_and_reasoning_never_silently_downgrade(monkeypatch, stage, review):
+    captured = []
+    def handle(request):
+        captured.append(json.loads(request.content))
+        return httpx2.Response(400, json={"error": {"message": "reasoning is unsupported", "type": "invalid_request_error"}})
+    monkeypatch.setattr("app.services.model_calls.DefaultHttpx2Client",
+                        lambda **kw: httpx2.Client(transport=httpx2.MockTransport(handle), **kw))
+    settings = Settings(_env_file=None, openai_api_key="fixture-not-real")
+    with model_calls.scope(3), pytest.raises(Exception):
+        ResponsesProvider(settings).complete([], "fixture", TurnBudget(settings), stage=stage,
+                                             review=review, allow_tools=False)
+    assert len(captured) == 1
+    assert captured[0]["model"] == "gpt-5.6-sol"
+    assert captured[0]["reasoning"] == {"effort": "medium"}

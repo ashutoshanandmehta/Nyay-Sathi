@@ -1,0 +1,805 @@
+{
+  "evidence_type": "offline orchestration fixtures, not live LLM evaluation",
+  "paid_calls": 0,
+  "cases": [
+    {
+      "scenario": "greeting",
+      "prompt": "नमस्ते, मदद चाहिए।",
+      "expected_fixture_route": "fast",
+      "actual_route": "fast",
+      "actual_stages": [
+        "routing",
+        "fast"
+      ],
+      "actual_route_history": [
+        "fast"
+      ],
+      "actual_model_fixture_calls": 1,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "mode": "fast",
+        "policy": "Use existing evidence; keep the answer focused. Never bypass grounding/review. Request research if a material gap emerges."
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "fast",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "fast",
+          "status": "complete",
+          "detail": "Using existing context and evidence"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "earbuds",
+      "prompt": "₹5,000 के earbuds खराब हैं, refund चाहिए।",
+      "expected_fixture_route": "verified",
+      "actual_route": "verified",
+      "actual_stages": [
+        "routing",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "verified"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "verified",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "refund",
+      "prompt": "Refund pending hai; company ko email kar diya.",
+      "expected_fixture_route": "verified",
+      "actual_route": "verified",
+      "actual_stages": [
+        "routing",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "verified"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "verified",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "delivery",
+      "prompt": "My paid order never arrived.",
+      "expected_fixture_route": "verified",
+      "actual_route": "verified",
+      "actual_stages": [
+        "routing",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "verified"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "verified",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "service",
+      "prompt": "Repair service failed twice. What can I do?",
+      "expected_fixture_route": "verified",
+      "actual_route": "verified",
+      "actual_stages": [
+        "routing",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "verified"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "verified",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "draft_edit",
+      "prompt": "Confirmed draft ko सरल हिंदी में लिखो।",
+      "expected_fixture_route": "fast",
+      "actual_route": "fast",
+      "actual_stages": [
+        "routing",
+        "fast"
+      ],
+      "actual_route_history": [
+        "fast"
+      ],
+      "actual_model_fixture_calls": 1,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "mode": "fast",
+        "policy": "Use existing evidence; keep the answer focused. Never bypass grounding/review. Request research if a material gap emerges."
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "fast",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "fast",
+          "status": "complete",
+          "detail": "Using existing context and evidence"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "correction",
+      "prompt": "Amount ₹5000 था, ₹15000 नहीं।",
+      "expected_fixture_route": "fast",
+      "actual_route": "fast",
+      "actual_stages": [
+        "routing",
+        "fast"
+      ],
+      "actual_route_history": [
+        "fast"
+      ],
+      "actual_model_fixture_calls": 1,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "mode": "fast",
+        "policy": "Use existing evidence; keep the answer focused. Never bypass grounding/review. Request research if a material gap emerges."
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "fast",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "fast",
+          "status": "complete",
+          "detail": "Using existing context and evidence"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "missing_date",
+      "prompt": "पुरानी खरीद पर कौन सा नियम लगेगा?",
+      "expected_fixture_route": "verified",
+      "actual_route": "verified",
+      "actual_stages": [
+        "routing",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "verified"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "verified",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "jurisdiction",
+      "prompt": "I moved from Delhi to Pune; where can I complain?",
+      "expected_fixture_route": "verified",
+      "actual_route": "verified",
+      "actual_stages": [
+        "routing",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "verified"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "verified",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "new_law",
+      "prompt": "Has the consumer filing rule changed this week?",
+      "expected_fixture_route": "research",
+      "actual_route": "research",
+      "actual_stages": [
+        "routing",
+        "web_research",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "research"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 1,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "research",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "web_research",
+          "status": "running",
+          "detail": "Gathering official evidence before applicability checks"
+        },
+        {
+          "stage": "web_research",
+          "status": "complete",
+          "passages_count": 0,
+          "detail": "Research finished; checking applicability",
+          "duration_ms": 0
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "stale_source",
+      "prompt": "That source is from 2019; is it still current?",
+      "expected_fixture_route": "research",
+      "actual_route": "research",
+      "actual_stages": [
+        "routing",
+        "web_research",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "research"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 1,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "research",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "web_research",
+          "status": "running",
+          "detail": "Gathering official evidence before applicability checks"
+        },
+        {
+          "stage": "web_research",
+          "status": "complete",
+          "passages_count": 0,
+          "detail": "Research finished; checking applicability",
+          "duration_ms": 0
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "conflict",
+      "prompt": "Two official pages give different filing instructions.",
+      "expected_fixture_route": "research",
+      "actual_route": "research",
+      "actual_stages": [
+        "routing",
+        "web_research",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "research"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 1,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "research",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "web_research",
+          "status": "running",
+          "detail": "Gathering official evidence before applicability checks"
+        },
+        {
+          "stage": "web_research",
+          "status": "complete",
+          "passages_count": 0,
+          "detail": "Research finished; checking applicability",
+          "duration_ms": 0
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "misleading",
+      "prompt": "A blog guarantees ten times compensation. Is that true?",
+      "expected_fixture_route": "research",
+      "actual_route": "research",
+      "actual_stages": [
+        "routing",
+        "web_research",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "research"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 1,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "research",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "web_research",
+          "status": "running",
+          "detail": "Gathering official evidence before applicability checks"
+        },
+        {
+          "stage": "web_research",
+          "status": "complete",
+          "passages_count": 0,
+          "detail": "Research finished; checking applicability",
+          "duration_ms": 0
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "banking",
+      "prompt": "My bank rejected an unauthorized transaction claim.",
+      "expected_fixture_route": "verified",
+      "actual_route": "verified",
+      "actual_stages": [
+        "routing",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "verified"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "verified",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "scenario": "unsupported",
+      "prompt": "Can you guarantee my foreign tax appeal outcome?",
+      "expected_fixture_route": "verified",
+      "actual_route": "verified",
+      "actual_stages": [
+        "routing",
+        "applicability"
+      ],
+      "actual_route_history": [
+        "verified"
+      ],
+      "actual_model_fixture_calls": 2,
+      "actual_research_fixture_batches": 0,
+      "actual_guidance": {
+        "jurisdiction": "India; state unconfirmed",
+        "relevant_date": "Unknown",
+        "limitations": [
+          "Incident date is not confirmed"
+        ],
+        "excluded_evidence_ids": [],
+        "essential_question": null,
+        "research": null
+      },
+      "actual_events": [
+        {
+          "stage": "routing",
+          "status": "running",
+          "agent": "Workflow Router",
+          "detail": "Choosing the appropriate level of help"
+        },
+        {
+          "stage": "routing",
+          "status": "complete",
+          "route": "verified",
+          "previous_route": null,
+          "detail": "Assess evidence applicability",
+          "agent": "Workflow Router"
+        },
+        {
+          "stage": "applicability",
+          "status": "running",
+          "detail": "Checking jurisdiction, incident date and source currency"
+        },
+        {
+          "stage": "applicability",
+          "status": "complete",
+          "detail": "Applicability check completed; remaining uncertainties are retained"
+        }
+      ],
+      "passed": true
+    }
+  ]
+}

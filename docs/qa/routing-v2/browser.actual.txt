@@ -1,0 +1,35 @@
+npm notice run nyay-saathi-frontend@0.1.0 npx
+npm notice run 'playwright' test --config playwright.primary.config.ts --workers=1
+[WebServer] INFO:     Started server process [45842]
+[WebServer] INFO:     Waiting for application startup.
+
+[WebServer] INFO:     Application startup complete.
+[WebServer] INFO:     Uvicorn running on http://127.0.0.1:8100 (Press CTRL+C to quit)
+
+[WebServer] npm notice run nyay-saathi-frontend@0.1.0 dev
+
+[WebServer] npm notice run vite --host 0.0.0.0 --config vite.e2e.config.ts --host 127.0.0.1 --port 5174
+
+[WebServer] (node:45874) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 8 tests using 1 worker
+
+(node:45893) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/8] [chromium] › e2e-primary/primary.spec.ts:3:1 › Strict Mode initializes one anonymous owner session without a startup race
+[2/8] [chromium] › e2e-primary/primary.spec.ts:16:1 › primary runner preserves familiar UI, history and general-question isolation
+[3/8] [chromium] › e2e-primary/primary.spec.ts:33:1 › emergency guidance survives reload and is shown once
+[4/8] [chromium] › e2e-primary/primary.spec.ts:45:1 › workflow drawer supports the new engine without hardcoded legacy nodes
+(node:45949) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[5/8] [mobile] › e2e-primary/primary.spec.ts:3:1 › Strict Mode initializes one anonymous owner session without a startup race
+[6/8] [mobile] › e2e-primary/primary.spec.ts:16:1 › primary runner preserves familiar UI, history and general-question isolation
+[7/8] [mobile] › e2e-primary/primary.spec.ts:33:1 › emergency guidance survives reload and is shown once
+[8/8] [mobile] › e2e-primary/primary.spec.ts:45:1 › workflow drawer supports the new engine without hardcoded legacy nodes
+  8 passed (1.1m)

@@ -45,6 +45,9 @@ def isolated_app(tmp_path: Path):
         upload_path=tmp_path / "uploads",
         export_path=tmp_path / "exports",
         openai_api_key=None,
+        # Existing fixtures exercise the pre-routing publication pipeline.
+        # Routing integration tests explicitly enable the new graph.
+        agent_routing_enabled=False,
     )
     settings.ensure_dirs()
     graph = AssistantGraph(settings, HybridRetriever(settings), interpreter=OfflineInterpreter())

@@ -97,7 +97,7 @@ def test_a_reasoning_search_model_keeps_its_setting(fake_openai):
     calls = fake_openai(reject_reasoning=False)
     provider = web_research.OfficialSearchProvider(Settings(openai_api_key="fixture"))
     provider.search_public("bns section 351 criminal intimidation", 10)
-    assert calls[0]["reasoning"] == {"effort": "low"} and len(calls) == 1
+    assert calls[0]["reasoning"] == {"effort": "medium"} and len(calls) == 1
 
 
 def test_devspace_offers_a_small_search_model():

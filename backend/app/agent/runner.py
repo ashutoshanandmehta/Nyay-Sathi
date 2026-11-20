@@ -28,6 +28,7 @@ from app.agent.contracts import (
 )
 from app.agent.provider import ResponsesProvider
 from app.agent.research import ResearchService
+from app.agent.routing import prepare_route, change_route, assess_research_escalation
 from app.agent.safety import classify_urgent_context, detect_india_context, safety_event
 from app.agent.verification import (
     TEMPLATES,
@@ -170,7 +171,7 @@ def _public_prequery_terms(
 
 
 class PrimaryAgent:
-    engine_version = "primary-agent-v2.0"
+    engine_version = "primary-agent-v2.1-routed"
 
     def __init__(self, settings, retriever, *, provider=None, research=None):
         self.settings, self.retriever = settings, retriever
@@ -372,7 +373,7 @@ class PrimaryAgent:
             "complete",
             agent="Context & Intake Agent",
             tool="certified_knowledge_pack",
-            result=f"Loaded {len(state['passages'])} verified statutory provisions & facts",
+            result=f"Loaded {len(state['passages'])} retrieved source passages & facts",
             passages_count=len(state["passages"]),
             detail=f"Context ready ({len(state['passages'])} legal provisions loaded)",
         )
@@ -385,6 +386,8 @@ class PrimaryAgent:
             ),
         ) as telemetry:
             try:
+                if self.settings.ai_configured and self.settings.agent_routing_enabled:
+                    prepare_route(self, state, budget, event)
                 answer, rounds = self._reason(state, budget, event, emit_safety)
                 if state.get("urgent_continuation"):
                     answer = self._enforce_urgent_followup_continuity(answer)
@@ -617,9 +620,9 @@ class PrimaryAgent:
                 event(
                     "verify",
                     "passed",
-                    agent="Output Certification Agent",
-                    result="Output verified & certified for safe publication",
-                    detail="Verified legal guidance ready · Certified",
+                    agent="Output Structuring Agent",
+                    result="Publication checks completed; unsupported content withheld",
+                    detail="Response prepared with publication safeguards",
                 )
             except Exception as exc:
                 event("primary", "fallback", error_type=type(exc).__name__)
@@ -647,7 +650,11 @@ class PrimaryAgent:
             if any(r["usage_reported"] for r in telemetry.records)
             else "unknown"
         )
+        result["route"] = state.get("route")
+        result["route_history"] = state.get("route_history", [])
         result["metrics"] = {
+            "route": state.get("route"),
+            "route_history": state.get("route_history", []),
             **budget.snapshot(),
             "total_ms": round((time.monotonic() - started) * 1000),
             "timing_scope": "runner; excludes API authorization and final database commit",
@@ -765,6 +772,11 @@ class PrimaryAgent:
             "language": state.get("language", "en"),
             "current_message": state["current_message"],
             "segments": segment_message(state["current_message"]),
+            "workflow": {
+                "route": state.get("route"),
+                "applicability": state.get("route_guidance"),
+                "limitations": state.get("routing_limitations", []),
+            },
         }
         if state.get("urgent_continuation"):
             payload["urgent_case_continuity"] = {
@@ -829,8 +841,11 @@ class PrimaryAgent:
                 elif call.get("name") != "research_legal_issue" or not allow_tools:
                     tool_result = {"status": "rejected", "limitations": ["Tool is unavailable."]}
                 else:
+                    previous_passages = list(state["passages"])
                     try:
                         request = ResearchRequest.model_validate_json(call["arguments"])
+                        if self.settings.agent_routing_enabled:
+                            change_route(state, event, "research", "The answering agent identified an evidence gap")
                         search_query_str = (
                             ", ".join(q.query for q in request.questions[:2])
                             if getattr(request, "questions", None)
@@ -854,7 +869,7 @@ class PrimaryAgent:
                             tool="research_legal_issue",
                             result=f"Fetched {fetched_count} statutory passages from official registry",
                             duration_ms=tool_result.get("elapsed_ms", 0),
-                            detail=f"Retrieved {fetched_count} verified legal passages ({tool_result.get('elapsed_ms', 0)}ms)",
+                            detail=f"Retrieved {fetched_count} source passages ({tool_result.get('elapsed_ms', 0)}ms)",
                         )
                         state["tool_records"].extend(tool_result.get("tool_records", []))
                         merged = {p["passage_id"]: p for p in state["passages"]}
@@ -862,7 +877,17 @@ class PrimaryAgent:
                         state["passages"] = list(merged.values())[
                             : self.settings.agent_max_passages * 2
                         ]
+                        if self.settings.agent_routing_enabled:
+                            assessment = assess_research_escalation(self, state, budget, event)
+                            excluded = set(state.get("excluded_evidence_ids", []))
+                            tool_result["evidence"] = [p for p in tool_result.get("evidence", [])
+                                                       if p["passage_id"] not in excluded]
+                            tool_result["applicability"] = assessment
+                            tool_result["excluded_evidence_ids"] = sorted(excluded)
                     except Exception as exc:
+                        # Newly fetched evidence must not survive failed applicability checks.
+                        if self.settings.agent_routing_enabled:
+                            state["passages"] = previous_passages
                         tool_result = {
                             "status": "unavailable",
                             "limitations": [type(exc).__name__],

@@ -1,0 +1,12 @@
+npm notice run nyay-saathi-frontend@0.1.0 test
+npm notice run vitest run --reporter=dot
+
+ RUN  v5.1.0 /Users/ashutoshanand/Downloads/Nyay-Saathi-V2-Production/frontend
+
+···············································
+
+ Test Files  8 passed (8)
+      Tests  47 passed (47)
+   Start at  21:07:24
+   Duration  12.46s (environment 40%, tests 34%, import 20%, setup 4%, transform 3%)
+

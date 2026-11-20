@@ -610,7 +610,7 @@ class PracticeEngine:
         try:
             return client.responses.create(**kwargs)
         except BadRequestError:
-            if "reasoning" not in kwargs:
+            if kwargs["model"] == "gpt-5.6-sol" or "reasoning" not in kwargs:
                 raise
             _NO_REASONING_MODELS.add(kwargs["model"])
             kwargs.pop("reasoning")

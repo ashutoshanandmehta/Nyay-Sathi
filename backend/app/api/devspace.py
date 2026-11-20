@@ -102,8 +102,8 @@ RESTART_REQUIRED = {"APP_ORIGIN"}
 
 # Presets for the model pickers; the current value is always included and any name can be typed.
 MODEL_OPTIONS = {
-    "OPENAI_CHAT_MODEL": ["gpt-4o", "gpt-4o-mini", "gpt-6-luna", "gpt-4.1", "gpt-4-turbo"],
-    "OPENAI_REVIEW_MODEL": ["gpt-4o", "gpt-4o-mini", "gpt-6.1-sol", "gpt-4.1"],
+    "OPENAI_CHAT_MODEL": ["gpt-5.6-sol", "gpt-4o", "gpt-4o-mini", "gpt-6-luna", "gpt-4.1", "gpt-4-turbo"],
+    "OPENAI_REVIEW_MODEL": ["gpt-5.6-sol", "gpt-4o", "gpt-4o-mini", "gpt-6.1-sol", "gpt-4.1"],
     "OPENAI_EMBEDDING_MODEL": [
         "text-embedding-3-small",
         "text-embedding-3-large",
@@ -113,7 +113,7 @@ MODEL_OPTIONS = {
     "OPENAI_LIVE_TRANSCRIPTION_MODEL": ["gpt-realtime-whisper", "gpt-live-transcribe"],
     "OPENAI_TTS_MODEL": ["gpt-realtime-2.1-mini", "tts-1", "tts-1-hd"],
     # Search only finds links (we fetch and read pages ourselves), so a small model is enough.
-    "OPENAI_WEB_SEARCH_MODEL": ["gpt-6.1-sol", "gpt-6-astra", "gpt-4o", "gpt-4o-mini"],
+    "OPENAI_WEB_SEARCH_MODEL": ["gpt-5.6-sol", "gpt-6.1-sol", "gpt-6-astra", "gpt-4o", "gpt-4o-mini"],
     # Empty means "same as the chat model".
     "OPENAI_ROLEPLAY_MODEL": ["", "gpt-6-luna", "gpt-4o", "gpt-4o-mini", "gpt-4.1"],
 }

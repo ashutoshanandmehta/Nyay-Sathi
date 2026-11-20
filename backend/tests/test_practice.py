@@ -455,7 +455,7 @@ def test_roleplay_is_fast_and_in_character(live_engine):
     # The character may cite law like the real officer would; no extra check or notice.
     assert result.reply == responses.text and result.notice is None
     sent = responses.calls[0]
-    assert sent["reasoning"] == {"effort": "low"} and sent["max_output_tokens"] <= 1000
+    assert sent["reasoning"] == {"effort": "medium"} and sent["max_output_tokens"] <= 1000
     assert sent["stream"] is True and len(responses.calls) == 1
 
 
@@ -472,6 +472,7 @@ def test_reasoning_is_dropped_for_models_that_reject_it(live_engine, monkeypatch
     from openai import BadRequestError
 
     engine, responses = live_engine
+    engine.settings.openai_roleplay_model = "gpt-4o"  # Compatibility path for an explicitly selected old model.
     monkeypatch.setattr(engine_module, "_NO_REASONING_MODELS", set())
     request = httpx.Request("POST", "https://api.openai.com/v1/responses")
     rejected = BadRequestError(

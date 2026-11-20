@@ -11,7 +11,8 @@ CONTACT = {
     "number": "112",
     "url": "https://www.mha.gov.in/emergency-response-support-system-erss",
     "checked_at": "2026-11-07",
-    "revalidate_after": "2026-11-14",
+    "rechecked_at": "2026-11-20",
+    "revalidate_after": "2026-11-27",
     "jurisdiction": "India",
 }
 
@@ -34,8 +35,10 @@ SPECIALIZED_CONTACTS = {
         "number": "1930",
         "url": "https://cybercrime.gov.in/",
         "checked_at": "2026-11-07",
-        "revalidate_after": "2026-11-14",
+        "rechecked_at": "2026-11-20",
+        "revalidate_after": "2026-11-27",
         "jurisdiction": "India",
+        "verification_url": "https://www.mha.gov.in/MHA1/Par2017/pdfs/par2026-pdfs/LS17032026/4118.pdf",
     },
     "medical_emergency": {
         "number": "108",
@@ -126,6 +129,7 @@ CYBER_FINANCIAL_FRAUD_RE = re.compile(
     r"enter(?:ed)?\s+(?:my\s+)?(?:password|pin|otp|mpin))"
     r".{0,220}(?:debited|withdrawn|deducted|drained|lost\s+₹|lost\s+rs|unauthorized|unauthorised|fraud|scam|blocked\s+my\s+number))|"
     r"(?:\b(?:cyber\s*fraud|upi\s*fraud|upi\s*scam|phishing\s*scam|bank\s*fraud)\b.{0,120}\b(?:debited|lost|stole|₹|rs\.?|bank|account|wallet)\b)|"
+    r"(?:\b(?:upi|bank|online)\s+(?:fraud|scam)\b.{0,120}\b(?:paise|paisa|paise?\s+kat|kat\s+rahe|nikal)\b)|"
     r"(?:खाते\s+से.{0,60}(?:कट|निकल|धोखाधड़ी|फ्रॉड)|फर्जी\s+कस्टमर\s+केयर)",
     re.I | re.S,
 )
