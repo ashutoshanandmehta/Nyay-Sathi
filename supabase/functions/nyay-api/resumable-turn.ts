@@ -104,10 +104,19 @@ function evidenceRegistry(state:TurnCheckpoint) {
 function publication(state:TurnCheckpoint, candidate:AgentAnswer, review?:AgentReview) {
   const context=state.context!
   const registry=evidenceRegistry(state)
-  const verified=review ? (review.cross_block_coherent===true && review.primary_question_answered && review.next_action_useful) : false
-  const accepted: Record<string, string> = review && review.cross_block_coherent
-    ? propagateDependencies(candidate,applyReviewVerdicts(review,state.pending!,candidate,registry))
-    : Object.fromEntries(candidate.claims.map(c=>[c.claim_id, c.grounding || 'approved']))
+  const hasReview=Boolean(review)
+  const verified=hasReview && review!.cross_block_coherent===true && review!.primary_question_answered && review!.next_action_useful
+  // Truthful acceptance: when semantic review was performed and coherent, apply review verdicts.
+  // When review was not performed (e.g. routine procedural or fast route),
+  // only accept practical precautions, intake questions, and user-confirmed facts that passed mechanical checks.
+  // Never accept unreviewed substantive legal claims!
+  const accepted: Record<string, string> = verified
+    ? propagateDependencies(candidate,applyReviewVerdicts(review!,state.pending || [],candidate,registry))
+    : Object.fromEntries(
+        candidate.claims
+          .filter(c => (c.kind === 'question' || c.kind === 'practical' || c.grounding === 'reported_by_user') && (!state.blocked || !state.blocked[c.claim_id]))
+          .map(c => [c.claim_id, c.grounding || 'procedural_approved'])
+      )
   const authorization=authorizeCasePatches({
     answer:verified ? candidate : {...candidate,case_patches:[]},
     review:review || {claims:[],patch_verdicts:[],primary_question_answered:true,next_action_useful:true,cross_block_coherent:true,repair_instructions:[]},
@@ -118,11 +127,18 @@ function publication(state:TurnCheckpoint, candidate:AgentAnswer, review?:AgentR
     answer:candidate, accepted, registry, language:state.input.language,
     safetyMessages:context.safety ? [context.safety] : [], urgentContinuation:context.urgent,
   })
-  const status=assembled.publicationStatus==='supported' && (!verified || state.withheldRequired)
-    ? 'partial' : assembled.publicationStatus
+  // Truthful status: only 'supported' if independently verified and no required claims withheld.
+  // When unreviewed or partial, truthfully report 'partial'.
+  const hasUnreviewedLegalClaims = candidate.claims.some(
+    c => (c.kind === 'legal' || c.grounding === 'verified_legal_source') && !(c.claim_id in accepted)
+  )
+  const status = (assembled.publicationStatus === 'supported' && verified && !state.withheldRequired && !hasUnreviewedLegalClaims)
+    ? 'supported'
+    : 'partial'
   const verification={
-    passed:status==='supported', independent_review_performed:true,
-    approved_claim_count:Object.keys(accepted).length,
+    passed: status === 'supported',
+    independent_review_performed: verified,
+    approved_claim_count: Object.keys(accepted).length,
   }
   return {
     expected_version:context.memory.version, memory:authorization.updatedMemory,
@@ -252,21 +268,17 @@ export async function runOneTurnStep(deps:WorkerDependencies):Promise<boolean> {
       } else if(state.model!.stage==='review') {
         const review=structured<AgentReview>(response,AGENT_REVIEW_SCHEMA.schema)
         const answer=state.answer!
-        if (!covers(review.claims.map(c=>c.claim_id),state.pending!) ||
-            !covers((review.patch_verdicts || []).map(p=>p.patch_id),(answer.case_patches || []).map(p=>p.patch_id))) {
-          throw new Error('Independent review coverage invalid')
+        // Missing coverage handling: leave affected claims unapproved while preserving independently accepted content
+        const coveredClaimIds = new Set((review.claims || []).map(c => c.claim_id))
+        const missingClaimIds = (state.pending || []).filter(id => !coveredClaimIds.has(id))
+        for (const missingId of missingClaimIds) {
+          state.blocked = { ...(state.blocked || {}), [missingId]: 'unreviewed_coverage_gap' }
         }
-        const rejected=[...Object.keys(state.blocked!),...review.claims.filter(c=>c.support!=='supported').map(c=>c.claim_id)]
-        if (!state.repaired && rejected.length) {
-          state.repairable=rejected
-          await submitNext({stage:'repair',input:messageInput({
-            answer,review,rejected_claim_ids:rejected,evidence:evidenceRegistry(state).entries,
-          })})
-        } else {
-          state.publication=publication(state,answer,review)
-          await advance('ready',{event:stageEvent('publishing')})
-        }
+        // Failure handling: Avoid automatic repair-review loop! Retain approved content, withhold unsupported claims.
+        state.publication=publication(state,answer,review)
+        await advance('ready',{event:stageEvent('publishing')})
       } else {
+        // Retained for backwards-compatibility if an older repair job settles
         const repair=structured<RepairPatch>(response,AGENT_REPAIR_SCHEMA.schema)
         const removals=new Set(repair.removals)
         const replacements=new Map((repair.replacements || []).map(c=>[c.claim_id,c]))
@@ -277,7 +289,8 @@ export async function runOneTurnStep(deps:WorkerDependencies):Promise<boolean> {
         state.withheldRequired=state.answer!.claims.some(c=>removals.has(c.claim_id) && !c.optional)
         state.answer!.claims=state.answer!.claims.filter(c=>!removals.has(c.claim_id)).map(c=>replacements.get(c.claim_id) || c)
         state.repaired=true
-        await advance('check',{event:stageEvent('verifying')})
+        state.publication=publication(state,state.answer!,undefined)
+        await advance('ready',{event:stageEvent('publishing')})
       }
     } else if(job.stage==='tools') {
       const output=state.toolOutput!
@@ -305,11 +318,27 @@ export async function runOneTurnStep(deps:WorkerDependencies):Promise<boolean> {
       const {blocked}=mechanicalChecks(answer,evidenceRegistry(state))
       state.blocked=blocked
       state.pending=answer.claims.filter(c=>!Object.hasOwn(blocked,c.claim_id)).map(c=>c.claim_id)
-      await submitNext({stage:'review',input:messageInput({
-        answer,pending_claim_ids:state.pending,evidence:evidenceRegistry(state).entries,
-        incident_date:state.context!.incidentDate,date_basis:dateBasis(),
-        law_as_of_date:dateBasis()==='general_current_law' ? state.context!.asOfDate : null,region:state.context!.region,
-      })})
+
+      // Determine if focused semantic review is required:
+      // Triggered for newly generated substantive legal rights, limitation deadlines,
+      // or consequential legal advice asserted in pending claims.
+      const needsSemanticReview = state.pending.some(id => {
+        const claim = answer.claims.find(c => c.claim_id === id)
+        return claim && (claim.kind === 'legal' || claim.block_type === 'direct_answer' || claim.grounding === 'verified_legal_source')
+      })
+
+      if (needsSemanticReview && state.pending.length > 0) {
+        await submitNext({stage:'review',input:messageInput({
+          answer,pending_claim_ids:state.pending,evidence:evidenceRegistry(state).entries,
+          incident_date:state.context!.incidentDate,date_basis:dateBasis(),
+          law_as_of_date:dateBasis()==='general_current_law' ? state.context!.asOfDate : null,region:state.context!.region,
+        })})
+      } else {
+        // Routine procedural assistance (NCH guidance, questions, practical steps)
+        // publishes directly after mechanical checks without an extra model call.
+        state.publication = publication(state, answer, undefined)
+        await advance('ready', { event: stageEvent('publishing') })
+      }
     } else if(job.stage==='ready') {
       if(!await deps.store.advance(job,'publish',state.publication!)) outcome='fenced'
     } else {

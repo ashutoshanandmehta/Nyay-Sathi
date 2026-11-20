@@ -385,12 +385,15 @@ export class OpenAiResponsesProvider implements AiProviderPort {
       const data = await res.json() as WireResponse
       const parsed = structured<AgentReview>(data, AGENT_REVIEW_SCHEMA.schema)
       const expected = new Set(params.pendingClaimIds)
+      const validClaims: typeof parsed.claims = []
       const seen = new Set<string>()
-      for (const verdict of parsed.claims) {
-        if (!expected.has(verdict.claim_id) || seen.has(verdict.claim_id)) throw new Error('Invalid review coverage')
-        seen.add(verdict.claim_id)
+      for (const verdict of parsed.claims || []) {
+        if (expected.has(verdict.claim_id) && !seen.has(verdict.claim_id)) {
+          seen.add(verdict.claim_id)
+          validClaims.push(verdict)
+        }
       }
-      if (seen.size !== expected.size) throw new Error('Missing review verdicts')
+      parsed.claims = validClaims
       return { review: parsed, usage: data.usage }
     } finally {
       clearTimeout(timer)
