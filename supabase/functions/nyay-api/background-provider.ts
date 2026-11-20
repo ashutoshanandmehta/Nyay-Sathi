@@ -10,7 +10,7 @@ export interface ModelInput {
   runtime?:RuntimeConfig
 }
 export interface BackgroundProvider {
-  submit(key: string, input: ModelInput, intent: string): Promise<string>
+  submit(key: string, input: ModelInput, intent: string): Promise<string | WireResponse>
   collect(key: string, id: string): Promise<WireResponse>
   cancel(key: string, id: string): Promise<WireResponse|void>
 }
@@ -50,7 +50,7 @@ export class OpenAiBackgroundProvider implements BackgroundProvider {
     return await readBoundedJson(response,512_000) as WireResponse
   }
 
-  async submit(key:string, args:ModelInput, intent:string) {
+  async submit(key:string, args:ModelInput, intent:string): Promise<string | WireResponse> {
     const runtime=runtimeConfig(args.runtime || this.defaults)
     const isAsync = Deno.env.get('NYAY_OPENAI_ASYNC_MODE') === 'true'
     const response = await this.request(key,'',{
@@ -64,18 +64,13 @@ export class OpenAiBackgroundProvider implements BackgroundProvider {
     },intent)
     if(!validResponseId(response.id)) throw new Error('Missing provider response reference')
     if(response.status === 'completed' || response.output?.length) {
-      this.completedCache.set(response.id, response)
+      return response
     }
     return response.id
   }
 
   async collect(key:string,id:string) {
     if(!validResponseId(id)) throw new Error('Invalid response reference')
-    const cached = this.completedCache.get(id)
-    if (cached) {
-      this.completedCache.delete(id)
-      return cached
-    }
     const response=await this.request(key,'/'+id)
     if(response.id!==id) throw new Error('Response reference mismatch')
     return response

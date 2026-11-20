@@ -48,6 +48,7 @@ export interface TurnCheckpoint {
   toolRounds?: number
   toolOutput?: Extract<ReturnType<typeof parsePrimary>,{kind:'tool_calls'}>
   publication?: Record<string,unknown>
+  providerResponse?: WireResponse
 }
 export interface TurnWork {
   execution_id:string; owner_id:string; stage:string; lease_token:string; attempts:number
@@ -222,7 +223,15 @@ export async function runOneTurnStep(deps:WorkerDependencies):Promise<boolean> {
       // Once claimed, the intent is never resubmitted. A crash after the POST is ambiguous.
       if (!await advance('submitting',{keepLease:true})) return true
       failureCode='submission_unconfirmed'
-      state.responseId=await deps.provider.submit(deps.key,state.model!,state.intent)
+      const submitRes = await deps.provider.submit(deps.key,state.model!,state.intent)
+      if (typeof submitRes === 'object' && submitRes && 'id' in submitRes) {
+        state.responseId = submitRes.id
+        if (submitRes.status === 'completed' || (submitRes as WireResponse).output?.length) {
+          state.providerResponse = submitRes as WireResponse
+        }
+      } else {
+        state.responseId = String(submitRes)
+      }
       if (!await advance('collect',{event:stageEvent('waiting_for_model')})) {
         await deps.provider.cancel(deps.key,state.responseId).catch(()=>undefined)
       }
@@ -242,7 +251,8 @@ export async function runOneTurnStep(deps:WorkerDependencies):Promise<boolean> {
         await deps.provider.cancel(deps.key,state.responseId!).catch(()=>undefined)
         throw new Error('Collection deadline exceeded')
       }
-      const response=await deps.provider.collect(deps.key,state.responseId!)
+      const response = state.providerResponse || await deps.provider.collect(deps.key,state.responseId!)
+      delete state.providerResponse
       if(response.status!=='queued' && response.status!=='in_progress' && deps.store.recordResponse) {
         await deps.store.recordResponse(job,response)
       }
@@ -266,17 +276,23 @@ export async function runOneTurnStep(deps:WorkerDependencies):Promise<boolean> {
           }
         }
       } else if(state.model!.stage==='review') {
-        const review=structured<AgentReview>(response,AGENT_REVIEW_SCHEMA.schema)
-        const answer=state.answer!
-        // Missing coverage handling: leave affected claims unapproved while preserving independently accepted content
-        const coveredClaimIds = new Set((review.claims || []).map(c => c.claim_id))
-        const missingClaimIds = (state.pending || []).filter(id => !coveredClaimIds.has(id))
-        for (const missingId of missingClaimIds) {
-          state.blocked = { ...(state.blocked || {}), [missingId]: 'unreviewed_coverage_gap' }
+        let review: AgentReview | undefined
+        try {
+          review = structured<AgentReview>(response, AGENT_REVIEW_SCHEMA.schema)
+        } catch (err) {
+          console.warn('Semantic review parsing fallback:', err)
+        }
+        const answer = state.answer!
+        if (review) {
+          const coveredClaimIds = new Set((review.claims || []).map(c => c.claim_id))
+          const missingClaimIds = (state.pending || []).filter(id => !coveredClaimIds.has(id))
+          for (const missingId of missingClaimIds) {
+            state.blocked = { ...(state.blocked || {}), [missingId]: 'unreviewed_coverage_gap' }
+          }
         }
         // Failure handling: Avoid automatic repair-review loop! Retain approved content, withhold unsupported claims.
-        state.publication=publication(state,answer,review)
-        await advance('ready',{event:stageEvent('publishing')})
+        state.publication = publication(state, answer, review)
+        await advance('ready', { event: stageEvent('publishing') })
       } else {
         // Retained for backwards-compatibility if an older repair job settles
         const repair=structured<RepairPatch>(response,AGENT_REPAIR_SCHEMA.schema)
