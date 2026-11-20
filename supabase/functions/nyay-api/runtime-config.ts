@@ -13,7 +13,7 @@ export const MAX_SUBMISSIONS=6
 export const MAX_REQUEST_BYTES=64_000
 // UTF-8 byte bound plus conservative framing/tool overhead; enforce the body bound too.
 export const MAX_INPUT_TOKENS=MAX_REQUEST_BYTES+8192
-export const DEFAULT_RUNTIME:RuntimeConfig={model:'gpt-6.2-sol',reasoning:'medium',maxOutputTokens:4096}
+export const DEFAULT_RUNTIME:RuntimeConfig={model:'gpt-6.2-sol',reasoning:'low',maxOutputTokens:4096}
 export function runtimeConfig(values:Partial<Record<'model'|'reasoning'|'maxOutputTokens',unknown>>={}):RuntimeConfig {
   const config={...DEFAULT_RUNTIME,...values}
   if(!Object.hasOwn(RUNTIME_MODELS,String(config.model)) ||

@@ -28,6 +28,7 @@ const instructions = {
 
 // Model/quality compatibility still needs a separately budgeted provider evaluation.
 export class OpenAiBackgroundProvider implements BackgroundProvider {
+  private readonly completedCache = new Map<string, WireResponse>()
   constructor(private readonly defaults:RuntimeConfig = DEFAULT_RUNTIME) {runtimeConfig(defaults)}
 
   private async request(key:string, path:string, body?:Record<string,unknown>, intent?:string):Promise<WireResponse> {
@@ -38,7 +39,7 @@ export class OpenAiBackgroundProvider implements BackgroundProvider {
       headers: {Authorization:'Bearer '+key,'Content-Type':'application/json',
         ...(intent ? {'X-Client-Request-Id':intent} : {})},
       body: serialized,
-      signal: AbortSignal.timeout(9_000),
+      signal: AbortSignal.timeout(28_000),
       redirect: 'error',
     })
     if (!response.ok) {
@@ -51,8 +52,9 @@ export class OpenAiBackgroundProvider implements BackgroundProvider {
 
   async submit(key:string, args:ModelInput, intent:string) {
     const runtime=runtimeConfig(args.runtime || this.defaults)
+    const isAsync = Deno.env.get('NYAY_OPENAI_ASYNC_MODE') === 'true'
     const response = await this.request(key,'',{
-      model:runtime.model, reasoning:{effort:runtime.reasoning}, background:true, store:false,
+      model:runtime.model, reasoning:{effort:runtime.reasoning}, background:isAsync, store:false,
       service_tier:'default', max_output_tokens:runtime.maxOutputTokens,
       prompt_cache_options:{ttl:'30m'},
       metadata:{nyay_intent:intent}, instructions:instructions[args.stage],
@@ -61,11 +63,19 @@ export class OpenAiBackgroundProvider implements BackgroundProvider {
       include:['reasoning.encrypted_content'],
     },intent)
     if(!validResponseId(response.id)) throw new Error('Missing provider response reference')
+    if(response.status === 'completed' || response.output?.length) {
+      this.completedCache.set(response.id, response)
+    }
     return response.id
   }
 
   async collect(key:string,id:string) {
     if(!validResponseId(id)) throw new Error('Invalid response reference')
+    const cached = this.completedCache.get(id)
+    if (cached) {
+      this.completedCache.delete(id)
+      return cached
+    }
     const response=await this.request(key,'/'+id)
     if(response.id!==id) throw new Error('Response reference mismatch')
     return response
